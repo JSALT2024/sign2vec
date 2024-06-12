@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from vitpose import VitPose
+from model import ViTPoseModel
 from typing import Dict
 from detectron2.config import LazyConfig
 from detect import DefaultPredictor_Lazy
@@ -11,8 +11,8 @@ class ViTPoseExtractor():
         self.cpm = self.initialize_cpm()
         self.detector = self.initialize_detector()
 
-    def initialize_cpm(self) -> VitPose:
-        cpm = VitPose()
+    def initialize_cpm(self):
+        cpm = ViTPoseModel(device='cuda')
         return cpm
     
     def initialize_detector(self) -> DefaultPredictor_Lazy:
@@ -43,9 +43,6 @@ class ViTPoseExtractor():
             [np.concatenate([pred_bboxes, pred_scores[:, None]], axis=1)],
         )
 
-        bboxes = []
-        is_right = []
-
         people = []
 
         # Use hands based on hand keypoint detections
@@ -55,25 +52,39 @@ class ViTPoseExtractor():
 
             # Rejecting not confident detections
             is_left_valid = 0
+            is_right_valid = 0
+
+            left_bbox = None
+            right_bbox = None
+
             keyp = left_hand_keyp
             valid = keyp[:,2] > 0.5
+            bbox = [keyp[valid,0].min(), keyp[valid,1].min(), keyp[valid,0].max(), keyp[valid,1].max()]
+            left_bbox = bbox
+
             if sum(valid) > 3:
-                bbox = [keyp[valid,0].min(), keyp[valid,1].min(), keyp[valid,0].max(), keyp[valid,1].max()]
-                bboxes.append(bbox)
-                is_right.append(0)
-            
+                is_left_valid = 1
+
             keyp = right_hand_keyp
             valid = keyp[:,2] > 0.5
+            bbox = [keyp[valid,0].min(), keyp[valid,1].min(), keyp[valid,0].max(), keyp[valid,1].max()]
+            right_bbox = bbox
+
             if sum(valid) > 3:
-                bbox = [keyp[valid,0].min(), keyp[valid,1].min(), keyp[valid,0].max(), keyp[valid,1].max()]
-                bboxes.append(bbox)
-                is_right.append(1)
+                is_right_valid = 1
 
             people.append({
                 'person_id': person_id,
-                'bbox': bbox[-1],
+
+                'left_bbox': left_bbox,
+                'right_bbox': right_bbox,
+
                 'left_hand': left_hand_keyp,
                 'right_hand': right_hand_keyp,
+
+                'is_left_valid': is_left_valid,
+                'is_right_valid': is_right_valid,
+
                 'pose': vitposes['keypoints'][:-42],
             }) 
         

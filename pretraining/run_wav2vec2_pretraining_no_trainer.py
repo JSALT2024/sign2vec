@@ -365,26 +365,6 @@ class DataCollatorForWav2Vec2Pretraining:
         return batch
 
 
-def multiply_grads(params, c):
-    """Multiplies grads by a constant *c*."""
-    for p in params:
-        if p.grad is not None:
-            if torch.is_tensor(c):
-                c = c.to(p.grad.device)
-            p.grad.data.mul_(c)
-
-
-def get_grad_norm(params, scale=1):
-    """Compute grad norm given a gradient scale."""
-    total_norm = 0.0
-    for p in params:
-        if p.grad is not None:
-            param_norm = (p.grad.detach().data / scale).norm(2)
-            total_norm += param_norm.item() ** 2
-    total_norm = total_norm**0.5
-    return total_norm
-
-
 def main():
     # See all possible arguments in src/transformers/args.py
     # or by passing the --help flag to this script.
@@ -394,6 +374,10 @@ def main():
     # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_wav2vec2_pretraining_no_trainer", args)
+
+    ###############################
+    #       Data Loading
+    ###############################
 
     # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
     accelerator = Accelerator()
@@ -624,6 +608,9 @@ def main():
         model.train()
         for step, batch in enumerate(train_dataloader):
             # compute num of losses
+
+            print(batch)
+
             num_losses = batch["mask_time_indices"].sum()
             sub_attention_mask = batch.pop("sub_attention_mask", None)
             sub_attention_mask = (

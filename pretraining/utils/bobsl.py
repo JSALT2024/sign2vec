@@ -80,7 +80,7 @@ class BOBSLDataset(Dataset):
         array = np.load(f'{self.data_path}/{doc_id}.npy')
 
         inputs = self.feature_extractor(
-            array[start_time:end_time], max_length=self.max_length, truncation=True
+            array[start_time:end_time], max_length=self.max_length, truncation=True, sampling_rate=self.sampling_rate
         )
 
         return {

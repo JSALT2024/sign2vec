@@ -21,16 +21,16 @@ class Trainer:
                  tokenizer, 
                  train_dataloader,
                  eval_dataloader,
-                 vectorized_datasets,
                  api,
                  repo_id):
 
         self.model = model
 
+        self.args = args
+
         self.api = api
         self.repo_id = repo_id
 
-        self.vectorized_datasets = vectorized_datasets
         self.accelerator = Accelerator()
 
         # Optimizer
@@ -67,10 +67,11 @@ class Trainer:
 
 
     def train(self):
+        
         args = self.args
 
         logger.info("***** Running training *****")
-        logger.info(f"  Num examples = {len(self.vectorized_datasets['train'])}")
+        logger.info(f"  Num examples = {len(self.train_dataloader.dataset)}")
         logger.info(f"  Num Epochs = {args.num_train_epochs}")
         logger.info(f"  Instantaneous batch size per device = {args.per_device_train_batch_size}")
         logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {self.total_batch_size}")
@@ -87,8 +88,6 @@ class Trainer:
             self.model.train()
             for step, batch in enumerate(self.train_dataloader):
                 # compute num of losses
-
-                print(batch)
 
                 num_losses = batch["mask_time_indices"].sum()
                 sub_attention_mask = batch.pop("sub_attention_mask", None)

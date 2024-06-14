@@ -42,11 +42,11 @@ def main():
     model = Wav2Vec2ForPreTraining(config)
 
     # Import dataset and tokenizer
-    from utils.dataset import prepare_dataset
-    train_dataset, validation_dataset, vectorized_datasets = prepare_dataset(args, config, model, accelerator)
+    from utils.dataset import prepare_dataloader
+    train_dataset, validation_dataset = prepare_dataloader(args, config, model, accelerator)
 
     # Initialize training
-    trainer = Trainer(args, model, train_dataset, validation_dataset, vectorized_datasets, accelerator, api, repo_id)
+    trainer = Trainer(args, model, train_dataset, validation_dataset, accelerator, api, repo_id)
 
     # Training
     trainer.train()

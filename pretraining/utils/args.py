@@ -3,27 +3,9 @@ import argparse
 from transformers import SchedulerType
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Finetune a transformers model on a text classification task")
-    parser.add_argument(
-        "--dataset_name",
-        type=str,
-        default=None,
-        help="The name of the dataset to use (via the datasets library).",
-    )
-    parser.add_argument(
-        "--dataset_config_names",
-        nargs="+",
-        type=str,
-        required=True,
-        help="The configuration names of the dataset to use (via the datasets library).",
-    )
-    parser.add_argument(
-        "--dataset_split_names",
-        nargs="+",
-        type=str,
-        required=True,
-        help="The names of the training data set splits to use (via the datasets library).",
-    )
+
+    parser = argparse.ArgumentParser(description="Pre-Training a 🤗 Sign2Vec2 model on unlabeled sign language data")
+
     parser.add_argument(
         "--preprocessing_num_workers",
         type=int,
@@ -218,6 +200,71 @@ def parse_args():
             " If omitted, will pull value from model config."
         ),
     )
+
+
+    # sign2vec specific arguments
+
+    parser.add_argument(
+        "--use_face",
+        action="store_true",
+        help="[sign2vec] Whether to use face features in the model",
+    )
+
+    parser.add_argument(
+        "--use_hands",
+        action="store_true",
+        help="[sign2vec] Whether to use hand features in the model",
+    )
+
+    parser.add_argument(
+        "--use_pose",
+        action="store_true",
+        help="[sign2vec] Whether to use pose features in the model",
+    )
+
+    parser.add_argument(
+        "--stride",
+        type=int,
+        default=1,
+        help="[sign2vec] Stride for the feature extraction",
+    )
+
+    parser.add_argument(
+        "--train_data_path",
+        type=str,
+        default=None,
+        help="[sign2vec] Path to the training data",
+    )
+
+    parser.add_argument(
+        "--train_info_path",
+        type=str,
+        default='info.json',
+        help="[sign2vec] Path to the training info",
+    )
+
+    parser.add_argument(
+        "--validation_data_path",
+        type=str,
+        default=None,
+        help="[sign2vec] Path to the validation data",
+    )
+
+    parser.add_argument(
+        "--validation_info_path",
+        type=str,
+        default=None,
+        help="[sign2vec] Path to the validation info",
+    )
+
+    parser.add_argument(
+        "--fps",
+        type=int,
+        default=25,
+        help="[sign2vec] Frames per second in the video",
+    )
+    
+
     args = parser.parse_args()
 
     if args.push_to_hub:

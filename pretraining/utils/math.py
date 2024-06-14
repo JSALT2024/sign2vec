@@ -1,3 +1,5 @@
+import torch
+
 def multiply_grads(params, c):
     """Multiplies grads by a constant *c*."""
     for p in params:

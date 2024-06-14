@@ -20,7 +20,7 @@ def initialize_accelerator(args):
         datasets.utils.logging.set_verbosity_warning()
         transformers.utils.logging.set_verbosity_info()
 
-        # set up weights and biases if available
+        # # set up weights and biases if available
         if is_wandb_available():
             import wandb
 

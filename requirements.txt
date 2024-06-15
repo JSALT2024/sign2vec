@@ -2,3 +2,10 @@ numpy
 pandas
 tqdm
 python-dotenv
+datasets >= 1.12.0
+torch >= 1.5
+torchaudio
+accelerate >= 0.12.0
+librosa
+transformers
+wandb

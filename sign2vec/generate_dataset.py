@@ -65,14 +65,28 @@ def get_keypoints(video_path):
             keypoints = json.load(f)
             if keypoints['people']:
                 for person in keypoints['people']:
+                    # Remove confidence scores
+                    
                     KEYPOINTS.append({
                         'person_id': person['person_id'][0],
                         'document_id': keypoint.split("/")[-1].replace(".json", "").split('_')[0],
                         'frame_id': keypoint.split("/")[-1].replace(".json", "").split('_')[1],
-                        'pose_keypoints_2d': np.array(person['pose_keypoints_2d']),
-                        'face_keypoints_2d': np.array(person['face_keypoints_2d']),
-                        'hand_left_keypoints_2d': np.array(person['hand_left_keypoints_2d']),
-                        'hand_right_keypoints_2d': np.array(person['hand_right_keypoints_2d']),
+                        
+                        'pose_keypoints_2d': np.array(
+                            person['pose_keypoints_2d']
+                        ).reshape(-1, 3)[:, :2].reshape(-1, 1),
+
+                        'face_keypoints_2d': np.array(
+                            person['face_keypoints_2d']
+                        ).reshape(-1, 3)[:, :2].reshape(-1, 1),
+
+                        'hand_left_keypoints_2d': np.array(
+                            person['hand_left_keypoints_2d']
+                        ).reshape(-1, 3)[:, :2].reshape(-1, 1),
+                        
+                        'hand_right_keypoints_2d': np.array(
+                            person['hand_right_keypoints_2d']
+                        ).reshape(-1, 3)[:, :2].reshape(-1, 1),
                     })
 
     return pd.DataFrame(KEYPOINTS)
@@ -82,20 +96,20 @@ def process_keypoints(df_keypoints, save_path="features"):
 
     df_keypoints['keypoints'] = df_keypoints.apply(merge_keypoints, axis=1)
 
-    batch = {
-        'person_id': np.array(df_keypoints.person_id.values),
-        # 'document_id': np.array(df_keypoints.document_id.values),
-        'frame_id': np.array(df_keypoints.frame_id.values),
-        'array': np.concatenate(df_keypoints.keypoints.values),
-    }
+    array = np.array(df_keypoints.keypoints.to_list())
 
     with open(f"{save_path}/{df_keypoints.document_id.iloc[0]}.pkl", "wb") as f:
-        pickle.dump(batch, f)
+        pickle.dump(array, f)
 
     return {
         'document_id': df_keypoints.document_id.iloc[0],
         'frame_ids': df_keypoints.frame_id.to_list(),
-        'person_count': len(df_keypoints.person_id.unique())
+        'person_count': len(df_keypoints.person_id.unique()),
+        'left_hand_missing': int(df_keypoints.hand_left_keypoints_2d.apply(lambda x: x.sum()) == 0).sum(),
+        'right_hand_missing': int(df_keypoints.hand_right_keypoints_2d.apply(lambda x: x.sum()) == 0).sum(),
+        'face_missing': int(df_keypoints.face_keypoints_2d.apply(lambda x: x.sum()) == 0).sum(),
+        'pose_missing': int(df_keypoints.pose_keypoints_2d.apply(lambda x: x.sum()) == 0).sum(),
+
     }
 
 def remove_files():
@@ -128,6 +142,9 @@ def main():
         df_keypoints = get_keypoints(video_path)
         info = process_keypoints(df_keypoints)
         dataset_info.append(info)
+
+        with open("info.json", "w") as f: json.dump(dataset_info, f)
+
         remove_files()
         
 

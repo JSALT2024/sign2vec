@@ -9,9 +9,9 @@ def prepare_dataloader(args, config, model, accelerator):
     
     # 1. Set the correct target sampling rate
     sampling_rate = sum([
-        61 * 3 if args.use_face else 0, # 61 landmarks, 2 coordinate and confidence for face
-        2 * 21 * 3 if args.use_hands else 0, # 21 landmarks, 2 coordinate and confidence for each hand
-        35 * 3 if args.use_pose else 0, # 35 landmarks, 2 coordinate and confidence for pose
+        61 * 2 if args.use_face else 0, # 61 landmarks, 2 coordinate for face
+        2 * 21 * 2 if args.use_hands else 0, # 21 landmarks, 2 coordinate for each hand
+        35 * 2 if args.use_pose else 0, # 35 landmarks, 2 coordinate for pose
     ] ) * args.fps
 
     # 2. Now we preprocess the datasets including loading the audio, resampling and normalization

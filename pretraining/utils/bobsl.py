@@ -49,7 +49,7 @@ class BOBSLDataset(Dataset):
 
         for DOC in metadata:
 
-            doc_id = DOC['document_ids']
+            doc_id = DOC['document_id']
             frame_ids = DOC['frame_ids']
             frame_ids = np.array(frame_ids).astype(int)
             frame_diff = np.diff(frame_ids)
@@ -68,8 +68,6 @@ class BOBSLDataset(Dataset):
                         'end_time': end_time
                     })
 
-            print(data[:10])
-
         return data
             
     def __len__(self):
@@ -81,7 +79,7 @@ class BOBSLDataset(Dataset):
         start_time = self.data[idx]['start_time']
         end_time = self.data[idx]['end_time']
         
-        array = np.load(f'{self.data_path}/{doc_id}.npy')
+        array = np.load(f'{self.data_path}/{doc_id}.npy').reshape(-1)
 
         array = array[start_time:end_time]
 

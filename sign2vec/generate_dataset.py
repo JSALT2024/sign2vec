@@ -12,7 +12,7 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 from pathlib import Path
 
-dotenv_path = Path('./.env')
+dotenv_path = Path(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path=dotenv_path)
 
 POSE_COLS = [
@@ -36,7 +36,10 @@ def download_video(video_url, username, password):
     
     print(f"Processing {document_id}")
 
-    if os.path.exists(f'features/{document_id}.pkl'):
+    feature_path = os.path.join(os.path.dirname(__file__), f"features/{document_id}.pkl")
+    export_path = os.path.join(os.path.dirname(__file__), f"tmp/*.json")
+
+    if os.path.exists(f'features/{document_id}.npy'):
         print(f'Ignoring {document_id} as it already exists')
         return None
 
@@ -47,7 +50,7 @@ def download_video(video_url, username, password):
         print(f"Video {video_name} not exists - downloading")
         os.system(f"curl --user {username}:{password} {video_url} --output {video_path}")
 
-    if len(glob.glob("tmp/*.json")) == 0:
+    if len(glob.glob(export_path)) == 0:
         print(f"Extracting video from {video_name}")
         os.system(f"tar -xf {video_path} -C tmp/")
         return video_path
@@ -74,24 +77,25 @@ def get_keypoints(video_path):
                         
                         'pose_keypoints_2d': np.array(
                             person['pose_keypoints_2d']
-                        ).reshape(-1, 3)[:, :2].reshape(-1),
+                        ).reshape(-1, 3)[:, :2].reshape(-1,1),
 
                         'face_keypoints_2d': np.array(
                             person['face_keypoints_2d']
-                        ).reshape(-1, 3)[:, :2].reshape(-1),
+                        ).reshape(-1, 3)[:, :2].reshape(-1,1),
 
                         'hand_left_keypoints_2d': np.array(
                             person['hand_left_keypoints_2d']
-                        ).reshape(-1, 3)[:, :2].reshape(-1),
+                        ).reshape(-1, 3)[:, :2].reshape(-1,1),
                         
                         'hand_right_keypoints_2d': np.array(
                             person['hand_right_keypoints_2d']
-                        ).reshape(-1, 3)[:, :2].reshape(-1),
+                        ).reshape(-1, 3)[:, :2].reshape(-1,1),
                     })
 
     return pd.DataFrame(KEYPOINTS)
 
 def process_keypoints(df_keypoints, save_path="features"):
+
     os.makedirs(save_path, exist_ok=True)
 
     df_keypoints['keypoints'] = df_keypoints.apply(merge_keypoints, axis=1)
@@ -118,8 +122,13 @@ def remove_files():
 
 def main():
 
+    import os
+
+    SOURCE_PATH =  "config/bobsl.txt"
+    INFO_PATH = "info.json"
+
     # # Load dataset urls
-    with open("config/bobsl.txt", "r") as f:
+    with open(SOURCE_PATH, "r") as f:
         dataset = f.readlines()
 
     dataset = [video_url.replace('\n', '') for video_url in dataset if video_url.startswith("http")]
@@ -133,8 +142,10 @@ def main():
         raise Exception("Please set BOBSL_USERNAME and BOBSL_PASSWORD environment variables")
 
     dataset_info = []
-    for video_url in dataset[:2]:
+    dataset = dataset[:3] if os.getenv("DEBUG") else dataset
+    for video_url in dataset:
         video_path = download_video(video_url, config["username"], config["password"])
+        
         if video_path is None:
             print(f"Skipping {video_url}")
             continue
@@ -143,7 +154,7 @@ def main():
         info = process_keypoints(df_keypoints)
         dataset_info.append(info)
 
-        with open("info.json", "w") as f: json.dump(dataset_info, f)
+        with open(INFO_PATH, "w") as f: json.dump(dataset_info, f)
 
         remove_files()
         

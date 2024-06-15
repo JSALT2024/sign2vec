@@ -11,6 +11,9 @@ from transformers import (
 from tqdm import tqdm
 from utils.math import multiply_grads, get_grad_norm
 
+import torch._dynamo
+torch._dynamo.config.suppress_errors = True
+
 logger = get_logger(__name__)
 
 class Trainer:

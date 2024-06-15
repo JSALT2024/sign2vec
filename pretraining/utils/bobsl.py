@@ -85,8 +85,6 @@ class BOBSLDataset(Dataset):
 
         array = array[start_time:end_time]
 
-        print(f'array: {array.shape}')
-
         inputs = self.feature_extractor(
             array, max_length=self.max_length, truncation=True, sampling_rate=self.sampling_rate
         )

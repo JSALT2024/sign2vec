@@ -74,19 +74,19 @@ def get_keypoints(video_path):
                         
                         'pose_keypoints_2d': np.array(
                             person['pose_keypoints_2d']
-                        ).reshape(-1, 3)[:, :2].reshape(-1, 1),
+                        ).reshape(-1, 3)[:, :2].reshape(-1),
 
                         'face_keypoints_2d': np.array(
                             person['face_keypoints_2d']
-                        ).reshape(-1, 3)[:, :2].reshape(-1, 1),
+                        ).reshape(-1, 3)[:, :2].reshape(-1),
 
                         'hand_left_keypoints_2d': np.array(
                             person['hand_left_keypoints_2d']
-                        ).reshape(-1, 3)[:, :2].reshape(-1, 1),
+                        ).reshape(-1, 3)[:, :2].reshape(-1),
                         
                         'hand_right_keypoints_2d': np.array(
                             person['hand_right_keypoints_2d']
-                        ).reshape(-1, 3)[:, :2].reshape(-1, 1),
+                        ).reshape(-1, 3)[:, :2].reshape(-1),
                     })
 
     return pd.DataFrame(KEYPOINTS)
@@ -133,7 +133,7 @@ def main():
         raise Exception("Please set BOBSL_USERNAME and BOBSL_PASSWORD environment variables")
 
     dataset_info = []
-    for video_url in dataset[:10]:
+    for video_url in dataset[:2]:
         video_path = download_video(video_url, config["username"], config["password"])
         if video_path is None:
             print(f"Skipping {video_url}")

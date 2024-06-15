@@ -7,14 +7,18 @@ from huggingface_hub import HfApi
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from transformers import is_wandb_available, set_seed
+from accelerate.utils import DistributedDataParallelKwargs
+
 
 
 logger = get_logger(__name__)
 
+kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
+
 def initialize_accelerator(args):
 
     # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
-    accelerator = Accelerator()
+    accelerator = Accelerator(kwargs_handlers=[kwargs])
     logger.info(accelerator.state, main_process_only=False)
     if accelerator.is_local_main_process:
         datasets.utils.logging.set_verbosity_warning()

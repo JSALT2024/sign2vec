@@ -18,9 +18,9 @@ class Trainer:
     def __init__(self, 
                  args,
                  model, 
-                 tokenizer, 
                  train_dataloader,
                  eval_dataloader,
+                 accelerator,
                  api,
                  repo_id):
 
@@ -31,7 +31,7 @@ class Trainer:
         self.api = api
         self.repo_id = repo_id
 
-        self.accelerator = Accelerator()
+        self.accelerator = accelerator
 
         # Optimizer
         self.optimizer = AdamW(

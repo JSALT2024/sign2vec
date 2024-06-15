@@ -57,12 +57,6 @@ def parse_args():
         required=True,
     )
     parser.add_argument(
-        "--config_name",
-        type=str,
-        default=None,
-        help="Pretrained config name or path if not the same as model_name",
-    )
-    parser.add_argument(
         "--train_cache_file_name",
         type=str,
         default=None,
@@ -262,6 +256,13 @@ def parse_args():
         type=int,
         default=25,
         help="[sign2vec] Frames per second in the video",
+    )
+
+    parser.add_argument(
+        "--config_name",
+        type=str,
+        default=None,
+        help="[sign2vec] Path to the config file",
     )
     
 

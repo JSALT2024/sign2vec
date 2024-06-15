@@ -28,9 +28,11 @@ class BOBSLDataset(Dataset):
 
         self.max_length = max_length
 
+        self.fps = fps
+
         self.max_frames = int(max_length / (sampling_rate / fps))
         self.stride = stride
-        self.sampling_rate = sampling_rate
+        self.sampling_rate = sampling_rate 
 
         self.data_path = data_path
         self.info_path = info_path
@@ -57,14 +59,16 @@ class BOBSLDataset(Dataset):
                 if frame_diff[i:i+self.max_frames].max() < self.max_frame_diff:
 
                     frames = frame_ids[i:i+self.max_frames]
-                    start_time = int(i * self.sampling_rate)
-                    end_time = int((i+self.max_frames) * self.sampling_rate)
+                    start_time = int(i * (self.sampling_rate / self.fps))
+                    end_time = int((i+self.max_frames) * (self.sampling_rate / self.fps))
                     data.append({
                         'doc_id': doc_id,
                         'frame_ids': frames,
                         'start_time': start_time,
                         'end_time': end_time
                     })
+
+            print(data[:10])
 
         return data
             
@@ -79,8 +83,12 @@ class BOBSLDataset(Dataset):
         
         array = np.load(f'{self.data_path}/{doc_id}.npy')
 
+        array = array[start_time:end_time]
+
+        print(f'array: {array.shape}')
+
         inputs = self.feature_extractor(
-            array[start_time:end_time], max_length=self.max_length, truncation=True, sampling_rate=self.sampling_rate
+            array, max_length=self.max_length, truncation=True, sampling_rate=self.sampling_rate
         )
 
         return {

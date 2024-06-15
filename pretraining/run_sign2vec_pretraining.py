@@ -1,15 +1,17 @@
 """Pre-Training a 🤗 Wav2Vec2 model on unlabeled audio data"""
 
-
+import json
 from accelerate.logging import get_logger
 from transformers import (
     Wav2Vec2Config,
     Wav2Vec2ForPreTraining,
 )
+
 from transformers.utils import send_example_telemetry
 
 from utils.train import Trainer
 from utils.args import parse_args
+from utils.config import Sign2VecConfig
 from utils.accelerator import initialize_accelerator
 
 logger = get_logger(__name__)
@@ -28,7 +30,8 @@ def main():
     accelerator, api, repo_id = initialize_accelerator(args)
 
     # Initialize random model before training
-    config = Wav2Vec2Config.from_pretrained(args.model_name_or_path)
+    # config = Wav2Vec2Config.from_pretrained(args.model_name_or_path)
+    config = Sign2VecConfig(**json.load(open(args.config_name)))
 
     # pretraining is only supported for "newer" stable layer norm architecture
     # apply_spec_augment has to be True, mask_feature_prob has to be 0.0
@@ -43,11 +46,17 @@ def main():
 
     # Import dataset and tokenizer
     from utils.dataset import prepare_dataloader
-    train_dataset, validation_dataset = prepare_dataloader(args, config, model, accelerator)
+    train_dataloader, validation_dataloader = prepare_dataloader(args, config, model, accelerator)
 
     # Initialize training
-    trainer = Trainer(args, model, train_dataset, validation_dataset, accelerator, api, repo_id)
 
+    trainer = Trainer(args,
+                      model, 
+                      train_dataloader,
+                      validation_dataloader,
+                      accelerator,
+                      api,
+                      repo_id)
     # Training
     trainer.train()
 

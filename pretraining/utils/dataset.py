@@ -108,4 +108,13 @@ def prepare_dataloader(args, config, model, accelerator):
         vectorized_datasets["validation"], collate_fn=data_collator, batch_size=args.per_device_eval_batch_size
     )
 
+    print('DataLoader created successfully!')
+
+    test = next(iter(train_dataloader))
+
+    # print('Test:', test)
+    print(test['input_values'].shape)
+    print(test['mask_time_indices'].shape)
+    print('====================')
+
     return train_dataloader, eval_dataloader

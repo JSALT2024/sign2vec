@@ -49,6 +49,8 @@ class Trainer:
             model, self.optimizer, train_dataloader, eval_dataloader
         )
 
+        self.model._set_static_graph()
+
         # Scheduler and math around the number of training steps.
         num_update_steps_per_epoch = math.ceil(len(self.train_dataloader) / args.gradient_accumulation_steps)
 

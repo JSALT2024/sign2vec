@@ -66,7 +66,7 @@ def get_keypoints(video_path):
             if keypoints['people']:
                 for person in keypoints['people']:
                     # Remove confidence scores
-                    
+
                     KEYPOINTS.append({
                         'person_id': person['person_id'][0],
                         'document_id': keypoint.split("/")[-1].replace(".json", "").split('_')[0],
@@ -105,10 +105,10 @@ def process_keypoints(df_keypoints, save_path="features"):
         'document_id': df_keypoints.document_id.iloc[0],
         'frame_ids': df_keypoints.frame_id.to_list(),
         'person_count': len(df_keypoints.person_id.unique()),
-        'left_hand_missing': int(df_keypoints.hand_left_keypoints_2d.apply(lambda x: x.sum()) == 0).sum(),
-        'right_hand_missing': int(df_keypoints.hand_right_keypoints_2d.apply(lambda x: x.sum()) == 0).sum(),
-        'face_missing': int(df_keypoints.face_keypoints_2d.apply(lambda x: x.sum()) == 0).sum(),
-        'pose_missing': int(df_keypoints.pose_keypoints_2d.apply(lambda x: x.sum()) == 0).sum(),
+        'left_hand_missing': int((df_keypoints.hand_left_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()),
+        'right_hand_missing': int((df_keypoints.hand_right_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()),
+        'face_missing': int((df_keypoints.face_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()),
+        'pose_missing': int((df_keypoints.pose_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()),
 
     }
 

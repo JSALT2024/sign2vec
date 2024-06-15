@@ -98,8 +98,8 @@ def process_keypoints(df_keypoints, save_path="features"):
 
     array = np.array(df_keypoints.keypoints.to_list())
 
-    with open(f"{save_path}/{df_keypoints.document_id.iloc[0]}.pkl", "wb") as f:
-        pickle.dump(array, f)
+    with open(f"{save_path}/{df_keypoints.document_id.iloc[0]}.npy", "wb") as f:
+        np.save(f, array)
 
     return {
         'document_id': df_keypoints.document_id.iloc[0],

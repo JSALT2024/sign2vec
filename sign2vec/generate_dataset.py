@@ -1,10 +1,8 @@
 import os
 import glob
 import json
-import pickle
 import json
 import glob
-import pickle
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -16,8 +14,12 @@ dotenv_path = Path(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path=dotenv_path)
 
 POSE_COLS = [
-    'pose_keypoints_2d', 'face_keypoints_2d', 'hand_left_keypoints_2d', 'hand_right_keypoints_2d'
+    "pose_keypoints_2d",
+    "face_keypoints_2d",
+    "hand_left_keypoints_2d",
+    "hand_right_keypoints_2d",
 ]
+
 
 def merge_keypoints(row):
     return np.concatenate([row[pose_col] for pose_col in POSE_COLS])
@@ -27,94 +29,132 @@ def download_video(video_url, username, password):
 
     if not video_url.startswith("http"):
         return None
-    
+
     video_url = video_url.replace("\n", "")
     video_name = video_url.split("/")[-1].strip().replace("\n", "")
-    video_path = f"tmp/{video_name}"
-    os.makedirs("tmp/", exist_ok=True)
+    video_path = os.path.join(os.path.dirname(__file__), f"tmp/{video_name}")
+    os.makedirs(os.path.join(os.path.dirname(__file__), "tmp/"), exist_ok=True)
     document_id = video_name.split("_")[0].strip().split(".")[0]
-    
+
     print(f"Processing {document_id}")
 
-    feature_path = os.path.join(os.path.dirname(__file__), f"features/{document_id}.pkl")
-    export_path = os.path.join(os.path.dirname(__file__), f"tmp/*.json")
+    FEATURE_PATH = os.path.join(
+        os.path.dirname(__file__), f"features/{document_id}.npy"
+    )
+    VIDEO_PATH = os.path.join(os.path.dirname(__file__), f"tmp/{video_name}")
+    EXPORT_PATH = os.path.join(os.path.dirname(__file__), f"tmp/{document_id}_*.json")
 
-    if os.path.exists(f'features/{document_id}.npy'):
-        print(f'Ignoring {document_id} as it already exists')
+    if os.path.exists(FEATURE_PATH):
+        print(f"Ignoring {FEATURE_PATH} as it already exists")
         return None
 
-    if os.path.exists(video_name):
-        print(f"Video {video_name} already exists")
+    if os.path.exists(VIDEO_PATH):
+        print(f"Video {VIDEO_PATH} already exists")
+        if len(glob.glob(EXPORT_PATH)) == 0:
+            print(f"Extracting video from {video_name}")
+            os.system(f"tar -xf {video_path} -C {os.path.dirname(__file__)}/tmp/")
+        return video_path
 
-    if not os.path.exists(video_path):
-        print(f"Video {video_name} not exists - downloading")
-        os.system(f"curl --user {username}:{password} {video_url} --output {video_path}")
+    if not os.path.exists(VIDEO_PATH):
+        print(f"Video {VIDEO_PATH} not exists - downloading")
+        os.system(
+            f"curl --user {username}:{password} {video_url} --output {VIDEO_PATH}"
+        )
+        return video_path
 
-    if len(glob.glob(export_path)) == 0:
+    if len(glob.glob(EXPORT_PATH)) == 0:
         print(f"Extracting video from {video_name}")
-        os.system(f"tar -xf {video_path} -C tmp/")
+        os.system(f"tar -xf {video_path} -C {os.path.dirname(__file__)}/tmp/")
         return video_path
 
     return None
 
+
 def get_keypoints(video_path):
     # Load keypoints
-    keypoints = glob.glob("tmp/*.json")
+    TMP_PATH = os.path.join(os.path.dirname(__file__), "tmp/*.json")
+
+    keypoints = glob.glob(TMP_PATH)
     sorted_keypoints = sorted(keypoints)
 
     KEYPOINTS = []
     for keypoint in tqdm(sorted_keypoints):
         with open(keypoint, "r") as f:
             keypoints = json.load(f)
-            if keypoints['people']:
-                for person in keypoints['people']:
+            if keypoints["people"]:
+                for person in keypoints["people"]:
                     # Remove confidence scores
 
-                    KEYPOINTS.append({
-                        'person_id': person['person_id'][0],
-                        'document_id': keypoint.split("/")[-1].replace(".json", "").split('_')[0],
-                        'frame_id': keypoint.split("/")[-1].replace(".json", "").split('_')[1],
-                        
-                        'pose_keypoints_2d': np.array(
-                            person['pose_keypoints_2d']
-                        ).reshape(-1, 3)[:, :2].reshape(-1,1),
-
-                        'face_keypoints_2d': np.array(
-                            person['face_keypoints_2d']
-                        ).reshape(-1, 3)[:, :2].reshape(-1,1),
-
-                        'hand_left_keypoints_2d': np.array(
-                            person['hand_left_keypoints_2d']
-                        ).reshape(-1, 3)[:, :2].reshape(-1,1),
-                        
-                        'hand_right_keypoints_2d': np.array(
-                            person['hand_right_keypoints_2d']
-                        ).reshape(-1, 3)[:, :2].reshape(-1,1),
-                    })
+                    KEYPOINTS.append(
+                        {
+                            "person_id": person["person_id"][0],
+                            "document_id": keypoint.split("/")[-1]
+                            .replace(".json", "")
+                            .split("_")[0],
+                            "frame_id": keypoint.split("/")[-1]
+                            .replace(".json", "")
+                            .split("_")[1],
+                            "pose_keypoints_2d": np.array(person["pose_keypoints_2d"])
+                            .reshape(-1, 3)[:, :2] # Remove confidence scores
+                            .reshape(-1, 1),
+                            "face_keypoints_2d": np.array(person["face_keypoints_2d"])
+                            .reshape(-1, 3)[:, :2] # Remove confidence scores
+                            .reshape(-1, 1),
+                            "hand_left_keypoints_2d": np.array(
+                                person["hand_left_keypoints_2d"]
+                            )
+                            .reshape(-1, 3)[:, :2] # Remove confidence scores
+                            .reshape(-1, 1),
+                            "hand_right_keypoints_2d": np.array(
+                                person["hand_right_keypoints_2d"]
+                            )
+                            .reshape(-1, 3)[:, :2] # Remove confidence scores
+                            .reshape(-1, 1),
+                        }
+                    )
 
     return pd.DataFrame(KEYPOINTS)
 
+
 def process_keypoints(df_keypoints, save_path="features"):
+
+    SAVE_PATH = os.path.join(
+        os.path.dirname(__file__), f"{save_path}/{df_keypoints.document_id.iloc[0]}.npy"
+    )
 
     os.makedirs(save_path, exist_ok=True)
 
-    df_keypoints['keypoints'] = df_keypoints.apply(merge_keypoints, axis=1)
+    df_keypoints["keypoints"] = df_keypoints.apply(merge_keypoints, axis=1)
 
     array = np.array(df_keypoints.keypoints.to_list())
 
-    with open(f"{save_path}/{df_keypoints.document_id.iloc[0]}.npy", "wb") as f:
+    max_frame = sorted(glob.glob("tmp/*.json"))[-1]
+    max_frame = max_frame.split("/")[-1].replace(".json", "").split("_")[1]
+    max_frame = int(max_frame)
+
+    with open(SAVE_PATH, "wb") as f:
         np.save(f, array)
 
     return {
-        'document_id': df_keypoints.document_id.iloc[0],
-        'frame_ids': df_keypoints.frame_id.to_list(),
-        'person_count': len(df_keypoints.person_id.unique()),
-        'left_hand_missing': int((df_keypoints.hand_left_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()),
-        'right_hand_missing': int((df_keypoints.hand_right_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()),
-        'face_missing': int((df_keypoints.face_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()),
-        'pose_missing': int((df_keypoints.pose_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()),
-
+        "document_id": df_keypoints.document_id.iloc[0],
+        "person_count": len(df_keypoints.person_id.unique()),
+        "left_hand_missing": int(
+            (df_keypoints.hand_left_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()
+        ),
+        "right_hand_missing": int(
+            (df_keypoints.hand_right_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()
+        ),
+        "face_missing": int(
+            (df_keypoints.face_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()
+        ),
+        "pose_missing": int(
+            (df_keypoints.pose_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()
+        ),
+        "total_frames": max_frame,
+        "nan_frames": max_frame - len(df_keypoints),
+        "frame_ids": df_keypoints.frame_id.to_list(),
     }
+
 
 def remove_files():
     os.system("rm -rf tmp")
@@ -124,14 +164,18 @@ def main():
 
     import os
 
-    SOURCE_PATH =  "config/bobsl.txt"
-    INFO_PATH = "info.json"
+    SOURCE_PATH = os.path.join(os.path.dirname(__file__), "config/bobsl.txt")
+    INFO_PATH = os.path.join(os.path.dirname(__file__), "config/info.json")
 
     # # Load dataset urls
     with open(SOURCE_PATH, "r") as f:
         dataset = f.readlines()
 
-    dataset = [video_url.replace('\n', '') for video_url in dataset if video_url.startswith("http")]
+    dataset = [
+        video_url.replace("\n", "")
+        for video_url in dataset
+        if video_url.startswith("http")
+    ]
 
     config = {
         "username": os.getenv("BOBSL_USERNAME"),
@@ -139,25 +183,28 @@ def main():
     }
 
     if config["username"] is None or config["password"] is None:
-        raise Exception("Please set BOBSL_USERNAME and BOBSL_PASSWORD environment variables")
+        raise Exception(
+            "Please set BOBSL_USERNAME and BOBSL_PASSWORD environment variables"
+        )
 
-    dataset_info = []
-    dataset = dataset[:3] if os.getenv("DEBUG") else dataset
+    dataset_info = [] if not os.path.exists(INFO_PATH) else json.load(open(INFO_PATH))
+    dataset = dataset[1:3] if os.getenv("DEBUG") else dataset
     for video_url in dataset:
         video_path = download_video(video_url, config["username"], config["password"])
-        
+
         if video_path is None:
             print(f"Skipping {video_url}")
             continue
-        
+
         df_keypoints = get_keypoints(video_path)
         info = process_keypoints(df_keypoints)
         dataset_info.append(info)
 
-        with open(INFO_PATH, "w") as f: json.dump(dataset_info, f)
+        with open(INFO_PATH, "w") as f:
+            json.dump(dataset_info, f)
 
-        remove_files()
-        
+        os.system(os.path.join(os.path.dirname(__file__), "tmp"))
+
 
 if __name__ == "__main__":
     main()

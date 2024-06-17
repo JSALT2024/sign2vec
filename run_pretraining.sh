@@ -21,8 +21,8 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                                 --use_face \
                                                 --use_hands \
                                                 --use_pose \
-                                                --train_info_path="sign2vec/info.json" \
+                                                --train_info_path="sign2vec/config/info.json" \
                                                 --train_data_path="sign2vec/features" \
-                                                --validation_info_path="sign2vec/info.json" \
+                                                --validation_info_path="sign2vec/config/info.json" \
                                                 --validation_data_path="sign2vec/features" \
                                                 --config_name="pretraining/config.json"

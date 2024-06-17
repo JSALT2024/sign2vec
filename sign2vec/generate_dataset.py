@@ -53,6 +53,7 @@ def download_video(video_url, username, password):
         if len(glob.glob(EXPORT_PATH)) == 0:
             print(f"Extracting video from {video_name}")
             os.system(f"tar -xf {video_path} -C {os.path.dirname(__file__)}/tmp/")
+        else: print('Already extracted')
         return video_path
 
     if not os.path.exists(VIDEO_PATH):
@@ -60,7 +61,7 @@ def download_video(video_url, username, password):
         os.system(
             f"curl --user {username}:{password} {video_url} --output {VIDEO_PATH}"
         )
-        return video_path
+
 
     if len(glob.glob(EXPORT_PATH)) == 0:
         print(f"Extracting video from {video_name}")
@@ -117,18 +118,24 @@ def get_keypoints(video_path):
 
 
 def process_keypoints(df_keypoints, save_path="features"):
+    
+    document_id = df_keypoints.document_id.iloc[0]
 
     SAVE_PATH = os.path.join(
-        os.path.dirname(__file__), f"{save_path}/{df_keypoints.document_id.iloc[0]}.npy"
+        os.path.dirname(__file__), f"{save_path}/{document_id}.npy"
     )
 
+    os.makedirs(os.path.join(
+        os.path.dirname(__file__), f"{save_path}"
+    ), exist_ok=True)
     os.makedirs(save_path, exist_ok=True)
 
     df_keypoints["keypoints"] = df_keypoints.apply(merge_keypoints, axis=1)
 
     array = np.array(df_keypoints.keypoints.to_list())
 
-    max_frame = sorted(glob.glob("tmp/*.json"))[-1]
+    max_frame = sorted(glob.glob(os.path.join(os.path.dirname(__file__),  f"tmp/{document_id}_*.json")))[-1]
+    
     max_frame = max_frame.split("/")[-1].replace(".json", "").split("_")[1]
     max_frame = int(max_frame)
 
@@ -187,7 +194,7 @@ def main():
             "Please set BOBSL_USERNAME and BOBSL_PASSWORD environment variables"
         )
 
-    dataset_info = [] if not os.path.exists(INFO_PATH) else json.load(open(INFO_PATH))
+    dataset_info = []
     dataset = dataset[1:3] if os.getenv("DEBUG") else dataset
     for video_url in dataset:
         video_path = download_video(video_url, config["username"], config["password"])
@@ -203,7 +210,7 @@ def main():
         with open(INFO_PATH, "w") as f:
             json.dump(dataset_info, f)
 
-        os.system(os.path.join(os.path.dirname(__file__), "tmp"))
+        os.system(f'rm -rf {os.path.join(os.path.dirname(__file__), "tmp/")}')
 
 
 if __name__ == "__main__":

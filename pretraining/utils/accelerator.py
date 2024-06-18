@@ -24,13 +24,13 @@ def initialize_accelerator(args):
         datasets.utils.logging.set_verbosity_warning()
         transformers.utils.logging.set_verbosity_info()
 
-        # # set up weights and biases if available
-        # if is_wandb_available():
-        #     import wandb
+        # set up weights and biases if available
+        if is_wandb_available():
+            import wandb
 
-        #     wandb.init(
-        #         project=args.output_dir.split("/")[-1]
-        #     )
+            wandb.init(
+                project=args.output_dir.split("/")[-1]
+            )
     else:
         datasets.utils.logging.set_verbosity_error()
         transformers.utils.logging.set_verbosity_error()

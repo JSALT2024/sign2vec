@@ -67,9 +67,9 @@ def download_video(video_url, username, password):
         print(f"Extracting video from {video_name}")
         os.system(f"tar -xf {video_path} -C {os.path.dirname(__file__)}/tmp/")
         return video_path
+    
 
     return None
-
 
 def get_keypoints(video_path):
     # Load keypoints

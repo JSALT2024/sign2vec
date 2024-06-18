@@ -48,6 +48,8 @@ class Trainer:
         self.model, self.optimizer, self.train_dataloader, self.eval_dataloader = self.accelerator.prepare(
             model, self.optimizer, train_dataloader, eval_dataloader
         )
+        
+        self.model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
 
         # Scheduler and math around the number of training steps.
         num_update_steps_per_epoch = math.ceil(len(self.train_dataloader) / args.gradient_accumulation_steps)

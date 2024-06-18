@@ -252,12 +252,15 @@ class Trainer:
                     wandb.log(val_logs)
 
             if args.output_dir is not None:
+                print("Waiting for everyone to save model")
                 self.accelerator.wait_for_everyone()
                 unwrapped_model = self.accelerator.unwrap_model(self.model)
                 unwrapped_model.save_pretrained(
                     args.output_dir, is_main_process=self.accelerator.is_main_process, save_function=self.accelerator.save
                 )
+                print("Waiting for everyone to save model")
                 if self.accelerator.is_main_process:
+                    print("Saving model")
                     if args.push_to_hub:
                         self.api.upload_folder(
                             commit_message="End of training",

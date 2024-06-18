@@ -195,7 +195,7 @@ def main():
         )
 
     dataset_info = []
-    dataset = dataset[1:3] if os.getenv("DEBUG") else dataset
+    dataset = dataset[:100] if os.getenv("DEBUG") else dataset
     for video_url in dataset:
         video_path = download_video(video_url, config["username"], config["password"])
 

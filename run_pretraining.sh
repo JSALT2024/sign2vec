@@ -10,8 +10,8 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                                 --weight_decay="0.01" \
                                                 --max_duration_in_seconds="20.0" \
                                                 --min_duration_in_seconds="2.0" \
-                                                --logging_steps="1" \
-                                                --saving_steps="10000" \
+                                                --logging_steps="10000" \
+                                                --saving_steps="100" \
                                                 --per_device_train_batch_size="16" \
                                                 --per_device_eval_batch_size="16" \
                                                 --adam_beta1="0.9" \
@@ -30,4 +30,3 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                                 --config_name="pretraining/config.json"
                                                 --push_to_hub \
                                                 --hub_model_id="sign2vec" 
-

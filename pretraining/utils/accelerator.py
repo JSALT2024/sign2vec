@@ -9,7 +9,12 @@ from accelerate.logging import get_logger
 from transformers import is_wandb_available, set_seed
 from accelerate.utils import DistributedDataParallelKwargs
 
+from dotenv import load_dotenv
 
+dotenv_path = Path('sign2vec/', ".env")
+load_dotenv(dotenv_path=dotenv_path)
+
+print(os.getenv("HUB_TOKEN"))
 
 logger = get_logger(__name__)
 
@@ -50,7 +55,7 @@ def initialize_accelerator(args):
                 repo_name = Path(args.output_dir).absolute().name
             # Create repo and retrieve repo_id
             api = HfApi()
-            repo_id = api.create_repo(repo_name, exist_ok=True, token=args.hub_token).repo_id
+            repo_id = api.create_repo(repo_name, exist_ok=True, token=os.getenv("HUB_TOKEN")).repo_id
 
             with open(os.path.join(args.output_dir, ".gitignore"), "w+") as gitignore:
                 if "step_*" not in gitignore:

@@ -1,4 +1,6 @@
 import math
+import os
+from pathlib import Path
 import torch
 import wandb
 from accelerate import Accelerator
@@ -10,6 +12,11 @@ from transformers import (
 )
 from tqdm import tqdm
 from utils.math import multiply_grads, get_grad_norm
+
+from dotenv import load_dotenv
+
+dotenv_path = Path('sign2vec/', ".env")
+load_dotenv(dotenv_path=dotenv_path)
 
 import torch._dynamo
 torch._dynamo.config.suppress_errors = True
@@ -48,7 +55,8 @@ class Trainer:
         self.model, self.optimizer, self.train_dataloader, self.eval_dataloader = self.accelerator.prepare(
             model, self.optimizer, train_dataloader, eval_dataloader
         )
-        
+
+        # Gradient checkpointing
         self.model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
 
         # Scheduler and math around the number of training steps.
@@ -201,7 +209,7 @@ class Trainer:
                             folder_path=args.output_dir,
                             repo_id=self.repo_id,
                             repo_type="model",
-                            token=args.hub_token,
+                            token=os.getenv("HUB_TOKEN"),
                         )
 
                 # if completed steps > `args.max_train_steps` stop
@@ -256,5 +264,5 @@ class Trainer:
                             folder_path=args.output_dir,
                             repo_id=self.repo_id,
                             repo_type="model",
-                            token=args.hub_token,
+                            token=os.getenv("HUB_TOKEN"),
                         )

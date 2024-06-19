@@ -86,6 +86,14 @@ def parse_args():
         default=5e-5,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
+
+    parser.add_argument(
+        "--max_frame_diff",
+        type=int,
+        default=10,
+        help="Maximum difference between frames in a sequence to be considered as a valid sequence.",
+    )
+
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
     parser.add_argument("--num_train_epochs", type=int, default=3, help="Total number of training epochs to perform.")
     parser.add_argument(

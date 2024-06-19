@@ -6,20 +6,20 @@ from datasets import load_dataset, concatenate_datasets, DatasetDict
 from torch.utils.data.dataloader import DataLoader
 
 channel_size = {
-    'face_keypoints_2d': (70, 2),
-    'hand_left_keypoints_2d': (21, 2),
-    'hand_right_keypoints_2d': (21, 2),
-    'pose_keypoints_2d': (25, 2)
+    'face_keypoints_2d': 70,
+    'hand_left_keypoints_2d': 21,
+    'hand_right_keypoints_2d': 21,
+    'pose_keypoints_2d': 25,
 }
 
 def prepare_dataloader(args, config, model, accelerator):
     
     # 1. Set the correct target sampling rate
     sampling_rate = int(
-        channel_size['face_keypoints_2d'].shape[0] * 2 if args.use_face else 0 + 
-        channel_size['hand_left_keypoints_2d'].shape[0] * 2 if args.use_hands else 0 +
-        channel_size['hand_right_keypoints_2d'].shape[0] * 2 if args.use_hands else 0 +
-        channel_size['pose_keypoints_2d'].shape[0] * 2 if args.use_pose else 0
+        channel_size['face_keypoints_2d'] * 2 if args.use_face else 0 + 
+        channel_size['hand_left_keypoints_2d'] * 2 if args.use_hands else 0 +
+        channel_size['hand_right_keypoints_2d'] * 2 if args.use_hands else 0 +
+        channel_size['pose_keypoints_2d'] * 2 if args.use_pose else 0
     ) * args.fps
 
     # 2. Now we preprocess the datasets including loading the audio, resampling and normalization

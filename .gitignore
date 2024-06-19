@@ -27,9 +27,12 @@ share/python-wheels/
 *.egg
 MANIFEST
 .DS_Store
+wandb/
 */wandb/
+*/*/wandb/
 */wav2vec*/
 */tmp/
+*.ipynb
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

@@ -39,7 +39,7 @@ class BOBSLDataset(Dataset):
         self.feature_extractor = feature_extractor
         self.data = self.load_data()
 
-        print(f'Loaded {len(self.data)} samples')
+        print(f'Loaded {len(self.data)} training samples')
         print(f'With max_frames: {self.max_frames} and stride: {self.stride}')
 
     def load_data(self):
@@ -67,6 +67,31 @@ class BOBSLDataset(Dataset):
                         'start_time': start_time,
                         'end_time': end_time
                     })
+                
+                else: 
+
+                    frames = frame_ids[i:i+self.max_frames]
+                    subset = np.where(frame_diff[i:i+self.max_frames] < self.max_frame_diff)[0]
+                    subset = subset.tolist()
+                    subset = [0] + subset
+                    
+                    for j in range(len(subset)):
+                        start = subset[j]
+                        end = start + 1
+
+                        while end < len(subset) and subset[end] == subset[end-1] + 1:
+                            end += 1
+
+                        frames = frame_ids[i+start:i+end]
+                        start_time = int((i+start) * (self.sampling_rate / self.fps))
+                        end_time = int((i+end) * (self.sampling_rate / self.fps))
+                        data.append({
+                            'doc_id': doc_id,
+                            'frame_ids': frames,
+                            'start_time': start_time,
+                            'end_time': end_time
+                        })
+
 
         return data
             

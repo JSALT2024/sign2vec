@@ -33,6 +33,8 @@ def main():
     # config = Wav2Vec2Config.from_pretrained(args.model_name_or_path)
     config = Sign2VecConfig(**json.load(open(args.config_name)))
 
+    print(config)
+
     # pretraining is only supported for "newer" stable layer norm architecture
     # apply_spec_augment has to be True, mask_feature_prob has to be 0.0
     if not config.do_stable_layer_norm or config.feat_extract_norm != "layer":
@@ -43,6 +45,8 @@ def main():
 
     # initialize random model
     model = Wav2Vec2ForPreTraining(config)
+
+    print(model.config)
 
     # Import dataset and tokenizer
     from utils.dataset import prepare_dataloader

@@ -19,27 +19,15 @@
     "conv_dim": [
         512,
         512,
-        512,
-        512,
-        512,
-        512,
         512
     ],
     "conv_stride": [
         10,
         3,
-        3,
-        3,
-        3,
-        2,
-        2
+        3
     ],
     "conv_kernel": [
         5,
-        2,
-        2,
-        2,
-        2,
         2,
         2
     ],
@@ -90,7 +78,7 @@
     "pad_token_id": 0,
     "bos_token_id": 1,
     "eos_token_id": 2,
-    "add_adapter": false,
+    "add_adapter": true,
     "adapter_kernel_size": 3,
     "adapter_stride": 2,
     "num_adapter_layers": 3,

@@ -130,9 +130,12 @@ def process_keypoints(df_keypoints, save_path="features"):
     ), exist_ok=True)
     os.makedirs(save_path, exist_ok=True)
 
-    df_keypoints["keypoints"] = df_keypoints.apply(merge_keypoints, axis=1)
+    def merge_keypoints(row):
+        return np.concatenate([row[pose_col] for pose_col in POSE_COLS])
 
-    array = np.array(df_keypoints.keypoints.to_list())
+    df_keypoints["array"] = df_keypoints.apply(merge_keypoints, axis=1)
+
+    array = np.concatenate(df_keypoints["array"].values)
 
     max_frame = sorted(glob.glob(os.path.join(os.path.dirname(__file__),  f"tmp/{document_id}_*.json")))[-1]
     

@@ -27,6 +27,6 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                                 --train_data_path="sign2vec/features" \
                                                 --validation_info_path="sign2vec/config/info.json" \
                                                 --validation_data_path="sign2vec/features" \
-                                                --config_name="pretraining/config.json"
+                                                --config_name="pretraining/config.json" \
                                                 --push_to_hub \
                                                 --hub_model_id="sign2vec" 

@@ -18,13 +18,15 @@ class BOBSLDataset(Dataset):
                  stride=1,
                  info_path='info.json',
                  data_path='data/bobsl', 
-                 feature_extractor=None
+                 feature_extractor=None,
+                 add_adapter=True
                  ):
         
         self.use_pose = use_pose
         self.use_hands = use_hands
         self.use_face = use_face
         self.max_frame_diff = max_frame_diff
+        self.add_adapter = add_adapter
 
         self.max_length = max_length
 
@@ -69,28 +71,27 @@ class BOBSLDataset(Dataset):
                     })
                 
                 else: 
+                    continue
+                    # frames = frame_ids[i:i+self.max_frames]
+                    # subset = np.where(frame_diff[i:i+self.max_frames] < self.max_frame_diff)[0]
+                    # subset = subset.tolist()
+                    # subset = [0] + subset
+                    # for j in range(len(subset)):
+                    #     start = subset[j]
+                    #     end = start + 1
 
-                    frames = frame_ids[i:i+self.max_frames]
-                    subset = np.where(frame_diff[i:i+self.max_frames] < self.max_frame_diff)[0]
-                    subset = subset.tolist()
-                    subset = [0] + subset
-                    
-                    for j in range(len(subset)):
-                        start = subset[j]
-                        end = start + 1
+                    #     while end < len(subset) and subset[end] == subset[end-1] + 1:
+                    #         end += 1
 
-                        while end < len(subset) and subset[end] == subset[end-1] + 1:
-                            end += 1
-
-                        frames = frame_ids[i+start:i+end]
-                        start_time = int((i+start) * (self.sampling_rate / self.fps))
-                        end_time = int((i+end) * (self.sampling_rate / self.fps))
-                        data.append({
-                            'doc_id': doc_id,
-                            'frame_ids': frames,
-                            'start_time': start_time,
-                            'end_time': end_time
-                        })
+                    #     frames = frame_ids[i+start:i+end]
+                    #     start_time = int((i+start) * (self.sampling_rate / self.fps))
+                    #     end_time = int((i+end) * (self.sampling_rate / self.fps))
+                    #     data.append({
+                    #         'doc_id': doc_id,
+                    #         'frame_ids': frames,
+                    #         'start_time': start_time,
+                    #         'end_time': end_time
+                    #     })
 
 
         return data
@@ -104,17 +105,14 @@ class BOBSLDataset(Dataset):
         start_time = self.data[idx]['start_time']
         end_time = self.data[idx]['end_time']
         
-        array = np.load(f'{self.data_path}/{doc_id}.npy').reshape(-1)
+        array = np.load(f'{self.data_path}/{doc_id}.npy')
 
         array = array[start_time:end_time]
 
         inputs = self.feature_extractor(
-            array, max_length=self.max_length, truncation=True, sampling_rate=self.sampling_rate
+            array, max_length=self.max_length, truncation=True, sampling_rate=self.sampling_rate, add_adapter=self.add_adapter  
         )
 
         return {
-            'input_values': inputs.input_values[0],
-            # 'input_length': len(inputs.input_values[0]),
-            # 'start_time': start_time,
-            # 'end_time': end_time,
+            'input_values': inputs.input_values[0]
         }

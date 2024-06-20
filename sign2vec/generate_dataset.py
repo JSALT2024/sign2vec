@@ -137,6 +137,8 @@ def process_keypoints(df_keypoints, save_path="features"):
 
     array = np.concatenate(df_keypoints["array"].values)
 
+    print('Array shape:', array.shape)
+
     max_frame = sorted(glob.glob(os.path.join(os.path.dirname(__file__),  f"tmp/{document_id}_*.json")))[-1]
     
     max_frame = max_frame.split("/")[-1].replace(".json", "").split("_")[1]

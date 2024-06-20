@@ -16,11 +16,13 @@ def prepare_dataloader(args, config, model, accelerator):
     
     # 1. Set the correct target sampling rate
     sampling_rate = int(
-        channel_size['face_keypoints_2d'] * 2 if args.use_face else 0 + 
-        channel_size['hand_left_keypoints_2d'] * 2 if args.use_hands else 0 +
-        channel_size['hand_right_keypoints_2d'] * 2 if args.use_hands else 0 +
-        channel_size['pose_keypoints_2d'] * 2 if args.use_pose else 0
+        channel_size['pose_keypoints_2d'] * 2 +
+        channel_size['face_keypoints_2d'] * 2 + 
+        channel_size['hand_left_keypoints_2d'] * 2  +
+        channel_size['hand_right_keypoints_2d'] * 2 
     ) * args.fps
+
+    print('Sampling rate:', sampling_rate)
 
     # 2. Now we preprocess the datasets including loading the audio, resampling and normalization
     # Thankfully, `datasets` takes care of automatically loading and resampling the audio,

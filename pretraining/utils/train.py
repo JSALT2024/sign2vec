@@ -100,6 +100,7 @@ class Trainer:
         for epoch in range(starting_epoch, args.num_train_epochs):
             self.model.train()
             for step, batch in enumerate(self.train_dataloader):
+
                 # compute num of losses
 
                 num_losses = batch["mask_time_indices"].sum()

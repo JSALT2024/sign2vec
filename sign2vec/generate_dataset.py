@@ -134,10 +134,8 @@ def process_keypoints(df_keypoints, save_path="features"):
         return np.concatenate([row[pose_col] for pose_col in POSE_COLS])
 
     df_keypoints["array"] = df_keypoints.apply(merge_keypoints, axis=1)
-
-    array = np.concatenate(df_keypoints["array"].values)
-
-    print('Array shape:', array.shape)
+    
+    array = np.concatenate(df_keypoints["array"].values, axis=0).reshape(-1)
 
     max_frame = sorted(glob.glob(os.path.join(os.path.dirname(__file__),  f"tmp/{document_id}_*.json")))[-1]
     
@@ -149,6 +147,7 @@ def process_keypoints(df_keypoints, save_path="features"):
 
     return {
         "document_id": df_keypoints.document_id.iloc[0],
+        "total_frames": df_keypoints.shape[0],
         "person_count": len(df_keypoints.person_id.unique()),
         "left_hand_missing": int(
             (df_keypoints.hand_left_keypoints_2d.apply(lambda x: x.sum()) == 0).sum()

@@ -13,6 +13,7 @@ from utils.train import Trainer
 from utils.args import parse_args
 from utils.config import Sign2VecConfig
 from utils.accelerator import initialize_accelerator
+from utils.modeling_sign2vec import Sign2VecForPreTraining
 
 logger = get_logger(__name__)
 
@@ -43,7 +44,7 @@ def main():
         )
 
     # initialize random model
-    model = Wav2Vec2ForPreTraining(config)
+    model = Sign2VecForPreTraining(config)
 
     # Import dataset and tokenizer
     from utils.dataset import prepare_dataloader

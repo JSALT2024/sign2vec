@@ -203,6 +203,7 @@ class Sign2VecConfig(PretrainedConfig):
 
     def __init__(
         self,
+        input_dim=1,
         vocab_size=32,
         hidden_size=768,
         num_hidden_layers=12,
@@ -286,6 +287,7 @@ class Sign2VecConfig(PretrainedConfig):
         self.vocab_size = vocab_size
         self.do_stable_layer_norm = do_stable_layer_norm
         self.use_weighted_layer_sum = use_weighted_layer_sum
+        self.input_dim = input_dim
 
         if (
             (len(self.conv_stride) != self.num_feat_extract_layers)

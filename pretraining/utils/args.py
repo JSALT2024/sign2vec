@@ -86,7 +86,6 @@ def parse_args():
         default=5e-5,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
-
     parser.add_argument(
         "--max_frame_diff",
         type=int,

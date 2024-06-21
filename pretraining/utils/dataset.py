@@ -5,6 +5,8 @@ from utils.collator import DataCollatorForWav2Vec2Pretraining
 from datasets import load_dataset, concatenate_datasets, DatasetDict
 from torch.utils.data.dataloader import DataLoader
 
+from utils.modeling_sign2vec import Sign2VecFeatureEncoder
+
 channel_size = {
     'face_keypoints_2d': 70,
     'hand_left_keypoints_2d': 21,
@@ -28,23 +30,17 @@ def prepare_dataloader(args, config, model, accelerator):
     # Thankfully, `datasets` takes care of automatically loading and resampling the audio,
     # so that we just need to set the correct target sampling rate and normalize the input
     # via the `feature_extractor`
-    feature_extractor = Wav2Vec2FeatureExtractor(        
-        feature_size=1,
-        sampling_rate=sampling_rate,
-        padding_value=0.0,
-        return_attention_mask=False,
-        do_normalize=True
-    )
+    feature_extractor = Wav2Vec2FeatureExtractor(config)
 
     # only normalized-inputs-training is supported
-    if not feature_extractor.do_normalize:
-        raise ValueError(
-            "Training is only supported for normalized inputs. Make sure ``feature_extractor.do_normalize == True``"
-        )
+    # if not feature_extractor.do_normalize:
+    #     raise ValueError(
+    #         "Training is only supported for normalized inputs. Make sure ``feature_extractor.do_normalize == True``"
+    #     )
 
     # set max & min audio length in number of samples
-    max_length = int(args.max_duration_in_seconds)
-    min_length = int(args.min_duration_in_seconds)
+    max_length = int(args.max_duration_in_seconds * sampling_rate)
+    min_length = int(args.min_duration_in_seconds * sampling_rate)
 
     # load via mapped files via path
     cache_file_names = None
@@ -63,7 +59,7 @@ def prepare_dataloader(args, config, model, accelerator):
                 use_face=args.use_face,
                 use_hands=args.use_hands,
                 use_pose=args.use_pose,
-                stride=args.stride,
+                stride=int(args.stride),
                 max_length=max_length,
                 sampling_rate=sampling_rate,
                 feature_extractor=feature_extractor,
@@ -74,7 +70,7 @@ def prepare_dataloader(args, config, model, accelerator):
                 use_face=args.use_face,
                 use_hands=args.use_hands,
                 use_pose=args.use_pose,
-                stride=args.stride,
+                stride=int(args.stride),
                 max_length=max_length,
                 sampling_rate=sampling_rate,
                 feature_extractor=feature_extractor,

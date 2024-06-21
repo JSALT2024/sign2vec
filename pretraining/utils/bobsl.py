@@ -29,10 +29,9 @@ class BOBSLDataset(Dataset):
         self.add_adapter = add_adapter
 
         self.max_length = max_length
-
         self.fps = fps
 
-        self.max_frames = max_length
+        self.max_frames = int(max_length / (sampling_rate / fps))
 
         print('BOBSLDataset')
         print('Sampling rate:', sampling_rate)
@@ -65,42 +64,29 @@ class BOBSLDataset(Dataset):
             frame_ids = np.array(frame_ids).astype(int)
             frame_diff = np.diff(frame_ids)
 
-            print(doc_id, frame_ids.shape, frame_diff.shape, frame_diff.max())
+            array = np.load(f'{self.data_path}/{doc_id}.npy').reshape(-1)
 
-            for i in range(0, len(frame_ids) - self.max_frames, self.stride):
-
-                frames = frame_ids[i:i+self.max_frames]
-                start_time = int(i * (self.sampling_rate / self.fps))
-                end_time = int((i+self.max_frames) * (self.sampling_rate / self.fps))
-
-                data.append({
-                    'doc_id': doc_id,
-                    'frame_ids': frames,
-                    'start_time': start_time,
-                    'end_time': end_time
-                })
+            for i in list(range(0, len(frame_ids) - self.max_frames, self.stride)):
                 
+                frames = frame_ids[i:i+self.max_frames]
 
-                    # frames = frame_ids[i:i+self.max_frames]
-                    # subset = np.where(frame_diff[i:i+self.max_frames] < self.max_frame_diff)[0]
-                    # subset = subset.tolist()
-                    # subset = [0] + subset
-                    # for j in range(len(subset)):
-                    #     start = subset[j]
-                    #     end = start + 1
+                if (frame_diff[i:i+self.max_frames] > self.max_frame_diff).sum() == 0:
 
-                    #     while end < len(subset) and subset[end] == subset[end-1] + 1:
-                    #         end += 1
+                    joint_per_frame = (self.sampling_rate / self.fps)
 
-                    #     frames = frame_ids[i+start:i+end]
-                    #     start_time = int((i+start) * (self.sampling_rate / self.fps))
-                    #     end_time = int((i+end) * (self.sampling_rate / self.fps))
-                    #     data.append({
-                    #         'doc_id': doc_id,
-                    #         'frame_ids': frames,
-                    #         'start_time': start_time,
-                    #         'end_time': end_time
-                    #     })
+                    start_time = int( i * joint_per_frame )
+                    end_time = int( (i + self.max_frames) * joint_per_frame )
+
+                    if not array[start_time:end_time].shape[0]:
+                        print('Array is empty')
+                        continue
+
+                    data.append({
+                        'doc_id': doc_id,
+                        'frame_ids': frames,
+                        'start_time': start_time,
+                        'end_time': end_time
+                    })
 
 
         return data
@@ -114,21 +100,25 @@ class BOBSLDataset(Dataset):
         start_time = self.data[idx]['start_time']
         end_time = self.data[idx]['end_time']
         
-        array = np.load(f'{self.data_path}/{doc_id}.npy').reshape(-1)
-
-        print('Overall array shape:', array.shape)
+        array = np.load(f'{self.data_path}/{doc_id}.npy')
 
         array = array[start_time:end_time]
 
-        print('Input array shape:', array.shape)
-        print('Start time:', start_time)
-        print('End time:', end_time)
-
-        inputs = self.feature_extractor(
-            array, max_length=self.max_length, truncation=True, sampling_rate=self.sampling_rate, add_adapter=self.add_adapter  
+        array = array.reshape(
+            int(self.sampling_rate / self.fps),
+            -1
         )
+
+        # print('Array shape:', array.shape)
+
+        # inputs = self.feature_extractor(
+        #     array, 
+        #     max_length=self.max_length, 
+        #     truncation=True, 
+        #     sampling_rate=self.sampling_rate 
+        # )
 
 
         return {
-            'input_values': inputs.input_values[0]
+            'input_values': array,
         }

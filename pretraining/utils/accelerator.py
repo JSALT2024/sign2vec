@@ -14,8 +14,6 @@ from dotenv import load_dotenv
 dotenv_path = Path('sign2vec/', ".env")
 load_dotenv(dotenv_path=dotenv_path)
 
-print(os.getenv("HUB_TOKEN"))
-
 logger = get_logger(__name__)
 
 kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)

@@ -11,7 +11,7 @@ from accelerate.utils import DistributedDataParallelKwargs
 
 from dotenv import load_dotenv
 
-dotenv_path = Path('sign2vec/', ".env")
+dotenv_path = Path('../', ".env")
 load_dotenv(dotenv_path=dotenv_path)
 
 logger = get_logger(__name__)

@@ -15,7 +15,7 @@ from utils.math import multiply_grads, get_grad_norm
 
 from dotenv import load_dotenv
 
-dotenv_path = Path('sign2vec/', ".env")
+dotenv_path = Path('../', ".env")
 load_dotenv(dotenv_path=dotenv_path)
 
 import torch._dynamo

@@ -10,7 +10,7 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 from pathlib import Path
 
-dotenv_path = Path(os.path.dirname(__file__), ".env")
+dotenv_path = Path('../', ".env")
 load_dotenv(dotenv_path=dotenv_path)
 
 POSE_COLS = [

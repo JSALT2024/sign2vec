@@ -119,6 +119,12 @@ def prepare_dataloader(args, config, model, accelerator):
     # print('Test:', test)
     print(test['input_values'].shape)
     print(test['mask_time_indices'].shape)
+
+    batch_size, raw_sequence_length = test['input_values'].shape
+    sequence_length = model._get_feat_extract_output_lengths(raw_sequence_length).item()
+
+    print(f'Number of discrete tokens per {args.max_duration_in_seconds} seconds video:', sequence_length)
+
     print('====================')
 
     return train_dataloader, eval_dataloader

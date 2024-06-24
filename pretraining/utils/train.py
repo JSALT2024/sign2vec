@@ -15,7 +15,7 @@ from utils.math import multiply_grads, get_grad_norm
 
 from dotenv import load_dotenv
 
-dotenv_path = Path('../', ".env")
+dotenv_path = Path('../..', ".env")
 load_dotenv(dotenv_path=dotenv_path)
 
 import torch._dynamo
@@ -218,39 +218,39 @@ class Trainer:
                     break
 
             # 7. Validate!
-            self.model.eval()
+            # self.model.eval()
 
-            # init logs
-            val_logs = {
-                "val_loss": 0,
-                "val_contrastive_loss": 0,
-                "val_diversity_loss": 0,
-                "val_num_losses": 0,
-            }
-            for step, batch in enumerate(self.eval_dataloader):
-                with torch.no_grad():
-                    batch.pop("sub_attention_mask", None)
-                    outputs = self.model(**batch)
+            # # init logs
+            # val_logs = {
+            #     "val_loss": 0,
+            #     "val_contrastive_loss": 0,
+            #     "val_diversity_loss": 0,
+            #     "val_num_losses": 0,
+            # }
+            # for step, batch in enumerate(self.eval_dataloader):
+            #     with torch.no_grad():
+            #         batch.pop("sub_attention_mask", None)
+            #         outputs = self.model(**batch)
 
-                val_logs["val_loss"] += outputs.loss
-                val_logs["val_contrastive_loss"] += outputs.contrastive_loss
-                val_logs["val_diversity_loss"] += outputs.diversity_loss
-                val_logs["val_num_losses"] += batch["mask_time_indices"].sum()
+            #     val_logs["val_loss"] += outputs.loss
+            #     val_logs["val_contrastive_loss"] += outputs.contrastive_loss
+            #     val_logs["val_diversity_loss"] += outputs.diversity_loss
+            #     val_logs["val_num_losses"] += batch["mask_time_indices"].sum()
 
-            # sum over devices in multi-processing
-            if self.accelerator.num_processes > 1:
-                val_logs = {k: self.accelerator.gather_for_metrics(v).sum() for k, v in val_logs.items()}
+            # # sum over devices in multi-processing
+            # if self.accelerator.num_processes > 1:
+            #     val_logs = {k: self.accelerator.gather_for_metrics(v).sum() for k, v in val_logs.items()}
 
-            val_logs = {k: v / val_logs["val_num_losses"] for k, v in val_logs.items()}
+            # val_logs = {k: v / val_logs["val_num_losses"] for k, v in val_logs.items()}
 
-            log_str = ""
-            for k, v in val_logs.items():
-                log_str += "| {}: {:.3e}".format(k, v.item())
+            # log_str = ""
+            # for k, v in val_logs.items():
+            #     log_str += "| {}: {:.3e}".format(k, v.item())
 
-            if self.accelerator.is_local_main_process:
-                progress_bar.write(log_str)
-                if is_wandb_available():
-                    wandb.log(val_logs)
+            # if self.accelerator.is_local_main_process:
+            #     progress_bar.write(log_str)
+            #     if is_wandb_available():
+            #         wandb.log(val_logs)
 
             if args.output_dir is not None:
                 print("Waiting for everyone to save model")

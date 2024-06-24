@@ -70,8 +70,6 @@ class BOBSLDataset(Dataset):
                 
                 frames = frame_ids[i:i+self.max_frames]
 
-                # if (frame_diff[i:i+self.max_frames] > self.max_frame_diff).sum() == 0:
-
                 joint_per_frame = (self.sampling_rate / self.fps)
 
                 start_time = int( i * joint_per_frame )
@@ -108,16 +106,6 @@ class BOBSLDataset(Dataset):
             int(self.sampling_rate / self.fps),
             -1
         )
-
-        # print('Array shape:', array.shape)
-
-        # inputs = self.feature_extractor(
-        #     array, 
-        #     max_length=self.max_length, 
-        #     truncation=True, 
-        #     sampling_rate=self.sampling_rate 
-        # )
-
 
         return {
             'input_values': array,

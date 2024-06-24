@@ -198,7 +198,7 @@ def main():
             "Please set BOBSL_USERNAME and BOBSL_PASSWORD environment variables"
         )
 
-    dataset_info = []
+    dataset_info = [] if not os.path.exists(INFO_PATH) else json.load(open(INFO_PATH))
     dataset = dataset[:100] if os.getenv("DEBUG") else dataset
     for video_url in dataset:
         video_path = download_video(video_url, config["username"], config["password"])

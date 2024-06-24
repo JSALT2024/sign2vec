@@ -70,23 +70,23 @@ class BOBSLDataset(Dataset):
                 
                 frames = frame_ids[i:i+self.max_frames]
 
-                if (frame_diff[i:i+self.max_frames] > self.max_frame_diff).sum() == 0:
+                # if (frame_diff[i:i+self.max_frames] > self.max_frame_diff).sum() == 0:
 
-                    joint_per_frame = (self.sampling_rate / self.fps)
+                joint_per_frame = (self.sampling_rate / self.fps)
 
-                    start_time = int( i * joint_per_frame )
-                    end_time = int( (i + self.max_frames) * joint_per_frame )
+                start_time = int( i * joint_per_frame )
+                end_time = int( (i + self.max_frames) * joint_per_frame )
 
-                    if not array[start_time:end_time].shape[0]:
-                        print('Array is empty')
-                        continue
+                if not array[start_time:end_time].shape[0]:
+                    print('Array is empty')
+                    continue
 
-                    data.append({
-                        'doc_id': doc_id,
-                        'frame_ids': frames,
-                        'start_time': start_time,
-                        'end_time': end_time
-                    })
+                data.append({
+                    'doc_id': doc_id,
+                    'frame_ids': frames,
+                    'start_time': start_time,
+                    'end_time': end_time
+                })
 
 
         return data

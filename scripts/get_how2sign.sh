@@ -1,0 +1,1 @@
+scp -J karahan@193.140.195.142  how2sign/pose/val/video/_2FBDaOPYig_1-3-rgb_front.mp4  karahan@193.140.195.17:/ssd1/karahan/

@@ -5,7 +5,7 @@ from utils.collator import DataCollatorForWav2Vec2Pretraining
 from datasets import load_dataset, concatenate_datasets, DatasetDict
 from torch.utils.data.dataloader import DataLoader
 
-from utils.modeling_sign2vec import Sign2VecFeatureEncoder
+from ..sign2vec.modeling_sign2vec import Sign2VecFeatureEncoder
 
 channel_size = {
     'face_keypoints_2d': 70,
@@ -116,7 +116,6 @@ def prepare_dataloader(args, config, model, accelerator):
 
     test = next(iter(train_dataloader))
 
-    # print('Test:', test)
     print(test['input_values'].shape)
     print(test['mask_time_indices'].shape)
 

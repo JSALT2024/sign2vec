@@ -33,6 +33,7 @@ wandb/
 */wav2vec*/
 */tmp/
 *.ipynb
+finetune/how2sign
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

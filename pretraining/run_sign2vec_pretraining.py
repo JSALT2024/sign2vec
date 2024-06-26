@@ -7,13 +7,17 @@ from transformers import (
     Wav2Vec2ForPreTraining,
 )
 
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
+
 from transformers.utils import send_example_telemetry
 
 from utils.train import Trainer
 from utils.args import parse_args
 from utils.config import Sign2VecConfig
 from utils.accelerator import initialize_accelerator
-from utils.modeling_sign2vec import Sign2VecForPreTraining
+from sign2vec.modeling_sign2vec import Sign2VecForPreTraining
 
 logger = get_logger(__name__)
 

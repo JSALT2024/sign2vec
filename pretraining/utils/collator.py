@@ -8,7 +8,7 @@ from transformers import (
 from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
 
 @dataclass
-class DataCollatorForWav2Vec2Pretraining:
+class DataCollatorForSign2VecPretraining:
     """
     Data collator that will dynamically pad the inputs received and prepare masked indices
     for self-supervised pretraining.
@@ -53,8 +53,13 @@ class DataCollatorForWav2Vec2Pretraining:
 
     def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         # reformat list to dict and set to pytorch format
+
+        print('DataCollatorForSign2VecPretraining called!')
+
+        keypoints = [ f['keypoints'] for f in features ]
+
         batch = self.feature_extractor.pad(
-            features,
+            { 'input_values': keypoints },
             padding=self.padding,
             pad_to_multiple_of=self.pad_to_multiple_of,
             return_tensors="pt",
@@ -92,5 +97,8 @@ class DataCollatorForWav2Vec2Pretraining:
         )
         batch["mask_time_indices"] = torch.tensor(mask_time_indices, dtype=torch.long, device=device)
         batch["sampled_negative_indices"] = torch.tensor(sampled_negative_indices, dtype=torch.long, device=device)
+
+        batch['text'] = [ f['text'] for f in features ]
+        batch['decoder_input_ids'] = [ f['decoder_input_ids'] for f in features ]
 
         return batch

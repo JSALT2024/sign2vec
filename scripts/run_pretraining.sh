@@ -21,8 +21,9 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --use_face \
                                         --use_hands \
                                         --use_pose \
-                                        --train_data_path="../pretraining/how2sign/train-5.csv" \
-                                        --validation_data_path="../pretraining/how2sign/train-5.csv" \
-                                        --config_name="config.json" \
+                                        --train_data_path="how2sign/training.csv" \
+                                        --validation_data_path="how2sign/validation.csv" \
+                                        --data_dir="../../../ssd1/karahan/" \
+                                        --config_name="pretraining/config.json" \
                                         --push_to_hub \
-                                        --hub_model_id="sign2vec" 
+                                        --hub_model_id="sign2vec-v0-how2sign"

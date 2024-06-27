@@ -51,9 +51,11 @@ def prepare_dataloader(args, config, model, accelerator):
         vectorized_datasets = {
             "train": How2SignDatasetForPretraining(
                 dataset=args.train_data_path,
+                data_dir=args.data_dir,
             ),
             "validation": How2SignDatasetForPretraining(
-                dataset=args.validation_data_path
+                dataset=args.validation_data_path,
+                data_dir=args.data_dir,
             )
         }
 

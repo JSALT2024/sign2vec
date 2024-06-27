@@ -160,6 +160,14 @@ def parse_args():
             " use of Tensor Cores on NVIDIA hardware with compute capability >= 7.5 (Volta)."
         ),
     )
+
+    parser.add_argument(
+        '--data_dir',
+        type=str,
+        default=None,
+        help="Path to the directory containing the data files",
+    )
+
     parser.add_argument(
         "--adam_beta1",
         type=float,

@@ -20,7 +20,7 @@ from transformers import AutoTokenizer, T5ForConditionalGeneration
 
 from sign2vec.modeling_sign2vec import Sign2VecModel
 from pretraining.utils.config import Sign2VecConfig
-from pretraining.utils.collator import DataCollatorForSign2VecPretraining
+from sign2vec.finetune.collator import DataCollatorForSign2VecPretraining
 
 from sign2vec.models.finetune import T5ForSignLanguageTranslation
 from sign2vec.dataset.how2sign import How2SignDatasetForPretraining, get_how2sign_dataset

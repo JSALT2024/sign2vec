@@ -237,24 +237,10 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--train_info_path",
-        type=str,
-        default='info.json',
-        help="[sign2vec] Path to the training info",
-    )
-
-    parser.add_argument(
         "--validation_data_path",
         type=str,
         default=None,
         help="[sign2vec] Path to the validation data",
-    )
-
-    parser.add_argument(
-        "--validation_info_path",
-        type=str,
-        default=None,
-        help="[sign2vec] Path to the validation info",
     )
 
     parser.add_argument(
@@ -271,7 +257,6 @@ def parse_args():
         help="[sign2vec] Path to the config file",
     )
     
-
     args = parser.parse_args()
 
     if args.push_to_hub:

@@ -1,12 +1,42 @@
-import numpy as np
-from torch.utils.data import DataLoader
-from torch.utils.data import Dataset
 import os
 import cv2
-import datetime
 import h5py
 import torch
+import datetime
+import numpy as np
+import pandas as pd
+from torch.utils.data import DataLoader, Dataset
 from sign2vec.utils.normalization import local_keypoint_normalization, global_keypoint_normalization
+
+
+class How2SignDatasetForPretraining(Dataset):
+
+    def __init__(self, 
+                 dataset, 
+                 max_length=1024, 
+                 padding="max_length"):
+        
+        self.data_dir = 'pretraining/how2sign'
+        self.dataset = pd.read_csv(dataset)
+        self.loader = How2SignDataset
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+
+        h5_path = os.path.join( '../', self.data_dir ,self.dataset['h5_file_path'].iloc[idx])
+        sentence_idx = self.dataset['sentence_idx'].iloc[idx]
+        dataset = self.loader(h5_path)
+
+        data, sentence = dataset.load_data(idx=sentence_idx)
+
+        data = torch.tensor(data).float().reshape(data.shape[0], -1)
+        print('data:', data.shape)
+
+        return {
+            'input_values': data
+        }
 
 
 class How2SignDataset(Dataset):
@@ -139,7 +169,9 @@ class How2SignDataset(Dataset):
             pose_landmarks = pose_landmarks[:, :, 0:2]
 
             data = np.concatenate((pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks),
-                                  axis=1).reshape(len(face_landmarks), 214)
+                                  axis=1)
+            # data = np.concatenate((pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks),
+            #                       axis=1).reshape(len(face_landmarks), 214)
 
         return data, sentence
 

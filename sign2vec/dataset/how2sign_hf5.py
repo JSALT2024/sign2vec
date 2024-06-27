@@ -27,6 +27,8 @@ class How2SignDatasetForPretraining(Dataset):
         
         self.max_length = max_length
         self.dataset = pd.read_csv(dataset)
+        self.dataset.dropna(inplace=True)
+        self.dataset[self.dataset['video_path'].apply(lambda x: True if x else False)]
         self.loader = How2SignDataset
 
     def __len__(self):

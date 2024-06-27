@@ -4,7 +4,7 @@ from transformers import Wav2Vec2FeatureExtractor
 from utils.collator import DataCollatorForWav2Vec2Pretraining
 from datasets import load_dataset, concatenate_datasets, DatasetDict
 from torch.utils.data.dataloader import DataLoader
-
+from tqdm import tqdm
 
 from sign2vec.dataset.how2sign_hf5 import How2SignDatasetForPretraining
 from sign2vec.modeling_sign2vec import Sign2VecFeatureEncoder
@@ -80,12 +80,11 @@ def prepare_dataloader(args, config, model, accelerator):
 
     print('DataLoader created successfully!')
     print('Total Number of Training Instances', len(vectorized_datasets["train"]))
-    for i, batch in enumerate(train_dataloader):
-        print(i)
-        print(batch['input_values'].shape)
-        print(batch['mask_time_indices'].shape)
-        print('====================')
-        break
+    batch_count = 0
+    for batch in tqdm(train_dataloader): 
+        batch_count += batch['input_values'].shape[0]
+    
+    print('Total Number of Training Batch:', batch_count)
 
     eval_dataloader = DataLoader(
         vectorized_datasets["validation"], 

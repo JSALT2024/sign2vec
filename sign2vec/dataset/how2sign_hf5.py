@@ -9,12 +9,11 @@ from transformers import Wav2Vec2FeatureExtractor
 from torch.utils.data import DataLoader, Dataset
 from sign2vec.utils.normalization import local_keypoint_normalization, global_keypoint_normalization
 
-
 class How2SignDatasetForPretraining(Dataset):
 
     def __init__(self, 
                  dataset, 
-                 max_length=250, 
+                 max_length=25*20, 
                  data_dir=None,
                  padding="max_length"):
         
@@ -41,9 +40,18 @@ class How2SignDatasetForPretraining(Dataset):
         dataset = self.loader(h5_path)
 
         data, sentence = dataset.load_data(idx=sentence_idx)
+        
+        pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
 
-        data = torch.tensor(data).float().reshape(data.shape[0], -1)
-        data = data[:self.max_length, :]
+        face_landmarks = face_landmarks.reshape(-1, 32*2)
+        pose_landmarks = pose_landmarks.reshape(-1, 7*2)
+        right_hand_landmarks = right_hand_landmarks.reshape(-1, 21*2)
+        left_hand_landmarks = left_hand_landmarks.reshape(-1, 21*2)
+        
+        data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
+
+        data = torch.tensor(data).reshape(data.shape[0], -1)
+        data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
 
         data = self.feature_extractor(
             data, 
@@ -191,7 +199,7 @@ class How2SignDataset(Dataset):
             # data = np.concatenate((pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks),
             #                       axis=1).reshape(len(face_landmarks), 214)
 
-        return data, sentence
+        return (pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks), sentence
 
     def plot_points2video(self, index, video_name):
         if self.video_path is None:

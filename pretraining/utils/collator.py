@@ -49,9 +49,8 @@ class DataCollatorForWav2Vec2Pretraining:
     mask_time_length: Optional[int] = 10
 
     def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
-        # reformat list to dict and set to pytorch format
 
-        
+        # reformat list to dict and set to pytorch format
         batch = self.feature_extractor.pad(
             features,
             padding=self.padding,
@@ -60,7 +59,7 @@ class DataCollatorForWav2Vec2Pretraining:
         )
 
         # make sure that `input_values` are of shape [batch_size x num_features x sequence_length]
-        # batch["input_values"] = batch["input_values"].transpose(1, 2)
+        batch["input_values"] = batch["input_values"].transpose(1, 2)
 
         device = batch["input_values"].device
         batch_size = batch["input_values"].shape[0]

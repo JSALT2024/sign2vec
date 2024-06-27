@@ -1,8 +1,8 @@
 TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py \
                                         --model_name_or_path="patrickvonplaten/wav2vec2-base-v2" \
                                         --output_dir="./sign2vec" \
-                                        --max_train_steps="2" \
-                                        --num_warmup_steps="3" \
+                                        --max_train_steps="200000" \
+                                        --num_warmup_steps="300000" \
                                         --gradient_accumulation_steps="4" \
                                         --learning_rate="0.001" \
                                         --weight_decay="0.01" \

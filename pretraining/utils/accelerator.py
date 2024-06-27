@@ -60,6 +60,10 @@ def initialize_accelerator(args):
                     gitignore.write("step_*\n")
                 if "epoch_*" not in gitignore:
                     gitignore.write("epoch_*\n")
+
+                gitignore.write("wandb/\n")
+                gitignore.write(".env\n")
+
         elif args.output_dir is not None:
             os.makedirs(args.output_dir, exist_ok=True)
     accelerator.wait_for_everyone()

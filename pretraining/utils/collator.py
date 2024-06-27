@@ -51,7 +51,6 @@ class DataCollatorForWav2Vec2Pretraining:
     def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         # reformat list to dict and set to pytorch format
 
-        print('DataCollatorForWav2Vec2Pretraining called!')
         
         batch = self.feature_extractor.pad(
             features,
@@ -59,6 +58,9 @@ class DataCollatorForWav2Vec2Pretraining:
             pad_to_multiple_of=self.pad_to_multiple_of,
             return_tensors="pt",
         )
+
+        # make sure that `input_values` are of shape [batch_size x num_features x sequence_length]
+        batch["input_values"] = batch["input_values"].transpose(1, 2)
 
         device = batch["input_values"].device
         batch_size = batch["input_values"].shape[0]

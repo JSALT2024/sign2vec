@@ -13,11 +13,12 @@ class How2SignDatasetForPretraining(Dataset):
 
     def __init__(self, 
                  dataset, 
-                 max_length=1024, 
+                 max_length=250, 
                  data_dir=None,
                  padding="max_length"):
         
         self.data_dir = data_dir
+        self.max_length = max_length
         self.dataset = pd.read_csv(dataset)
         self.loader = How2SignDataset
 
@@ -33,7 +34,7 @@ class How2SignDatasetForPretraining(Dataset):
         data, sentence = dataset.load_data(idx=sentence_idx)
 
         data = torch.tensor(data).float().reshape(data.shape[0], -1)
-        print('data:', data.shape)
+        data = data[:self.max_length, :]
 
         return {
             'input_values': data

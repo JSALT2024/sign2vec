@@ -89,7 +89,6 @@ def prepare_dataloader(args, config, model, accelerator):
     print('DataLoader created successfully!')
 
     print('Total Number of Training Instances', len(vectorized_datasets["train"]))
-    pr
 
     test = next(iter(train_dataloader))
 

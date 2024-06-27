@@ -14,9 +14,10 @@ class How2SignDatasetForPretraining(Dataset):
     def __init__(self, 
                  dataset, 
                  max_length=1024, 
+                 data_dir=None,
                  padding="max_length"):
         
-        self.data_dir = 'pretraining/how2sign'
+        self.data_dir = data_dir
         self.dataset = pd.read_csv(dataset)
         self.loader = How2SignDataset
 
@@ -25,7 +26,7 @@ class How2SignDatasetForPretraining(Dataset):
 
     def __getitem__(self, idx):
 
-        h5_path = os.path.join( '../', self.data_dir ,self.dataset['h5_file_path'].iloc[idx])
+        h5_path = os.path.join( self.data_dir ,self.dataset['h5_file_path'].iloc[idx])
         sentence_idx = self.dataset['sentence_idx'].iloc[idx]
         dataset = self.loader(h5_path)
 

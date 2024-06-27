@@ -18,14 +18,9 @@ channel_size = {
 
 def prepare_dataloader(args, config, model, accelerator):
     
-    # 1. Set the correct target sampling rate
-    sampling_rate = int(
-        channel_size['pose_keypoints_2d'] * 2 +
-        channel_size['face_keypoints_2d'] * 2 + 
-        channel_size['hand_left_keypoints_2d'] * 2  +
-        channel_size['hand_right_keypoints_2d'] * 2 
-    ) * args.fps
+    # load the dataset
 
+    sampling_rate = 25
     print('Sampling rate:', sampling_rate)
     print('config:', config)
 
@@ -52,10 +47,12 @@ def prepare_dataloader(args, config, model, accelerator):
             "train": How2SignDatasetForPretraining(
                 dataset=args.train_data_path,
                 data_dir=args.data_dir,
+                max_length=max_length,
             ),
             "validation": How2SignDatasetForPretraining(
                 dataset=args.validation_data_path,
                 data_dir=args.data_dir,
+                max_length=max_length,
             )
         }
 

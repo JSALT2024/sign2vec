@@ -5,6 +5,7 @@ import torch
 import datetime
 import numpy as np
 import pandas as pd
+from transformers import Wav2Vec2FeatureExtractor
 from torch.utils.data import DataLoader, Dataset
 from sign2vec.utils.normalization import local_keypoint_normalization, global_keypoint_normalization
 
@@ -18,6 +19,12 @@ class How2SignDatasetForPretraining(Dataset):
                  padding="max_length"):
         
         self.data_dir = data_dir
+        self.feature_extractor = Wav2Vec2FeatureExtractor(
+            feature_size=167,
+            sampling_rate=25,
+            padding_value=0.0,
+        )
+        
         self.max_length = max_length
         self.dataset = pd.read_csv(dataset)
         self.loader = How2SignDataset
@@ -36,8 +43,15 @@ class How2SignDatasetForPretraining(Dataset):
         data = torch.tensor(data).float().reshape(data.shape[0], -1)
         data = data[:self.max_length, :]
 
+        data = self.feature_extractor(
+            data, 
+            max_length=self.max_length, 
+            truncation=True, 
+            sampling_rate=25
+        )
+
         return {
-            'input_values': data
+            'input_values': data['input_values'][0],
         }
 
 

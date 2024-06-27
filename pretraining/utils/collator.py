@@ -60,7 +60,7 @@ class DataCollatorForWav2Vec2Pretraining:
         )
 
         # make sure that `input_values` are of shape [batch_size x num_features x sequence_length]
-        batch["input_values"] = batch["input_values"].transpose(1, 2)
+        # batch["input_values"] = batch["input_values"].transpose(1, 2)
 
         device = batch["input_values"].device
         batch_size = batch["input_values"].shape[0]

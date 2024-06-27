@@ -78,6 +78,15 @@ def prepare_dataloader(args, config, model, accelerator):
         shuffle=True,
     )
 
+    print('DataLoader created successfully!')
+    print('Total Number of Training Instances', len(vectorized_datasets["train"]))
+    for i, batch in enumerate(train_dataloader):
+        print(i)
+        print(batch['input_values'].shape)
+        print(batch['mask_time_indices'].shape)
+        print('====================')
+        break
+
     eval_dataloader = DataLoader(
         vectorized_datasets["validation"], 
         collate_fn=data_collator, 

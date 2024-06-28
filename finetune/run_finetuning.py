@@ -382,7 +382,7 @@ def main(args):
                 'train_loss': loss.item(),
             })
 
-            if batch_idx % 2 == 0: print(f'Epoch: {epoch}, Batch: {batch_idx}, Loss: {loss.item()}')
+            if batch_idx % 20 == 0: print(f'epoch: {epoch} | loss: {loss.item()}')
 
             loss.backward()
             optimizer.step()
@@ -395,6 +395,9 @@ def main(args):
         model.eval()
         bleu_score = evaluate.load('bleu')
         for batch in val_loader:
+
+            batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+
             outputs = model(**batch)
             loss = outputs.loss
 
@@ -403,7 +406,7 @@ def main(args):
             })
 
             for input_values, sentence in zip(batch['input_values'], batch['sentence']):
-                generated_output = tokenizer.decode(model.generate(input_values[None, ...])[0], skip_special_tokens=True)
+                generated_output = tokenizer.decode(model.generate(input_values[None, ...])[0], skip_special_tokens=False)
                 bleu_score.add_batch(
                     predictions=[generated_output], 
                     references=[sentence]

@@ -3,6 +3,7 @@ python3 finetune/run_finetuning.py  --t5_model_path_or_name='google-t5/t5-small'
                                     --data_path="../../../ssd1/karahan/" \
                                     --experiment_type="baseline" \
                                     --output_dir='output' \
+                                    --max_epochs="100" \
                                     --batch_size="8" \
                                     --sign2vec_embed_dim="768" \
                                     --t5_embed_dim="512" \

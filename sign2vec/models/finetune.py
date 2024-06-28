@@ -97,7 +97,7 @@ class T5BaseForSignLanguageTranslation(nn.Module):
 
 	def generate(self, input_values, **kwargs):
 
-		out_proj = self.linear(input_values)
+		out_proj = self.linear(input_values.transpose(1, 2))
 		out_proj = self.dropout(out_proj)
 
 		outputs = self.t5.generate(

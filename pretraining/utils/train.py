@@ -52,13 +52,17 @@ class Trainer:
         )
 
         # # Prepare everything with our `accelerator`.
-        # self.model, self.optimizer, self.train_dataloader, self.eval_dataloader = self.accelerator.prepare(
-        #     model, self.optimizer, train_dataloader, eval_dataloader
-        # )
-        self.model, self.optimizer, self.train_dataloader, self.eval_dataloader = model, self.optimizer, train_dataloader, eval_dataloader 
-
+        # if args.env == 'local':
+        self.model, self.optimizer, self.train_dataloader, self.eval_dataloader = self.accelerator.prepare(
+            model, self.optimizer, train_dataloader, eval_dataloader
+        )
         # Gradient checkpointing
-        # self.model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
+        self.model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
+
+
+        # if args.env == 'local':
+        #     self.model, self.optimizer, self.train_dataloader, self.eval_dataloader = model, self.optimizer, train_dataloader, eval_dataloader 
+
 
         # Scheduler and math around the number of training steps.
         num_update_steps_per_epoch = math.ceil(len(self.train_dataloader) / args.gradient_accumulation_steps)
@@ -98,6 +102,7 @@ class Trainer:
         progress_bar = tqdm(range(args.max_train_steps), disable=not self.accelerator.is_local_main_process)
         completed_steps = 0
         starting_epoch = 0
+        print("Starting training for {} epochs".format(args.num_train_epochs))
         for epoch in range(starting_epoch, args.num_train_epochs):
             self.model.train()
             for step, batch in enumerate(self.train_dataloader):

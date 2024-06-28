@@ -1282,6 +1282,7 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Module):
                 f"by `config.num_codevector_groups` {self.num_groups} for concatenation"
             )
 
+        # TODO: Group codevectors according to cue groups
         # storage for codebook variables (codewords)
         self.codevectors = nn.Parameter(
             torch.FloatTensor(1, self.num_groups * self.num_vars, config.codevector_dim // self.num_groups)

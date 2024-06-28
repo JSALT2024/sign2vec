@@ -7,23 +7,23 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 # Add the parent directory to the path so that we can import the modules
-sys.path.append(os.path.dirname('../'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
+
 
 import torch
 import evaluate
 from torch import nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 from transformers import Wav2Vec2FeatureExtractor
 from transformers import T5ForConditionalGeneration
 from transformers import AutoTokenizer, T5ForConditionalGeneration
 
 
 from sign2vec.modeling_sign2vec import Sign2VecModel
-from pretraining.utils.config import Sign2VecConfig
-from sign2vec.finetune.collator import DataCollatorForSign2VecPretraining
+from finetune.collator import DataCollatorForSign2VecFinetuning
 
 from sign2vec.models.finetune import T5ForSignLanguageTranslation
-from sign2vec.dataset.how2sign import How2SignDatasetForPretraining, get_how2sign_dataset
+from sign2vec.dataset.how2sign_hf5 import How2SignDatasetForFinetuning
 
 def parse_args():
 
@@ -192,6 +192,28 @@ def parse_args():
         help='Wandb entity name'
     )
 
+    parser.add_argument(
+        '--train_dataset_path',
+        type=str,
+        default='data/how2sign/dev.csv',
+        help='Train dataset path'
+    )
+
+    parser.add_argument(
+        '--val_dataset_path',
+        type=str,
+        default='data/how2sign/dev.csv',
+        help='Val dataset path'
+    )
+
+    parser.add_argument(
+        '--test_dataset_path',
+        type=str,
+        default='data/how2sign/dev.csv',
+        help='Test dataset path'
+    )
+
+
     args = parser.parse_args()
 
     return args
@@ -236,30 +258,22 @@ def main(args):
 
     if args.env == 'dev':
 
-        train_df, val_df, test_df = get_how2sign_dataset(
-            DATASET_PATH=args.data_path,
-            verbose=True
+        train_dataset = How2SignDatasetForFinetuning(
+            dataset=args.train_dataset_path,
+            data_dir=args.data_path,
+            max_length=args.max_frames,
         )
 
-        train_dataset = How2SignDatasetForPretraining(
-            dataframe=train_df,
-            keypoint_path=args.data_path,
-            tokenizer=tokenizer,
-            max_frames=args.max_frames
+        val_dataset = How2SignDatasetForFinetuning(
+            dataset=args.val_dataset_path,
+            data_dir=args.data_path,
+            max_length=args.max_frames,
         )
 
-        val_dataset = How2SignDatasetForPretraining(
-            dataframe=val_df,
-            keypoint_path=args.data_path,
-            tokenizer=tokenizer,
-            max_frames=args.max_frames
-        )
-
-        test_dataset = How2SignDatasetForPretraining(
-            dataframe=test_df,
-            keypoint_path=args.data_path,
-            tokenizer=tokenizer,
-            max_frames=args.max_frames
+        test_dataset = How2SignDatasetForFinetuning(
+            dataset=args.test_dataset_path,
+            data_dir=args.data_path,
+            max_length=args.max_frames,
         )
 
         print('Datasets loaded!')
@@ -268,12 +282,20 @@ def main(args):
         raise NotImplementedError('Only dev environment is supported')
     
     
-    data_collator = DataCollatorForSign2VecPretraining(
+    sample_data = train_dataset[0]
+    print('keypoints:', sample_data['input_values'].shape)
+    print('sentence:', sample_data['sentence'])
+    print('='*50)
+    
+    
+    data_collator = DataCollatorForSign2VecFinetuning(
         model=sign2vec,
         feature_extractor=feature_extractor,
         pad_to_multiple_of=args.pad_to_multiple_of,
         mask_time_prob=args.mask_time_prob,
         mask_time_length=args.mask_time_length,
+        tokenizer=tokenizer,
+        shift_right=t5._shift_right,
     )
 
     print('Data collator created!')
@@ -299,15 +321,6 @@ def main(args):
         batch_size=args.batch_size,
     )
 
-    print('='*50)
-    sample_data = next(iter(val_loader))
-    print('keypoints:', sample_data['input_values'].shape)
-    print('mask_time_indices:', sample_data['mask_time_indices'].shape)
-    print('sampled_negative_indices:', sample_data['sampled_negative_indices'].shape)
-    print('='*50)
-
-    print('DataLoaders created!')
-
     model = T5ForSignLanguageTranslation(
         sign2vec_model=sign2vec,
         t5_model=t5,
@@ -320,8 +333,6 @@ def main(args):
     # if torch.cuda.device_count() > 1: model = nn.DataParallel(model)
     # TODO: Add evaluation metrics (BLEU, BLEU-1, BLEU-2, BLEU-3, BLEU-4, BLEURT, etc.)
     # TODO: Add checkpointing to huggingface
-    # TODO: Add wandb logging
-
 
     # model.to('cuda')
     
@@ -338,54 +349,73 @@ def main(args):
         gamma=0.1,
     )
 
-    # import wandb
-    # wandb.init(
-    #     project=args.wandb_project_name if args.wandb_project_name else None,
-    #     entity=args.wandb_run_name if args.wandb_run_name else None,
-    # )
+    bleu_score = evaluate.load('bleu')
+
+    import wandb
+    wandb.init(
+        args.wandb_project_name if args.wandb_project_name else None,
+    )
+
+    wandb.config.update(args)
+    wandb.watch(model)
 
     # 6. Train the model
     for epoch in range(args.max_epochs):
 
         total_train_loss = 0
-        total_train_score = 0
         
         model.train()
-        for batch in tqdm(test_loader, desc='Training', leave=False):
+        progress_bar = tqdm(total=len(train_loader), desc='Training', leave=False)
+        for batch_idx, batch in enumerate(train_loader):
+            
             optimizer.zero_grad()
             outputs = model(**batch)
 
             loss = outputs.loss
             total_train_loss += loss.item()
-            total_train_score += outputs.score
 
-            # wandb.log({
-            #     'train_loss': loss.item(),
-            #     # 'train_score': outputs.score,
-            # })
+            wandb.log({
+                'train_loss': loss.item(),
+            })
+
+            if batch_idx % 2 == 0: print(f'Epoch: {epoch}, Batch: {batch_idx}, Loss: {loss.item()}')
 
             loss.backward()
             optimizer.step()
             scheduler.step()
+
+            progress_bar.update(1)
     
         total_val_loss = 0
-        total_val_score = 0
 
         model.eval()
+        bleu_score = evaluate.load('bleu')
         for batch in val_loader:
             outputs = model(**batch)
             loss = outputs.loss
 
-            # wandb.log({
-            #     'val_loss': loss.item(),
-            #     # 'val_score': outputs.score,
-            # })
+            wandb.log({
+                'val_loss': loss.item(),
+            })
 
+            for input_values, sentence in zip(batch['input_values'], batch['sentence']):
+                generated_output = tokenizer.decode(model.generate(input_values[None, ...])[0], skip_special_tokens=True)
+                bleu_score.add_batch(
+                    predictions=[generated_output], 
+                    references=[sentence]
+                )
 
+                print('Generated:', generated_output)
+                print('References:', sentence)
+                print('='*50)
 
             total_val_loss += loss.item()
-            total_val_score += outputs.score
 
+        final_score = bleu_score.compute()
+
+        wandb.log({
+            'bleu_score': final_score,
+        })
         
         print(f'Epoch: {epoch}')
         print(f'Train Loss: {total_train_loss}')

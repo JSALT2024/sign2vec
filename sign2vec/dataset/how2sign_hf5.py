@@ -9,6 +9,67 @@ from transformers import Wav2Vec2FeatureExtractor
 from torch.utils.data import DataLoader, Dataset
 from sign2vec.utils.normalization import local_keypoint_normalization, global_keypoint_normalization
 
+class How2SignDatasetForFinetuning(Dataset):
+
+
+    def __init__(self, 
+                 dataset, 
+                 max_length=25*20,
+                 feature_size=167,
+                 sampling_rate=25,
+                 data_dir=None,
+                 padding_value=0.0):
+        
+        self.data_dir = data_dir
+        self.feature_extractor = Wav2Vec2FeatureExtractor(
+            feature_size=feature_size,
+            sampling_rate=sampling_rate,
+            padding_value=padding_value,
+        )
+
+        
+        self.max_length = max_length
+        self.dataset = pd.read_csv(dataset)
+        self.dataset.dropna(inplace=True)
+        self.dataset[self.dataset['video_path'].apply(lambda x: True if x else False)]
+        self.loader = How2SignDataset
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+
+        h5_path = os.path.join( self.data_dir ,self.dataset['h5_file_path'].iloc[idx])
+        sentence_idx = self.dataset['sentence_idx'].iloc[idx]
+        dataset = self.loader(h5_path)
+
+        data, sentence = dataset.load_data(idx=sentence_idx)
+        
+        pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
+
+        face_landmarks = face_landmarks.reshape(-1, 32*2)
+        pose_landmarks = pose_landmarks.reshape(-1, 7*2)
+        right_hand_landmarks = right_hand_landmarks.reshape(-1, 21*2)
+        left_hand_landmarks = left_hand_landmarks.reshape(-1, 21*2)
+        
+        data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
+
+        data = torch.tensor(data).reshape(data.shape[0], -1)
+        data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
+
+        data = self.feature_extractor(
+            data, 
+            max_length=self.max_length, 
+            truncation=True, 
+            sampling_rate=25
+        )
+
+        return {
+            'input_values': data['input_values'][0],
+            'sentence': sentence,
+        }
+
+
 class How2SignDatasetForPretraining(Dataset):
 
     def __init__(self, 
@@ -29,6 +90,41 @@ class How2SignDatasetForPretraining(Dataset):
         self.dataset.dropna(inplace=True)
         self.dataset[self.dataset['video_path'].apply(lambda x: True if x else False)]
         self.loader = How2SignDataset
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+
+        h5_path = os.path.join( self.data_dir ,self.dataset['h5_file_path'].iloc[idx])
+        sentence_idx = self.dataset['sentence_idx'].iloc[idx]
+        dataset = self.loader(h5_path)
+
+        data, sentence = dataset.load_data(idx=sentence_idx)
+        
+        pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
+
+        face_landmarks = face_landmarks.reshape(-1, 32*2)
+        pose_landmarks = pose_landmarks.reshape(-1, 7*2)
+        right_hand_landmarks = right_hand_landmarks.reshape(-1, 21*2)
+        left_hand_landmarks = left_hand_landmarks.reshape(-1, 21*2)
+        
+        data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
+
+        data = torch.tensor(data).reshape(data.shape[0], -1)
+        data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
+
+        data = self.feature_extractor(
+            data, 
+            max_length=self.max_length, 
+            truncation=True, 
+            sampling_rate=25
+        )
+
+        return {
+            'input_values': data['input_values'][0],
+        }
+
 
     def __len__(self):
         return len(self.dataset)

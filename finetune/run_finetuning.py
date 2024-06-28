@@ -334,7 +334,8 @@ def main(args):
     # TODO: Add evaluation metrics (BLEU, BLEU-1, BLEU-2, BLEU-3, BLEU-4, BLEURT, etc.)
     # TODO: Add checkpointing to huggingface
 
-    # model.to('cuda')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.to(device)
     
     # 5. Define the optimizer and scheduler
     optimizer = torch.optim.AdamW(
@@ -359,6 +360,7 @@ def main(args):
     wandb.config.update(args)
     wandb.watch(model)
 
+
     # 6. Train the model
     for epoch in range(args.max_epochs):
 
@@ -367,6 +369,8 @@ def main(args):
         model.train()
         progress_bar = tqdm(total=len(train_loader), desc='Training', leave=False)
         for batch_idx, batch in enumerate(train_loader):
+
+            batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
             
             optimizer.zero_grad()
             outputs = model(**batch)

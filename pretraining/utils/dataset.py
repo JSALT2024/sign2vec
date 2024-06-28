@@ -79,12 +79,6 @@ def prepare_dataloader(args, config, model, accelerator):
     )
 
     print('DataLoader created successfully!')
-    print('Total Number of Training Instances', len(vectorized_datasets["train"]))
-    batch_count = 0
-    for batch in tqdm(train_dataloader): 
-        batch_count += batch['input_values'].shape[0]
-    
-    print('Total Number of Training Batch:', batch_count)
 
     eval_dataloader = DataLoader(
         vectorized_datasets["validation"], 

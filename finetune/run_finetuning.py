@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import glob
+import wandb
 import pandas as pd
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -22,7 +23,11 @@ from transformers import AutoTokenizer, T5ForConditionalGeneration
 from sign2vec.modeling_sign2vec import Sign2VecModel
 from finetune.collator import DataCollatorForSign2VecFinetuning
 
-from sign2vec.models.finetune import T5ForSignLanguageTranslation
+from sign2vec.models.finetune import (
+    T5ForSignLanguageTranslation,
+    T5BaseForSignLanguageTranslation,
+)
+
 from sign2vec.dataset.how2sign_hf5 import How2SignDatasetForFinetuning
 
 def parse_args():
@@ -30,6 +35,13 @@ def parse_args():
     import argparse
 
     parser = argparse.ArgumentParser(description='Sign2Vec Finetuning')
+
+    parser.add_argument(
+        '--experiment_type',
+        type=str,
+        default='baseline',
+        help='Experiment type'
+    )
 
     parser.add_argument(
         '--t5_model_path_or_name', 
@@ -321,13 +333,24 @@ def main(args):
         batch_size=args.batch_size,
     )
 
-    model = T5ForSignLanguageTranslation(
-        sign2vec_model=sign2vec,
-        t5_model=t5,
-        sign2vec_embed_dim=args.sign2vec_embed_dim,
-        t5_embed_dim=args.t5_embed_dim,
-        dropout=args.dropout,
-    )
+    if args.experiment_type == 'baseline':
+        model = T5BaseForSignLanguageTranslation(
+            t5_model=t5,
+            input_dim=sign2vec.config.input_dim,
+            t5_embed_dim=args.t5_embed_dim,
+            dropout=args.dropout,
+        )
+
+    elif args.experiment_type == 'sign2vec':
+        model = T5ForSignLanguageTranslation(
+            sign2vec_model=sign2vec,
+            t5_model=t5,
+            sign2vec_embed_dim=args.sign2vec_embed_dim,
+            t5_embed_dim=args.t5_embed_dim,
+            dropout=args.dropout,
+        )
+    else:
+        raise NotImplementedError('Only baseline and sign2vec experiments are supported')
 
     # TODO: Implement multi-gpu training
     # if torch.cuda.device_count() > 1: model = nn.DataParallel(model)
@@ -352,7 +375,6 @@ def main(args):
 
     bleu_score = evaluate.load('bleu')
 
-    import wandb
     wandb.init(
         args.wandb_project_name if args.wandb_project_name else None,
     )

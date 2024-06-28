@@ -415,7 +415,9 @@ def main(args):
         total_val_loss = 0
 
         model.eval()
+        instance_count = 0
         bleu_score = evaluate.load('bleu')
+        progress_bar = tqdm(total=len(val_loader), desc='Validation', leave=False)
         for batch in val_loader:
 
             batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
@@ -427,18 +429,23 @@ def main(args):
                 'val_loss': loss.item(),
             })
 
-            for input_values, sentence in zip(batch['input_values'], batch['sentence']):
-                generated_output = tokenizer.decode(model.generate(input_values[None, ...])[0], skip_special_tokens=False)
-                bleu_score.add_batch(
-                    predictions=[generated_output], 
-                    references=[sentence]
-                )
+            if instance_count < 100:
+                for input_values, sentence in zip(batch['input_values'], batch['sentence']):
+                    generated_output = tokenizer.decode(model.generate(input_values[None, ...])[0], skip_special_tokens=False)
+                    bleu_score.add_batch(
+                        predictions=[generated_output], 
+                        references=[sentence]
+                    )
 
-                print('Generated:', generated_output)
-                print('References:', sentence)
-                print('='*50)
+                    print('Generated:', generated_output)
+                    print('References:', sentence)
+                    print('='*50)
+
+                    instance_count += 1
 
             total_val_loss += loss.item()
+
+            progress_bar.update(1)
 
         final_score = bleu_score.compute()
 

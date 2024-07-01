@@ -444,8 +444,8 @@ def main(args):
                     instance_count += 1
 
             total_val_loss += loss.item()
-
             progress_bar.update(1)
+            
 
         final_score = bleu_score.compute()
 

@@ -55,10 +55,8 @@ class DataCollatorForSign2VecFinetuning:
         sentences = [feature["sentence"] for feature in features]
 
         decoder_input_ids = self.tokenizer(
-            sentences, return_tensors="pt", padding="max_length", max_length=250
+            sentences, return_tensors="pt", padding="max_length", max_length=250, truncation=True
         ).input_ids
-
-        # decoder_input_ids = self.shift_right(decoder_input_ids)
 
         features = [{"input_values": feature["input_values"]} for feature in features]
         # reformat list to dict and set to pytorch format

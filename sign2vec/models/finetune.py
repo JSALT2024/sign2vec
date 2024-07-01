@@ -42,10 +42,10 @@ class T5ForSignLanguageTranslation(nn.Module):
 		self.t5 = t5_model
 		self.t5.encoder.embed_tokens = nn.Linear(512, self.t5.config.d_model)
 
-		for param in self.t5.parameters():
-			param.requires_grad = False
+		# for param in self.t5.parameters():
+		# 	param.requires_grad = False
 
-		self.t5.lm_head.requires_grad = True
+		# self.t5.lm_head.requires_grad = True
 
 
 
@@ -95,11 +95,10 @@ class T5BaseForSignLanguageTranslation(nn.Module):
 		self.t5 = t5_model
 		self.t5.encoder.embed_tokens = nn.Linear(input_dim, self.t5.config.d_model)
 	
-		for param in self.t5.parameters():
-			param.requires_grad = False
+		# for param in self.t5.parameters():
+		# 	param.requires_grad = False
 
-		self.t5.lm_head.requires_grad = True
-
+		# self.t5.lm_head.requires_grad = True
 
 	def generate(self, input_values, **kwargs):
 

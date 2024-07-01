@@ -13,16 +13,16 @@
   "classifier_proj_size": 256,
   "codevector_dim": 256,
   "contrastive_logits_temperature": 0.1,
-  "conv_bias": false,
+  "conv_bias": true,
   "conv_dim": [
     512,
     512,
     512
   ],
   "conv_kernel": [
-    5,
     3,
-    3
+    3,
+    1
   ],
   "conv_stride": [
     1,
@@ -90,6 +90,6 @@
   "torch_dtype": "float32",
   "transformers_version": "4.42.0.dev0",
   "use_weighted_layer_sum": false,
-  "vocab_size": 1024,
+  "vocab_size": 64,
   "xvector_output_dim": 512
 }

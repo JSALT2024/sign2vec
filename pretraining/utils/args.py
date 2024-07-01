@@ -7,6 +7,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Pre-Training a 🤗 Sign2Vec2 model on unlabeled sign language data")
 
     parser.add_argument(
+        "--env",
+        type=str,
+        default="server",
+        help="Environment to run the script. Defaults to 'local'",
+    )
+
+    parser.add_argument(
         "--preprocessing_num_workers",
         type=int,
         default=None,

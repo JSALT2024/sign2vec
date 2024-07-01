@@ -1,5 +1,6 @@
 TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py \
                                         --model_name_or_path="patrickvonplaten/wav2vec2-base-v2" \
+                                        --env="local" \
                                         --output_dir="./sign2vec" \
                                         --num_train_epochs="1000" \
                                         --max_train_steps="2" \

@@ -27,19 +27,27 @@ class T5ForSignLanguageTranslation(nn.Module):
 				 ) -> None:
 		super().__init__(*args, **kwargs)
 
+		# Load the sign2vec model
 		self.sign2vec = sign2vec_model
+
+		for param in self.sign2vec.parameters():
+			param.requires_grad = False
+
+		# Linear layer to project the sign2vec embeddings to the T5 embeddings
+		self.linear = nn.Linear(sign2vec_embed_dim, t5_embed_dim)
+		# self.layer_norm = nn.LayerNorm(t5_embed_dim)
+		self.dropout = nn.Dropout(dropout)
+
+		# Load the T5 model
 		self.t5 = t5_model
 		self.t5.encoder.embed_tokens = nn.Linear(512, self.t5.config.d_model)
 
 		for param in self.t5.parameters():
 			param.requires_grad = False
 
-		for param in self.sign2vec.parameters():
-			param.requires_grad = False
+		# Open LM head for training
+		self.t5.lm_head.requires_grad = True
 
-		self.linear = nn.Linear(sign2vec_embed_dim, t5_embed_dim)
-		# self.layer_norm = nn.LayerNorm(t5_embed_dim)
-		self.dropout = nn.Dropout(dropout)
 
 
 	def generate(self, input_values, **kwargs):
@@ -70,8 +78,6 @@ class T5ForSignLanguageTranslation(nn.Module):
 		return outputs
 	
 
-
-
 class T5BaseForSignLanguageTranslation(nn.Module):
 
 	def __init__(self, 
@@ -84,15 +90,17 @@ class T5BaseForSignLanguageTranslation(nn.Module):
 				 ) -> None:
 		super().__init__(*args, **kwargs)
 
+		self.linear = nn.Linear(input_dim, t5_embed_dim)
+		self.dropout = nn.Dropout(dropout)
+
 		self.t5 = t5_model
 		self.t5.encoder.embed_tokens = nn.Linear(input_dim, self.t5.config.d_model)
 	
 		for param in self.t5.parameters():
 			param.requires_grad = False
 
-		self.linear = nn.Linear(input_dim, t5_embed_dim)
-		# self.layer_norm = nn.LayerNorm(t5_embed_dim)
-		self.dropout = nn.Dropout(dropout)
+		# Open LM head for training
+		self.t5.lm_head.requires_grad = True
 
 
 	def generate(self, input_values, **kwargs):

@@ -51,17 +51,17 @@ class Trainer:
             eps=args.adam_epsilon,
         )
 
-        # # Prepare everything with our `accelerator`.
-        # if args.env == 'local':
-        self.model, self.optimizer, self.train_dataloader, self.eval_dataloader = self.accelerator.prepare(
-            model, self.optimizer, train_dataloader, eval_dataloader
-        )
-        # Gradient checkpointing
-        self.model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
+        if args.env == 'server':
+            # Prepare everything with our `accelerator`.
+            self.model, self.optimizer, self.train_dataloader, self.eval_dataloader = self.accelerator.prepare(
+                model, self.optimizer, train_dataloader, eval_dataloader
+            )
+            # Gradient checkpointing
+            self.model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
 
 
-        # if args.env == 'local':
-        #     self.model, self.optimizer, self.train_dataloader, self.eval_dataloader = model, self.optimizer, train_dataloader, eval_dataloader 
+        if args.env == 'local':
+            self.model, self.optimizer, self.train_dataloader, self.eval_dataloader = model, self.optimizer, train_dataloader, eval_dataloader 
 
 
         # Scheduler and math around the number of training steps.

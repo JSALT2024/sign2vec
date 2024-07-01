@@ -358,13 +358,14 @@ def main(args):
     # TODO: Add checkpointing to huggingface
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model.to(device)
+    model.parallelize()
     
     # 5. Define the optimizer and scheduler
     optimizer = torch.optim.AdamW(
         t5.parameters(),
         lr=args.learning_rate,
         weight_decay=args.weight_decay,
+        warmup_steps=args.warmup_steps,
     )
 
     scheduler = torch.optim.lr_scheduler.StepLR(

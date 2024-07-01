@@ -7,6 +7,12 @@ import pandas as pd
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
+import torch.multiprocessing as mp
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.distributed import init_process_group, destroy_process_group
+import os
+
 # Add the parent directory to the path so that we can import the modules
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -315,6 +321,7 @@ def main(args):
     train_loader = DataLoader(
         train_dataset,
         shuffle=True,
+        sampler=DistributedSampler(train_dataset),
         collate_fn=data_collator,
         batch_size=args.batch_size,
     )
@@ -322,6 +329,7 @@ def main(args):
     val_loader = DataLoader(
         val_dataset,
         shuffle=True,
+        sampler=DistributedSampler(val_dataset),
         collate_fn=data_collator,
         batch_size=args.batch_size,
     )
@@ -329,6 +337,7 @@ def main(args):
     test_loader = DataLoader(
         test_dataset,
         shuffle=True,
+        sampler=DistributedSampler(test_loader),
         collate_fn=data_collator,
         batch_size=args.batch_size,
     )
@@ -358,7 +367,7 @@ def main(args):
     # TODO: Add checkpointing to huggingface
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model.parallelize()
+    model = DDP(model, device_ids=['cuda:0', 'cuda:1'])
     
     # 5. Define the optimizer and scheduler
     optimizer = torch.optim.AdamW(
@@ -376,6 +385,9 @@ def main(args):
 
     bleu_score = evaluate.load('bleu')
 
+
+    
+
     wandb.init(
         args.wandb_project_name if args.wandb_project_name else None,
     )
@@ -390,11 +402,12 @@ def main(args):
         total_train_loss = 0
         
         model.train()
+        train_loader.sampler.set_epoch(epoch)
         progress_bar = tqdm(total=len(train_loader), desc='Training', leave=False)
         for batch_idx, batch in enumerate(train_loader):
-
-            batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
             
+            batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+
             optimizer.zero_grad()
             outputs = model(**batch)
 
@@ -417,6 +430,7 @@ def main(args):
 
         model.eval()
         instance_count = 0
+        val_loader.sampler.set_epoch(epoch)
         bleu_score = evaluate.load('bleu')
         progress_bar = tqdm(total=len(val_loader), desc='Validation', leave=False)
         for batch in val_loader:

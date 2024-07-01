@@ -1,10 +1,10 @@
-python3 finetune/run_finetuning.py  --t5_model_path_or_name='google-t5/t5-small' \
+python3 finetune/run_finetuning.py  --t5_model_path_or_name='google/t5-v1_1-base' \
                                     --sign2vec_model_path='karahansahin/sign2vec-v0-how2sign' \
                                     --data_path="../../../ssd1/karahan/" \
                                     --experiment_type="baseline" \
                                     --output_dir='output' \
                                     --max_epochs="100" \
-                                    --batch_size="128" \
+                                    --batch_size="16" \
                                     --sign2vec_embed_dim="768" \
                                     --t5_embed_dim="512" \
                                     --dropout="0.1" \

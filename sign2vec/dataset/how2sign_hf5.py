@@ -64,8 +64,12 @@ class How2SignDatasetForFinetuning(Dataset):
             sampling_rate=25
         )
 
+        data['input_values'] = data['input_values'][0]
+        # skip every second frame
+        data['input_values'] = data['input_values'][::2,:]
+        
         return {
-            'input_values': data['input_values'][0],
+            'input_values': data['input_values'],
             'sentence': sentence,
         }
 

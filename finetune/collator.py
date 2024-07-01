@@ -52,11 +52,13 @@ class DataCollatorForSign2VecFinetuning:
 
     def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         
-        sentences = [feature["sentence"] for feature in features]
+        sentences = [ 'English translation: ' + feature["sentence"] for feature in features]
 
         decoder_input_ids = self.tokenizer(
             sentences, return_tensors="pt", padding="max_length", max_length=250, truncation=True
         ).input_ids
+
+        decoder_input_ids = self.shift_right(decoder_input_ids)
 
         features = [{"input_values": feature["input_values"]} for feature in features]
         # reformat list to dict and set to pytorch format

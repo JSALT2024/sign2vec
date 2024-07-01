@@ -429,16 +429,27 @@ def main(args):
                 'val_loss': loss.item(),
             })
 
+            generated_sentences = tokenizer.batch_decode(
+                model.generate(batch['input_values']),
+                skip_special_tokens=False
+            )
+
+            decoder_input_ids = batch['decoder_input_ids']
+            ground_sentences = tokenizer.batch_decode(
+                decoder_input_ids,
+                skip_special_tokens=True
+            )
+
             if instance_count < 100:
-                for input_values, sentence in zip(batch['input_values'], batch['sentence']):
-                    generated_output = tokenizer.decode(model.generate(input_values[None, ...])[0], skip_special_tokens=False)
+                for generated_sentence, ground_sentence in zip( generated_sentences, ground_sentences):
+                    
                     bleu_score.add_batch(
-                        predictions=[generated_output], 
-                        references=[sentence]
+                        predictions=[generated_sentence], 
+                        references=[ground_sentence]
                     )
 
-                    print('Generated:', generated_output)
-                    print('References:', sentence)
+                    print('Generated:', generated_sentence)
+                    print('References:', ground_sentence)
                     print('='*50)
 
                     instance_count += 1

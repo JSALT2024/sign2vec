@@ -113,7 +113,12 @@ class T5BaseForSignLanguageTranslation(nn.Module):
 
 		outputs = self.t5.generate(
 			inputs_embeds = out_proj,
-			**kwargs
+			early_stopping= True, 
+			length_penalty = 2.0, 
+			max_length=100, 
+			min_length=2, 
+			no_repeat_ngram_size=3, 
+			num_beams=4
 		)
 
 		return outputs

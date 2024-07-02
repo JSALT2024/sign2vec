@@ -15,7 +15,7 @@ class CustomT5Model(T5ForConditionalGeneration):
         else:
             raise ValueError("continuous_input cannot be None")
         
-        print("encoder_outputs: ", encoder_outputs.shape)
+        print("encoder_outputs: ", encoder_outputs)
         print("decoder_input_ids: ", decoder_input_ids.shape)
         print("labels: ", labels.shape)
         print("attention_mask: ", attention_mask.shape)

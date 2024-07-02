@@ -106,8 +106,8 @@ def preprocess_function(examples):
 # 4. Data Collator
 class CustomDataCollator:
     def __call__(self, batch):
-        labels = [torch.tensor(example['labels'], dtype=int) for example in batch]
-        labels = torch.stack(labels)
+        labels = [torch.tensor(example['labels'], dtype=int)[0] for example in batch]
+        labels = torch.stack(labels, dim=0)
 
         continuous_input = pad_sequence([
             torch.tensor(example['continuous_input']) for example in batch
@@ -116,11 +116,15 @@ class CustomDataCollator:
         # crop the continuous input to the maximum length
         continuous_input = continuous_input[:, :args.max_length, :]
 
-
         attention_mask = torch.ones(
             continuous_input.shape[0],
             continuous_input.shape[1]
         )  # create an attention mask for the continuous input
+
+        print("continuous_input: ", continuous_input.shape)
+        print("labels: ", labels.shape)
+        print("attention_mask: ", attention_mask.shape)
+
 
         return {
             'labels': labels, 

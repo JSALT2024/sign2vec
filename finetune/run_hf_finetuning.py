@@ -170,6 +170,7 @@ def compute_metrics(eval_preds):
     if isinstance(preds, tuple):
         preds = preds[0]
 
+    preds = np.argmax(preds, axis=2)
     print("Computing metrics...")
     print("preds: ", preds)
     decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)

@@ -135,7 +135,6 @@ class CustomDataCollator:
     
 os.environ["WANDB_DISABLED"] = "true"
 
-model.to('mps')
 print(" *** Using device:", device)
 
 # 5. Training Arguments

@@ -122,15 +122,11 @@ class CustomDataCollator:
             continuous_input.shape[1]
         )  # create an attention mask for the continuous input
 
-
-
-        decoder_input_ids = torch.full(labels.shape, tokenizer.pad_token_id)
-
         return {
             'labels': labels, 
             'continuous_input': continuous_input, 
             'attention_mask': attention_mask,
-            'decoder_input_ids': decoder_input_ids
+            'decoder_input_ids': labels
         }
     
 os.environ["WANDB_DISABLED"] = "true"

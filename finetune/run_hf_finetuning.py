@@ -119,12 +119,13 @@ class CustomDataCollator:
         attention_mask = torch.ones(
             continuous_input.shape[0],
             continuous_input.shape[1]
-        )  # create an attention mask for the continuous input
+        )
 
         return {
             'labels': labels, 
             'continuous_input': continuous_input, 
-            'decoder_input_ids': labels
+            'decoder_input_ids': labels,
+            'attention_mask': attention_mask
         }
     
 os.environ["WANDB_DISABLED"] = "true"

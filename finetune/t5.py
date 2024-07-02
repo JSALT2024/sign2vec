@@ -15,10 +15,6 @@ class CustomT5Model(T5ForConditionalGeneration):
         if continuous_input is not None:
             continuous_input_ = self.custom_linear(continuous_input)
             # generate attention mask for continuous input
-            attention_mask = torch.ones(
-                continuous_input_.shape[0],
-                continuous_input_.shape[1]
-            )
             encoder_outputs = self.encoder(
                 inputs_embeds=continuous_input_, 
                 attention_mask=attention_mask

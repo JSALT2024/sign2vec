@@ -116,12 +116,14 @@ class CustomDataCollator:
         # crop the continuous input to the maximum length
         continuous_input = continuous_input[:, :args.max_length, :]
 
+
         attention_mask = torch.ones(
             continuous_input.shape[0],
-            continuous_input.shape[1],
             continuous_input.shape[1]
         )  # create an attention mask for the continuous input
-        
+
+
+
         decoder_input_ids = torch.full(labels.shape, tokenizer.pad_token_id)
 
         return {
@@ -133,6 +135,7 @@ class CustomDataCollator:
     
 os.environ["WANDB_DISABLED"] = "true"
 
+model.to('mps')
 print(" *** Using device:", device)
 
 # 5. Training Arguments

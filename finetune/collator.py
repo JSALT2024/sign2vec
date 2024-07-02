@@ -70,7 +70,6 @@ class DataCollatorForSign2VecFinetuning:
         )
 
         # make sure that `input_values` are of shape [batch_size x num_features x sequence_length]
-        batch["input_values"] = batch["input_values"].transpose(1, 2)
 
         device = batch["input_values"].device
         batch_size = batch["input_values"].shape[0]
@@ -102,9 +101,6 @@ class DataCollatorForSign2VecFinetuning:
             self.model.config.num_negatives,
             mask_time_indices=mask_time_indices,
         )
-        batch["mask_time_indices"] = torch.tensor(mask_time_indices, dtype=torch.long, device=device)
-        batch["sampled_negative_indices"] = torch.tensor(sampled_negative_indices, dtype=torch.long, device=device)
-        batch["sentence"] = sentences
         batch["decoder_input_ids"] = decoder_input_ids
         
         return batch

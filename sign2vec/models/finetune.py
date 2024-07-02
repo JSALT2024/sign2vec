@@ -84,14 +84,16 @@ class T5BaseForSignLanguageTranslation(nn.Module):
         super(T5BaseForSignLanguageTranslation, self).__init__()
         self.model = T5ForConditionalGeneration.from_pretrained(model_id)
         self.linear = nn.Linear(embed_size, self.model.config.d_model)
+        self.model.encoder.embed_tokens = self.linear
+
+
+    def forward(self, input_values, decoder_input_ids):
         
-    def forward(self, inputs_embeds, labels):
-        
-        inputs_embeds = self.linear(inputs_embeds)
+        inputs_embeds = self.linear(input_values)
 
         outputs = self.model(
             inputs_embeds=inputs_embeds,
-            labels=labels
+            labels=decoder_input_ids
         )
 
         return outputs

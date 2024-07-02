@@ -336,20 +336,12 @@ def main(args):
 
     if args.experiment_type == 'baseline':
         model = T5BaseForSignLanguageTranslation(
-            t5_model=t5,
-            input_dim=sign2vec.config.input_dim,
-            t5_embed_dim=args.t5_embed_dim,
-            dropout=args.dropout,
+            model_id=args.t5_model_path_or_name,
+            embed_size=162,
         )
 
     elif args.experiment_type == 'sign2vec':
-        model = T5ForSignLanguageTranslation(
-            sign2vec_model=sign2vec,
-            t5_model=t5,
-            sign2vec_embed_dim=args.sign2vec_embed_dim,
-            t5_embed_dim=args.t5_embed_dim,
-            dropout=args.dropout,
-        )
+        pass
     else:
         raise NotImplementedError('Only baseline and sign2vec experiments are supported')
 
@@ -376,12 +368,12 @@ def main(args):
 
     bleu_score = evaluate.load('bleu')
 
-    wandb.init(
-        args.wandb_project_name if args.wandb_project_name else None,
-    )
+    # wandb.init(
+    #     args.wandb_project_name if args.wandb_project_name else None,
+    # )
 
-    wandb.config.update(args)
-    wandb.watch(model)
+    # wandb.config.update(args)
+    # wandb.watch(model)
 
     # 6. Train the model
     for epoch in range(args.max_epochs):
@@ -391,7 +383,11 @@ def main(args):
         model.train()
         progress_bar = tqdm(total=len(train_loader), desc='Training', leave=False)
         for batch_idx, batch in enumerate(train_loader):
-
+            
+            print('Batch:', batch_idx)
+            print('Batch:', batch.keys())
+            print('Batch:', batch['input_values'].shape)
+            print('Batch:', batch['decoder_input_ids'].shape)
             batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
             
             optimizer.zero_grad()
@@ -400,23 +396,19 @@ def main(args):
             loss = outputs.loss
             total_train_loss += loss.item()
 
-            wandb.log({
-                'train_loss': loss.item(),
-            })
+            # wandb.log({
+            #     'train_loss': loss.item(),
+            # })
 
-            if batch_idx % 200 == 0: 
+            if batch_idx % 20 == 0: 
                 
-                generated_sentence = []
-                for i in range(outputs.shape[0]):
-                    generated_sentence.append(
-                        tokenizer.decode(outputs[i], skip_special_tokens=True)
+                generated_sentences = []
+                print('Generated:', outputs.logits.shape)
+                for i in range(outputs.logits.shape[0]):
+                    generated_sentences.append(
+                        tokenizer.decode(outputs.logits[i].argmax(1), skip_special_tokens=True)
                     )
-
-                generated_sentences = tokenizer.batch_decode(
-                    
-                    skip_special_tokens=False
-                )
-
+            
                 decoder_input_ids = batch['decoder_input_ids']
                 ground_sentences = tokenizer.batch_decode(
                     decoder_input_ids,
@@ -449,14 +441,16 @@ def main(args):
             outputs = model(**batch)
             loss = outputs.loss
 
-            wandb.log({
-                'val_loss': loss.item(),
-            })
+            # wandb.log({
+            #     'val_loss': loss.item(),
+            # })
 
-            generated_sentences = tokenizer.batch_decode(
-                model.generate(batch['input_values']),
-                skip_special_tokens=False
-            )
+            generated_sentences = []
+            print('Generated:', outputs.logits.shape)
+            for i in range(outputs.logits.shape[0]):
+                generated_sentences.append(
+                    tokenizer.decode(outputs.logits[i].argmax(1), skip_special_tokens=True)
+                )
 
             decoder_input_ids = batch['decoder_input_ids']
             ground_sentences = tokenizer.batch_decode(
@@ -484,9 +478,9 @@ def main(args):
 
         final_score = bleu_score.compute()
 
-        wandb.log({
-            'bleu_score': final_score,
-        })
+        # wandb.log({
+        #     'bleu_score': final_score,
+        # })
         
         print(f'Epoch: {epoch}')
         print(f'Train Loss: {total_train_loss}')

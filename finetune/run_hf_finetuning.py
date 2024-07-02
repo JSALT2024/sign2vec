@@ -57,6 +57,9 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 tokenizer = AutoTokenizer.from_pretrained(args.t5_model_path_or_name)
 model = CustomT5Model.from_pretrained(args.t5_model_path_or_name).to(device)
+
+nn.init.xavier_uniform_(model.custom_linear.weight)
+nn.init.constant_(model.custom_linear.bias, 0.)
 loader = How2SignDataset
 
 train_df = pd.read_csv(args.train_data_path)

@@ -119,16 +119,16 @@ class CustomDataCollator:
         # crop the continuous input to the maximum length
         continuous_input = continuous_input[:, :args.max_length, :]
 
-        attention_mask = torch.ones(
-            continuous_input.shape[0],
-            continuous_input.shape[1]
-        )
+        # attention_mask = torch.ones(
+        #     continuous_input.shape[0],
+        #     continuous_input.shape[1]
+        # )
 
         return {
             'labels': labels, 
             'continuous_input': continuous_input, 
             'decoder_input_ids': labels,
-            'attention_mask': attention_mask
+            # 'attention_mask': attention_mask
         }
     
 os.environ["WANDB_DISABLED"] = "true"

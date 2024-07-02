@@ -111,6 +111,9 @@ class CustomDataCollator:
         continuous_input = pad_sequence([
             torch.tensor(example['continuous_input']) for example in batch
         ], batch_first=True, padding_value=0.0)
+
+        continuous_input = continuous_input.transpose(1, 2)
+
         attention_mask = torch.ones_like(continuous_input)  # create an attention mask for the continuous input
         decoder_input_ids = torch.full(labels.shape, tokenizer.pad_token_id)
 

@@ -12,4 +12,4 @@ NCCL_P2P_DISABLE="1" NCCL_IB_DISABLE="1" python3 finetune/run_hf_finetuning.py  
                                                 --evaluation_strategy="epoch" \
                                                 --save_total_limit="100" \
                                                 --logging_dir="./logs" \
-                                                --debug=" \
+                                                --debug \

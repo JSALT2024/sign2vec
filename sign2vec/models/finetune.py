@@ -80,58 +80,19 @@ class T5ForSignLanguageTranslation(nn.Module):
 	
 
 class T5BaseForSignLanguageTranslation(nn.Module):
+    def __init__(self, model_id="t5-small", embed_size=512):
+        super(T5BaseForSignLanguageTranslation, self).__init__()
+        self.model = T5ForConditionalGeneration.from_pretrained(model_id)
+        self.linear = nn.Linear(embed_size, self.model.config.d_model)
+        
+    def forward(self, inputs_embeds, labels):
+        
+        inputs_embeds = self.linear(inputs_embeds)
 
-	def __init__(self, 
-				 t5_model: T5ForConditionalGeneration = None,
-				 input_dim: int = 1024,
-				 t5_embed_dim: int = 512,
-				 dropout: float = 0.1,
-				 *args, 
-				 **kwargs,
-				 ) -> None:
-		super().__init__(*args, **kwargs)
+        outputs = self.model(
+            inputs_embeds=inputs_embeds,
+            labels=labels
+        )
 
-		self.linear = nn.Linear(input_dim, t5_embed_dim)
-		self.dropout = nn.Dropout(dropout)
-
-		self.t5 = t5_model
-		self.t5.encoder.embed_tokens = nn.Linear(input_dim, self.t5.config.d_model)
-	
-		# for param in self.t5.parameters():
-		# 	param.requires_grad = False
-
-		# self.t5.lm_head.requires_grad = True
-
-	def initialize_weights(self):
-		nn.init.xavier_uniform_(self.linear.weight)
-		nn.init.constant_(self.linear.bias, 0)
-
-	def generate(self, input_values, **kwargs):
-
-		out_proj = self.linear(input_values.transpose(1, 2))
-		out_proj = self.dropout(out_proj)
-
-		outputs = self.t5.generate(
-			inputs_embeds = out_proj,
-			early_stopping= True, 
-			length_penalty = 2.0, 
-			max_length=100, 
-			min_length=2, 
-			no_repeat_ngram_size=3, 
-			num_beams=4
-		)
-
-		return outputs
-
-	def forward(self, input_values, decoder_input_ids, **kwargs):
-
-		out_proj = self.linear(input_values.transpose(1, 2))
-		out_proj = self.dropout(out_proj)
-
-		outputs = self.t5(
-			labels=decoder_input_ids,
-			inputs_embeds = out_proj,
-		)
-
-		return outputs
+        return outputs
 	

@@ -27,11 +27,9 @@ class How2SignDatasetForFinetuning(Dataset):
             padding_value=padding_value,
         )
 
-        
         self.max_length = max_length
         self.dataset = pd.read_csv(dataset)
         self.dataset.dropna(inplace=True)
-        self.dataset[self.dataset['video_path'].apply(lambda x: True if x else False)]
         self.loader = How2SignDataset
 
     def __len__(self):
@@ -57,19 +55,8 @@ class How2SignDatasetForFinetuning(Dataset):
         data = torch.tensor(data).reshape(data.shape[0], -1)
         data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
 
-        data = self.feature_extractor(
-            data, 
-            max_length=self.max_length, 
-            truncation=True, 
-            sampling_rate=25
-        )
-
-        data['input_values'] = data['input_values'][0]
-        # skip every second frame
-        data['input_values'] = data['input_values'][::2,:]
-        
         return {
-            'input_values': data['input_values'],
+            'input_values': data,
             'sentence': sentence,
         }
 
@@ -153,15 +140,10 @@ class How2SignDatasetForPretraining(Dataset):
         data = torch.tensor(data).reshape(data.shape[0], -1)
         data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
 
-        data = self.feature_extractor(
-            data, 
-            max_length=self.max_length, 
-            truncation=True, 
-            sampling_rate=25
-        )
+        data = data / data.max()
 
         return {
-            'input_values': data['input_values'][0],
+            'input_values': data
         }
 
 

@@ -383,7 +383,6 @@ def main(args):
     wandb.config.update(args)
     wandb.watch(model)
 
-
     # 6. Train the model
     for epoch in range(args.max_epochs):
 

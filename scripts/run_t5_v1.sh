@@ -1,4 +1,4 @@
-accelerate launch --num_processes=1 finetune/run_hf_finetuning.py  --t5_model_path_or_name='google-t5/t5-small' \
+NCCL_IB_DISABLE="1" NCCL_P2P_DISABLE="1" python3 finetune/run_hf_finetuning.py  --t5_model_path_or_name='goog>
                                                 --train_data_path="how2sign/training.csv" \
                                                 --val_data_path="how2sign/test.csv" \
                                                 --test_data_path="how2sign/test.csv" \
@@ -13,3 +13,6 @@ accelerate launch --num_processes=1 finetune/run_hf_finetuning.py  --t5_model_pa
                                                 --save_total_limit="100" \
                                                 --logging_dir="./logs" \
                                                 --debug \
+
+
+

@@ -384,10 +384,6 @@ def main(args):
         progress_bar = tqdm(total=len(train_loader), desc='Training', leave=False)
         for batch_idx, batch in enumerate(train_loader):
             
-            print('Batch:', batch_idx)
-            print('Batch:', batch.keys())
-            print('Batch:', batch['input_values'].shape)
-            print('Batch:', batch['decoder_input_ids'].shape)
             batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
             
             optimizer.zero_grad()
@@ -403,7 +399,6 @@ def main(args):
             if batch_idx % 20 == 0: 
                 
                 generated_sentences = []
-                print('Generated:', outputs.logits.shape)
                 for i in range(outputs.logits.shape[0]):
                     generated_sentences.append(
                         tokenizer.decode(outputs.logits[i].argmax(1), skip_special_tokens=True)

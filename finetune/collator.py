@@ -69,6 +69,8 @@ class DataCollatorForSign2VecFinetuning:
             return_tensors="pt",
         )
 
+        batch['input_values'] = batch['input_values'][:, :500, :]
+
         # make sure that `input_values` are of shape [batch_size x num_features x sequence_length]
 
         device = batch["input_values"].device

@@ -10,6 +10,7 @@ class CustomT5Model(T5ForConditionalGeneration):
     def forward(self, continuous_input=None, attention_mask=None, decoder_input_ids=None, 
                 decoder_attention_mask=None, labels=None):
         if continuous_input is not None:
+            continuous_input = continuous_input.to('mps')
             continuous_input_ = self.custom_linear(continuous_input)
             encoder_outputs = self.encoder(inputs_embeds=continuous_input_, attention_mask=attention_mask)
         else:
@@ -18,7 +19,6 @@ class CustomT5Model(T5ForConditionalGeneration):
         print("encoder_outputs: ", encoder_outputs)
         print("decoder_input_ids: ", decoder_input_ids.shape)
         print("labels: ", labels.shape)
-        print("attention_mask: ", attention_mask.shape)
 
         decoder_outputs = self.decoder(
             input_ids=decoder_input_ids,

@@ -168,6 +168,9 @@ def compute_metrics(eval_preds):
     preds, labels = eval_preds
     if isinstance(preds, tuple):
         preds = preds[0]
+
+    print("Computing metrics...")
+    print("preds: ", preds)
     decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
 
     # Replace -100 in the labels as we can't decode them.

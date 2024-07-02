@@ -30,6 +30,7 @@ def parse_args():
     parser.add_argument("--t5_model_path_or_name", type=str, required=True, help="Path or name of the T5 model")
 
 
+    parser.add_argument("--debug", action="store_true", help="Run the script in debug mode")
     parser.add_argument("--max_length", type=int, default=128, help="Maximum length of the input sequence")
     parser.add_argument("--data_dir", type=str, default="./data", help="Path to the data directory")
 
@@ -58,6 +59,12 @@ loader = How2SignDataset
 train_df = pd.read_csv(args.train_data_path)
 val_df = pd.read_csv(args.val_data_path)
 test_df = pd.read_csv(args.test_data_path)
+
+
+if args.debug:
+    train_df = train_df.sample(100)
+    val_df = val_df.sample(100)
+    test_df = test_df.sample(100)
 
 train_dataset = Dataset.from_dict(train_df.to_dict(orient="list"))
 val_dataset = Dataset.from_dict(val_df.to_dict(orient="list"))
@@ -192,13 +199,6 @@ trainer = Seq2SeqTrainer(
 
 # Fine-tune the model
 trainer.train()
-
-
-
-
-
-
-
 
 
 # Save the model

@@ -1,4 +1,4 @@
-accelerate launch finetune/run_hf_finetuning.py  --t5_model_path_or_name='google-t5/t5-small' \
+accelerate launch --num_processes=1 finetune/run_hf_finetuning.py  --t5_model_path_or_name='google-t5/t5-small' \
                                                 --train_data_path="how2sign/training.csv" \
                                                 --val_data_path="how2sign/test.csv" \
                                                 --test_data_path="how2sign/test.csv" \
@@ -11,4 +11,5 @@ accelerate launch finetune/run_hf_finetuning.py  --t5_model_path_or_name='google
                                                 --weight_decay="0.01" \
                                                 --evaluation_strategy="epoch" \
                                                 --save_total_limit="100" \
-                                                --logging_dir="./logs"
+                                                --logging_dir="./logs" \
+                                                --debug \

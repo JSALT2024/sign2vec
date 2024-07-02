@@ -62,7 +62,7 @@ class T5ForSignLanguageTranslation(nn.Module):
 			inputs_embeds = out_proj,
 			**kwargs
 		)
-
+		
 		return outputs
 
 	def forward(self, input_values, decoder_input_ids, **kwargs):

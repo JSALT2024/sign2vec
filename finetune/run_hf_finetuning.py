@@ -7,7 +7,8 @@ import pandas as pd
 from torch import nn
 from t5 import CustomT5Model
 from torch.nn.utils.rnn import pad_sequence
-from datasets import Dataset, load_dataset
+
+from datasets import Dataset, load_metric
 from transformers import (
     AutoTokenizer,
     Seq2SeqTrainer, 
@@ -48,7 +49,7 @@ def parse_args():
 args = parse_args()
 
 # 1. Setup Environment
-device = torch.device("cuda" if torch.backends.mps.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 tokenizer = AutoTokenizer.from_pretrained(args.t5_model_path_or_name)
 model = CustomT5Model.from_pretrained(args.t5_model_path_or_name).to(device)
@@ -58,10 +59,9 @@ train_df = pd.read_csv(args.train_data_path)
 val_df = pd.read_csv(args.val_data_path)
 test_df = pd.read_csv(args.test_data_path)
 
-
 train_dataset = Dataset.from_dict(train_df.to_dict(orient="list"))
 val_dataset = Dataset.from_dict(val_df.to_dict(orient="list"))
-test_dataset = Dataset.from_dict(test_df.to_dict(orient="list"))
+# test_dataset = Dataset.from_dict(test_df.to_dict(orient="list"))
 
 
 def preprocess_pose(h5_file_path, sentence_idx):
@@ -143,8 +143,40 @@ training_args = Seq2SeqTrainingArguments(
 print("Preparing datasets...")
 train_dataset = train_dataset.map(preprocess_function)
 val_dataset = val_dataset.map(preprocess_function)
-test_dataset = test_dataset.map(preprocess_function)
+# test_dataset = test_dataset.map(preprocess_function)
 data_collator = CustomDataCollator()
+
+metric = load_metric("sacrebleu")
+
+import numpy as np
+
+def postprocess_text(preds, labels):
+    preds = [pred.strip() for pred in preds]
+    labels = [[label.strip()] for label in labels]
+
+    return preds, labels
+
+
+def compute_metrics(eval_preds):
+    preds, labels = eval_preds
+    if isinstance(preds, tuple):
+        preds = preds[0]
+    decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+
+    # Replace -100 in the labels as we can't decode them.
+    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+    decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+    # Some simple post-processing
+    decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+
+    result = metric.compute(predictions=decoded_preds, references=decoded_labels)
+    result = {"bleu": result["score"]}
+
+    prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
+    result["gen_len"] = np.mean(prediction_lens)
+    result = {k: round(v, 4) for k, v in result.items()}
+    return result
 
 
 # 6. Trainer
@@ -154,11 +186,20 @@ trainer = Seq2SeqTrainer(
     train_dataset=train_dataset,
     eval_dataset=val_dataset,
     tokenizer=tokenizer,
+    compute_metrics=compute_metrics,
     data_collator=data_collator,
 )
 
 # Fine-tune the model
 trainer.train()
+
+
+
+
+
+
+
+
 
 # Save the model
 model.save_pretrained("./custom_t5_translation_model")

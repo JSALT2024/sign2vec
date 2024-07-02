@@ -114,11 +114,6 @@ class CustomDataCollator:
         attention_mask = torch.ones_like(continuous_input)  # create an attention mask for the continuous input
         decoder_input_ids = torch.full(labels.shape, tokenizer.pad_token_id)
 
-        labels = labels.to(device)
-        continuous_input = continuous_input.to(device)
-        attention_mask = attention_mask.to(device)
-        decoder_input_ids = decoder_input_ids.to(device)
-
         return {
             'labels': labels, 
             'continuous_input': continuous_input, 
@@ -129,7 +124,6 @@ class CustomDataCollator:
 os.environ["WANDB_DISABLED"] = "true"
 
 print(" *** Using device:", device)
-model = model.to(device)
 
 # 5. Training Arguments
 training_args = Seq2SeqTrainingArguments(

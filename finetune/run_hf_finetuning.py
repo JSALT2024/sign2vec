@@ -121,6 +121,7 @@ class CustomDataCollator:
             continuous_input.shape[1],
             continuous_input.shape[1]
         )  # create an attention mask for the continuous input
+        
         decoder_input_ids = torch.full(labels.shape, tokenizer.pad_token_id)
 
         return {

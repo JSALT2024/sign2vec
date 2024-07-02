@@ -13,7 +13,6 @@ from transformers import T5ForConditionalGeneration
 from sign2vec.modeling_sign2vec import Sign2VecModel
 
 
-
 class T5ForSignLanguageTranslation(nn.Module):
 
 	def __init__(self, 
@@ -72,8 +71,8 @@ class T5ForSignLanguageTranslation(nn.Module):
 		out_proj = self.dropout(out_proj)
 
 		outputs = self.t5(
-			decoder_input_ids=decoder_input_ids,
 			labels=decoder_input_ids,
+			decoder_input_ids=decoder_input_ids,
 			inputs_embeds = out_proj,
 		)
 

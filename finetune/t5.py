@@ -32,7 +32,11 @@ class CustomT5Model(T5ForConditionalGeneration):
         
         loss = None
         if labels is not None:
+            print("labels: ", labels.view(-1).shape)
+            print("logits: ", logits.view(-1, logits.size(-1)).shape)
             loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
             loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
+            print("loss: ", loss)
 
+    
         return (loss, logits)

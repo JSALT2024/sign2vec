@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+
 import glob
 import wandb
 import pandas as pd
@@ -404,7 +405,7 @@ def main(args):
                 'train_loss': loss.item(),
             })
 
-            if batch_idx % 20 == 0: 
+            if batch_idx % 200 == 0: 
 
                 generated_sentences = tokenizer.batch_decode(
                     model.generate(batch['input_values']),

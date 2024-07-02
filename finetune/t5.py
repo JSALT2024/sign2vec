@@ -16,8 +16,14 @@ from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 class CustomT5Model(T5ForConditionalGeneration):
     def __init__(self, config):
         super().__init__(config)
+        print(config.d_model)
         self.custom_linear = nn.Linear(162, config.d_model)  # Assuming input size is 128, adjust as needed
-    
+        
+        # nn.init.xavier_uniform_(self.custom_linear.weight)
+        # nn.init.constant_(self.custom_linear.bias, 0)
+        # initialize weights
+
+
     def forward(self, 
                 continuous_input=None, 
                 attention_mask=None, 
@@ -62,7 +68,6 @@ class CustomT5Model(T5ForConditionalGeneration):
                 output_hidden_states=output_hidden_states,
                 return_dict=return_dict,
             )
-            print("Encoder outputs:", encoder_outputs)
         # Decode
         elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
             encoder_outputs = BaseModelOutput(

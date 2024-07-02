@@ -108,13 +108,19 @@ class CustomDataCollator:
     def __call__(self, batch):
         labels = [torch.tensor(example['labels'], dtype=int) for example in batch]
         labels = torch.stack(labels)
+
         continuous_input = pad_sequence([
             torch.tensor(example['continuous_input']) for example in batch
         ], batch_first=True, padding_value=0.0)
 
-        continuous_input = continuous_input.transpose(1, 2)
+        # crop the continuous input to the maximum length
+        continuous_input = continuous_input[:, :args.max_length, :]
 
-        attention_mask = torch.ones_like(continuous_input)  # create an attention mask for the continuous input
+        attention_mask = torch.ones(
+            continuous_input.shape[0],
+            continuous_input.shape[1],
+            continuous_input.shape[1]
+        )  # create an attention mask for the continuous input
         decoder_input_ids = torch.full(labels.shape, tokenizer.pad_token_id)
 
         return {

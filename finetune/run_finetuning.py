@@ -368,12 +368,12 @@ def main(args):
 
     bleu_score = evaluate.load('bleu')
 
-    # wandb.init(
-    #     args.wandb_project_name if args.wandb_project_name else None,
-    # )
+    wandb.init(
+        args.wandb_project_name if args.wandb_project_name else None,
+    )
 
-    # wandb.config.update(args)
-    # wandb.watch(model)
+    wandb.config.update(args)
+    wandb.watch(model)
 
     # 6. Train the model
     for epoch in range(args.max_epochs):
@@ -396,9 +396,9 @@ def main(args):
             loss = outputs.loss
             total_train_loss += loss.item()
 
-            # wandb.log({
-            #     'train_loss': loss.item(),
-            # })
+            wandb.log({
+                'train_loss': loss.item(),
+            })
 
             if batch_idx % 20 == 0: 
                 
@@ -441,9 +441,9 @@ def main(args):
             outputs = model(**batch)
             loss = outputs.loss
 
-            # wandb.log({
-            #     'val_loss': loss.item(),
-            # })
+            wandb.log({
+                'val_loss': loss.item(),
+            })
 
             generated_sentences = []
             print('Generated:', outputs.logits.shape)
@@ -478,9 +478,9 @@ def main(args):
 
         final_score = bleu_score.compute()
 
-        # wandb.log({
-        #     'bleu_score': final_score,
-        # })
+        wandb.log({
+            'bleu_score': final_score,
+        })
         
         print(f'Epoch: {epoch}')
         print(f'Train Loss: {total_train_loss}')

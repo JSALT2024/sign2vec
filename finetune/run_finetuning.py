@@ -407,8 +407,13 @@ def main(args):
 
             if batch_idx % 200 == 0: 
 
+                generated_sentence = tokenizer.batch_decode(
+                    outputs.logits.argmax(dim=2),
+                    skip_special_tokens=False
+                )
+
                 generated_sentences = tokenizer.batch_decode(
-                    model.generate(batch['input_values']),
+                    
                     skip_special_tokens=False
                 )
 

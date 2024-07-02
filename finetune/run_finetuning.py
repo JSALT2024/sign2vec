@@ -405,11 +405,12 @@ def main(args):
             })
 
             if batch_idx % 200 == 0: 
-
-                generated_sentence = tokenizer.batch_decode(
-                    outputs.logits.argmax(dim=2),
-                    skip_special_tokens=False
-                )
+                
+                generated_sentence = []
+                for i in range(outputs.shape[0]):
+                    generated_sentence.append(
+                        tokenizer.decode(outputs[i], skip_special_tokens=True)
+                    )
 
                 generated_sentences = tokenizer.batch_decode(
                     

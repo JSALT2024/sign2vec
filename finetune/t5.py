@@ -42,8 +42,6 @@ class CustomT5Model(T5ForConditionalGeneration):
             continuous_input_ = self.custom_linear(continuous_input)
             # generate attention mask for continuous input
 
-        print("Continuous input:", continuous_input_.shape)
-
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -52,8 +50,6 @@ class CustomT5Model(T5ForConditionalGeneration):
             if self.config.num_layers == self.config.num_decoder_layers:
                 decoder_head_mask = head_mask
 
-
-        print("Decoder input ids:", decoder_input_ids)
         # Encode if needed (training, first prediction pass)
         if encoder_outputs is None:
             # Convert encoder inputs in embeddings if needed

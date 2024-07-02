@@ -1,3 +1,5 @@
+
+import torch 
 from torch import nn
 from transformers import T5ForConditionalGeneration
 
@@ -9,13 +11,23 @@ class CustomT5Model(T5ForConditionalGeneration):
     
     def forward(self, continuous_input=None, attention_mask=None, decoder_input_ids=None, 
                 decoder_attention_mask=None, labels=None):
+        
         if continuous_input is not None:
             continuous_input_ = self.custom_linear(continuous_input)
-            encoder_outputs = self.encoder(inputs_embeds=continuous_input_, attention_mask=attention_mask)
+            # generate attention mask for continuous input
+            attention_mask = torch.ones(
+                continuous_input_.shape[0],
+                continuous_input_.shape[1]
+            )
+            encoder_outputs = self.encoder(
+                inputs_embeds=continuous_input_, 
+                attention_mask=attention_mask
+            )
         else:
             raise ValueError("continuous_input cannot be None")
         
         print("encoder_outputs: ", encoder_outputs)
+        print("encoder_outputs[0]: ", encoder_outputs[0].shape)
         print("decoder_input_ids: ", decoder_input_ids.shape)
         print("labels: ", labels.shape)
 

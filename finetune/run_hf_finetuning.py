@@ -50,7 +50,7 @@ def parse_args():
 args = parse_args()
 
 # 1. Setup Environment
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 tokenizer = AutoTokenizer.from_pretrained(args.t5_model_path_or_name)
 model = CustomT5Model.from_pretrained(args.t5_model_path_or_name).to(device)

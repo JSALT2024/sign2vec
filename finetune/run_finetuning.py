@@ -404,7 +404,25 @@ def main(args):
                 'train_loss': loss.item(),
             })
 
-            if batch_idx % 20 == 0: print(f'epoch: {epoch} | loss: {loss.item()}')
+            if batch_idx % 20 == 0: 
+
+                generated_sentences = tokenizer.batch_decode(
+                    model.generate(batch['input_values']),
+                    skip_special_tokens=False
+                )
+
+                decoder_input_ids = batch['decoder_input_ids']
+                ground_sentences = tokenizer.batch_decode(
+                    decoder_input_ids,
+                    skip_special_tokens=True
+                )
+
+                for generated_sentence, ground_sentence in zip( generated_sentences, ground_sentences):
+                    print('Generated:', generated_sentence)
+                    print('References:', ground_sentence)
+                    print('='*50)
+                
+                print(f'epoch: {epoch} | loss: {loss.item()}')
 
             loss.backward()
             optimizer.step()

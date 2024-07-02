@@ -1,0 +1,14 @@
+python3 finetune/run_hf_finetuning.py  --t5_model_path_or_name='google-t5/t5-small' \
+                                        --train_data_path="pretraining/how2sign/train-5.csv" \
+                                        --val_data_path="pretraining/how2sign/train-5.csv" \
+                                        --test_data_path="pretraining/how2sign/train-5.csv" \
+                                        --output_dir="./outputs" \
+                                        --data_dir="pretraining/how2sign/" \
+                                        --per_device_train_batch_size="8" \
+                                        --per_device_eval_batch_size="8" \
+                                        --learning_rate="5e-5" \
+                                        --num_train_epochs="100" \
+                                        --weight_decay="0.01" \
+                                        --evaluation_strategy="epoch" \
+                                        --save_total_limit="100" \
+                                        --logging_dir="./logs"

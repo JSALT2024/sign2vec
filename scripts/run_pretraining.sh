@@ -16,7 +16,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --per_device_eval_batch_size="8" \
                                         --adam_beta1="0.9" \
                                         --adam_beta2="0.98" \
-                                        --adam_epsilon="1e-06" \
+                                        --adam_epsilon="1e-05" \
                                         --gradient_checkpointing \
                                         --mask_time_prob="0.65" \
                                         --mask_time_length="10" \

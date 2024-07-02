@@ -121,15 +121,9 @@ class CustomDataCollator:
             continuous_input.shape[1]
         )  # create an attention mask for the continuous input
 
-        print("continuous_input: ", continuous_input.shape)
-        print("labels: ", labels.shape)
-        print("attention_mask: ", attention_mask.shape)
-
-
         return {
             'labels': labels, 
             'continuous_input': continuous_input, 
-            'attention_mask': attention_mask,
             'decoder_input_ids': labels
         }
     

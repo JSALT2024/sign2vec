@@ -1,7 +1,7 @@
 python3 finetune/run_finetuning.py  --t5_model_path_or_name='google-t5/t5-small' \
                                     --sign2vec_model_path='karahansahin/sign2vec-v0-how2sign' \
                                     --data_path="../../../ssd1/karahan/" \
-                                    --experiment_type="sign2vec" \
+                                    --experiment_type="baseline" \
                                     --output_dir='output' \
                                     --max_epochs="100" \
                                     --batch_size="4" \

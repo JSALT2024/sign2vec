@@ -185,6 +185,13 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--max_sequence_length',
+        type=int,
+        default=128,
+        help='Max sequence length'
+    )
+
+    parser.add_argument(
         '--mask_time_length',
         type=int,
         default=10,
@@ -309,6 +316,9 @@ def main(args):
         mask_time_length=args.mask_time_length,
         tokenizer=tokenizer,
         shift_right=t5._shift_right,
+        max_frame_length=args.max_frames,
+        max_text_length=args.max_sequence_length,
+        skip_frames=2,
     )
 
     print('Data collator created!')

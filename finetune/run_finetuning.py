@@ -392,13 +392,12 @@ def main(args):
             loss = outputs.loss
             total_train_loss += loss.item()
 
-            # wandb.log({
-            #     'train_loss': loss.item(),
-            # })
+            wandb.log({
+                'train_loss': loss.item(),
+            })
 
-            if batch_idx % 20 == 0: 
-                
-                # batch decoding
+            if batch_idx % 100 == print(f'epoch: {epoch} | loss: {loss.item()}')
+            if batch_idx % 200 == 0:
                 tokens = model.generate(
                     input_values=batch['input_values'],
                 )
@@ -412,15 +411,13 @@ def main(args):
                 decoder_input_ids = batch['decoder_input_ids']
                 ground_sentences = tokenizer.batch_decode(
                     decoder_input_ids,
-                    skip_special_tokens=True
+                    skip_special_tokens=False
                 )
 
                 for generated_sentence, ground_sentence in zip( generated_sentences, ground_sentences):
                     print('Generated:', generated_sentence)
                     print('References:', ground_sentence)
                     print('='*50)
-                
-                print(f'epoch: {epoch} | loss: {loss.item()}')
 
             loss.backward()
             optimizer.step()
@@ -441,36 +438,42 @@ def main(args):
             outputs = model(**batch)
             loss = outputs.loss
 
-            # wandb.log({
-            #     'val_loss': loss.item(),
-            # })
+            wandb.log({
+                'val_loss': loss.item(),
+            })
+
+            tokens = model.generate(
+                input_values=batch['input_values'],
+            )
 
             generated_sentences = []
-            print('Generated:', outputs.logits.shape)
-            for i in range(outputs.logits.shape[0]):
+            for i in range(tokens.shape[0]):
                 generated_sentences.append(
-                    tokenizer.decode(outputs.logits[i].argmax(1), skip_special_tokens=True)
+                    tokenizer.decode(tokens[i], skip_special_tokens=False)
                 )
 
             decoder_input_ids = batch['decoder_input_ids']
             ground_sentences = tokenizer.batch_decode(
                 decoder_input_ids,
-                skip_special_tokens=True
+                skip_special_tokens=False
             )
 
-            if instance_count < 100:
-                for generated_sentence, ground_sentence in zip( generated_sentences, ground_sentences):
-                    
-                    bleu_score.add_batch(
-                        predictions=[generated_sentence], 
-                        references=[ground_sentence]
-                    )
 
+            for generated_sentence, ground_sentence in zip( generated_sentences, ground_sentences):
+
+                if instance_count < 100:
                     print('Generated:', generated_sentence)
                     print('References:', ground_sentence)
                     print('='*50)
-
                     instance_count += 1
+
+                bleu_score.add_batch(
+                    predictions=[generated_sentence], 
+                    references=[ground_sentence]
+                )
+
+            print(f'epoch: {epoch} | loss: {loss.item()}')
+
 
             total_val_loss += loss.item()
             progress_bar.update(1)
@@ -478,9 +481,9 @@ def main(args):
 
         final_score = bleu_score.compute()
 
-        # wandb.log({
-        #     'bleu_score': final_score,
-        # })
+        wandb.log({
+            'bleu_score': final_score,
+        })
         
         print(f'Epoch: {epoch}')
         print(f'Train Loss: {total_train_loss}')

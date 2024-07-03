@@ -46,6 +46,9 @@ class DataCollatorForSign2VecFinetuning:
     tokenizer: None
     shift_right: None
     padding: Union[bool, str] = "longest"
+    max_text_length: Optional[int] = None
+    max_frame_length: Optional[int] = None
+    skip_frames: Optional[int] = 1
     pad_to_multiple_of: Optional[int] = None
     mask_time_prob: Optional[float] = 0.65
     mask_time_length: Optional[int] = 10
@@ -55,12 +58,12 @@ class DataCollatorForSign2VecFinetuning:
         sentences = [feature["sentence"] for feature in features]
 
         decoder_input_ids = self.tokenizer(
-            sentences, return_tensors="pt", padding="max_length", max_length=250, truncation=True
+            sentences, return_tensors="pt", padding="max_length", max_length=self.max_text_length, truncation=True
         ).input_ids
 
-        # decoder_input_ids = self.shift_right(decoder_input_ids)
-
-        features = [{"input_values": feature["input_values"]} for feature in features]
+        features = [
+            {"input_values": feature["input_values"]} for feature in features
+        ]
         # reformat list to dict and set to pytorch format
         batch = self.feature_extractor.pad(
             features,
@@ -69,40 +72,8 @@ class DataCollatorForSign2VecFinetuning:
             return_tensors="pt",
         )
 
-        batch['input_values'] = batch['input_values'][:, :500, :]
+        batch['input_values'] = batch['input_values'][:, :self.max_frame_length:self.skip_frames, :]
 
-        # make sure that `input_values` are of shape [batch_size x num_features x sequence_length]
-
-        device = batch["input_values"].device
-        batch_size = batch["input_values"].shape[0]
-
-        mask_indices_seq_length = self.model._get_feat_extract_output_lengths(batch["input_values"].shape[-1])
-        # make sure masked sequence length is a Python scalar
-        mask_indices_seq_length = int(mask_indices_seq_length)
-
-        # make sure that no loss is computed on padded inputs
-        if batch.get("attention_mask") is not None:
-            # compute real output lengths according to convolution formula
-            batch["sub_attention_mask"] = self.model._get_feature_vector_attention_mask(
-                mask_indices_seq_length, batch["attention_mask"]
-            )
-
-        features_shape = (batch_size, mask_indices_seq_length)
-
-        # sample randomly masked indices
-        mask_time_indices = _compute_mask_indices(
-            features_shape,
-            self.mask_time_prob,
-            self.mask_time_length,
-            attention_mask=batch.get("sub_attention_mask"),
-        )
-
-        # sample negative indices
-        sampled_negative_indices = _sample_negative_indices(
-            features_shape,
-            self.model.config.num_negatives,
-            mask_time_indices=mask_time_indices,
-        )
         batch["decoder_input_ids"] = decoder_input_ids
         
         return batch

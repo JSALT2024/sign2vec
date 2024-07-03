@@ -378,12 +378,12 @@ def main(args):
 
     bleu_score = evaluate.load('bleu')
 
-    # wandb.init(
-    #     args.wandb_project_name if args.wandb_project_name else None,
-    # )
+    wandb.init(
+        args.wandb_project_name if args.wandb_project_name else None,
+    )
 
-    # wandb.config.update(args)
-    # wandb.watch(model)
+    wandb.config.update(args)
+    wandb.watch(model)
 
     # 6. Train the model
     for epoch in range(args.max_epochs):

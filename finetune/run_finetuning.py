@@ -406,7 +406,7 @@ def main(args):
                 'train_loss': loss.item(),
             })
 
-            if batch_idx % 100 == print(f'epoch: {epoch} | loss: {loss.item()}')
+            if batch_idx % 100 == 0: print(f'epoch: {epoch} | loss: {loss.item()}')
             if batch_idx % 200 == 0:
                 tokens = model.generate(
                     input_values=batch['input_values'],

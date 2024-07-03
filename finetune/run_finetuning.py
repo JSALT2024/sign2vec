@@ -415,13 +415,13 @@ def main(args):
                 generated_sentences = []
                 for i in range(tokens.shape[0]):
                     generated_sentences.append(
-                        tokenizer.decode(tokens[i], skip_special_tokens=False)
+                        tokenizer.decode(tokens[i], skip_special_tokens=True)
                     )
 
                 decoder_input_ids = batch['decoder_input_ids']
                 ground_sentences = tokenizer.batch_decode(
                     decoder_input_ids,
-                    skip_special_tokens=False
+                    skip_special_tokens=True
                 )
 
                 for generated_sentence, ground_sentence in zip( generated_sentences, ground_sentences):
@@ -459,13 +459,13 @@ def main(args):
             generated_sentences = []
             for i in range(tokens.shape[0]):
                 generated_sentences.append(
-                    tokenizer.decode(tokens[i], skip_special_tokens=False)
+                    tokenizer.decode(tokens[i], skip_special_tokens=True)
                 )
 
             decoder_input_ids = batch['decoder_input_ids']
             ground_sentences = tokenizer.batch_decode(
                 decoder_input_ids,
-                skip_special_tokens=False
+                skip_special_tokens=True
             )
 
 

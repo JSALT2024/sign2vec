@@ -52,7 +52,7 @@ class DataCollatorForSign2VecFinetuning:
 
     def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         
-        sentences = [ 'English translation: ' + feature["sentence"] for feature in features]
+        sentences = [feature["sentence"] for feature in features]
 
         decoder_input_ids = self.tokenizer(
             sentences, return_tensors="pt", padding="max_length", max_length=250, truncation=True

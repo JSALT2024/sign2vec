@@ -86,6 +86,17 @@ class T5BaseForSignLanguageTranslation(nn.Module):
         self.linear = nn.Linear(embed_size, self.model.config.d_model)
         self.model.encoder.embed_tokens = self.linear
 
+    def generate(self, input_values, **kwargs):
+		
+        inputs_embeds = self.linear(input_values)
+        outputs = self.model.generate(
+			input_ids=None,
+			inputs_embeds=inputs_embeds,
+			**kwargs
+		)
+
+        return outputs
+
 
     def forward(self, input_values, decoder_input_ids):
         

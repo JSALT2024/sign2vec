@@ -368,12 +368,12 @@ def main(args):
 
     bleu_score = evaluate.load('bleu')
 
-    wandb.init(
-        args.wandb_project_name if args.wandb_project_name else None,
-    )
+    # wandb.init(
+    #     args.wandb_project_name if args.wandb_project_name else None,
+    # )
 
-    wandb.config.update(args)
-    wandb.watch(model)
+    # wandb.config.update(args)
+    # wandb.watch(model)
 
     # 6. Train the model
     for epoch in range(args.max_epochs):
@@ -392,18 +392,23 @@ def main(args):
             loss = outputs.loss
             total_train_loss += loss.item()
 
-            wandb.log({
-                'train_loss': loss.item(),
-            })
+            # wandb.log({
+            #     'train_loss': loss.item(),
+            # })
 
             if batch_idx % 20 == 0: 
                 
+                # batch decoding
+                tokens = model.generate(
+                    input_values=batch['input_values'],
+                )
+
                 generated_sentences = []
-                for i in range(outputs.logits.shape[0]):
+                for i in range(tokens.shape[0]):
                     generated_sentences.append(
-                        tokenizer.decode(outputs.logits[i].argmax(1), skip_special_tokens=True)
+                        tokenizer.decode(tokens[i], skip_special_tokens=False)
                     )
-            
+
                 decoder_input_ids = batch['decoder_input_ids']
                 ground_sentences = tokenizer.batch_decode(
                     decoder_input_ids,
@@ -436,9 +441,9 @@ def main(args):
             outputs = model(**batch)
             loss = outputs.loss
 
-            wandb.log({
-                'val_loss': loss.item(),
-            })
+            # wandb.log({
+            #     'val_loss': loss.item(),
+            # })
 
             generated_sentences = []
             print('Generated:', outputs.logits.shape)
@@ -473,9 +478,9 @@ def main(args):
 
         final_score = bleu_score.compute()
 
-        wandb.log({
-            'bleu_score': final_score,
-        })
+        # wandb.log({
+        #     'bleu_score': final_score,
+        # })
         
         print(f'Epoch: {epoch}')
         print(f'Train Loss: {total_train_loss}')

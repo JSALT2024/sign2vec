@@ -332,7 +332,7 @@ def main(args):
         shift_right=t5._shift_right,
         max_frame_length=args.max_frames,
         max_text_length=args.max_sequence_length,
-        skip_frames=2,
+        skip_frames=1,
     )
 
     print('Data collator created!')

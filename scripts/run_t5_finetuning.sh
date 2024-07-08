@@ -5,20 +5,18 @@ python3 finetune/run_finetuning.py  --t5_model_path_or_name='google/t5-v1_1-base
                                     --output_dir='output' \
                                     --max_epochs="100" \
                                     --batch_size="8" \
-                                    --max_sequence_length="128" \
+                                    --max_sequence_length="256" \
                                     --sign2vec_embed_dim="768" \
                                     --t5_embed_dim="224" \
                                     --dropout="0.1" \
-                                    --max_frames="256" \
+                                    --max_frames="512" \
                                     --max_epochs="200" \
-                                    --learning_rate="0.001" \
+                                    --learning_rate="0.0001" \
                                     --warmup_steps="1000" \
-                                    --weight_decay="0.001" \
+                                    --weight_decay="0.0001" \
                                     --wandb_project_name='sign2vec_how2sign' \
                                     --wandb_run_name='sign2vec_how2sign_v0.0' \
                                     --train_dataset_path='how2sign/train_dataset.csv' \
                                     --val_dataset_path='how2sign/val_dataset.csv' \
                                     --test_dataset_path='how2sign/val_dataset.csv' \
-                                    --token='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' \
-                                    --freeze_encoder \
-                                    --freeze_decoder \
+                                    --token='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' 

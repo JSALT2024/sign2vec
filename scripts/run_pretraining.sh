@@ -20,6 +20,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --gradient_checkpointing \
                                         --mask_time_prob="0.65" \
                                         --mask_time_length="10" \
+                                        --max
                                         --use_face \
                                         --use_hands \
                                         --use_pose \

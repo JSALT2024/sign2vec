@@ -40,17 +40,12 @@ class How2SignDatasetForFinetuning(Dataset):
         h5_path = os.path.join( self.data_dir ,self.dataset['h5_file_path'].iloc[idx])
         sentence_idx = self.dataset['sentence_idx'].iloc[idx]
         dataset = self.loader(h5_path)
-
         data, sentence = dataset.load_data(idx=sentence_idx)
-        
         pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
-
-        face_landmarks = face_landmarks.reshape(-1, 32*2)
-        pose_landmarks = pose_landmarks.reshape(-1, 7*2)
-        right_hand_landmarks = right_hand_landmarks.reshape(-1, 21*2)
-        left_hand_landmarks = left_hand_landmarks.reshape(-1, 21*2)
-        
         data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
+        print(data.shape)
+        data = torch.tensor(data).reshape(data.shape[0], -1)
+        print(data.shape)
 
         data = torch.tensor(data).reshape(data.shape[0], -1)
         data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
@@ -85,38 +80,6 @@ class How2SignDatasetForPretraining(Dataset):
     def __len__(self):
         return len(self.dataset)
 
-    def __getitem__(self, idx):
-
-        h5_path = os.path.join( self.data_dir ,self.dataset['h5_file_path'].iloc[idx])
-        sentence_idx = self.dataset['sentence_idx'].iloc[idx]
-        dataset = self.loader(h5_path)
-
-        data, sentence = dataset.load_data(idx=sentence_idx)
-        
-        pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
-
-        face_landmarks = face_landmarks.reshape(-1, 32*2)
-        pose_landmarks = pose_landmarks.reshape(-1, 7*2)
-        right_hand_landmarks = right_hand_landmarks.reshape(-1, 21*2)
-        left_hand_landmarks = left_hand_landmarks.reshape(-1, 21*2)
-        
-        data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
-
-        data = torch.tensor(data).reshape(data.shape[0], -1)
-        data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
-
-        data = self.feature_extractor(
-            data, 
-            max_length=self.max_length, 
-            truncation=True, 
-            sampling_rate=25
-        )
-
-        return {
-            'input_values': data['input_values'][0],
-        }
-
-
     def __len__(self):
         return len(self.dataset)
 
@@ -130,12 +93,20 @@ class How2SignDatasetForPretraining(Dataset):
         
         pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
 
+        # Add min-max scaling to each landmark
+        pose_landmarks
+
         face_landmarks = face_landmarks.reshape(-1, 32*2)
-        pose_landmarks = pose_landmarks.reshape(-1, 7*2)
+        pose_landmarks = pose_landmarks.reshape(-1, 33,*2)
         right_hand_landmarks = right_hand_landmarks.reshape(-1, 21*2)
         left_hand_landmarks = left_hand_landmarks.reshape(-1, 21*2)
         
-        data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
+        data = np.concatenate([
+            pose_landmarks, 
+            right_hand_landmarks, 
+            left_hand_landmarks, 
+            face_landmarks
+        ], axis=1)
 
         data = torch.tensor(data).reshape(data.shape[0], -1)
         data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
@@ -162,17 +133,14 @@ class How2SignDataset(Dataset):
 
         self.video_names = {}
 
-        self.face_landmarks = [101, 214,  # left cheek top, bot
-                               330, 434,  # right cheek top, bot
-                               197, 195, 4, 1,  # nose rigid1, rigid2, flex, tip
-                               295, 282, 283,  # right eyebrow
-                               53, 52, 65,  # left eyebrow
-                               263, 386, 362, 374,  # right eye
-                               33, 159, 133, 145,  # left eye
-                               40, 270, 91, 321,  # outer mouth sqruare
-                               311, 81, 178, 402,  # inner mouth square
-                               78, 308  # inner mouth corners
-                               ]
+        self.face_landmarks = [
+            0, 4, 13, 14, 17, 33, 37, 
+            39, 46, 52, 55, 61, 64, 81,
+            82, 93, 133, 151, 152, 
+            159, 172, 178, 181, 263, 269, 276, 
+            282, 285, 291, 294, 311, 323, 362, 
+            386, 397, 468, 473
+            ]
         self.transform = transform
         self.kp_normalization = kp_normalization
 

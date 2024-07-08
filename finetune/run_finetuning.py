@@ -303,6 +303,8 @@ def main(args):
     
     
     sample_data = train_dataset[0]
+    print('keypoints:', sample_data['input_values'])
+    print('sentence:', sample_data['input_values'].tolist())
     print('keypoints:', sample_data['input_values'].shape)
     print('sentence:', sample_data['sentence'])
     print('='*50)

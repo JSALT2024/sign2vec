@@ -349,7 +349,7 @@ def main(args):
     if args.experiment_type == 'baseline':
         model = T5BaseForSignLanguageTranslation(
             model_id=args.t5_model_path_or_name,
-            embed_size=162,
+            embed_size=args.t5_embed_dim,
         )
 
     elif args.experiment_type == 'sign2vec':

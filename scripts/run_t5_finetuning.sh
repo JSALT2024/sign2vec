@@ -19,4 +19,6 @@ python3 finetune/run_finetuning.py  --t5_model_path_or_name='google/t5-v1_1-base
                                     --train_dataset_path='how2sign/train_dataset.csv' \
                                     --val_dataset_path='how2sign/val_dataset.csv' \
                                     --test_dataset_path='how2sign/val_dataset.csv' \
-                                    --token='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'  
+                                    --token='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' \
+                                    --freeze_encoder \
+                                    --freeze_decoder \

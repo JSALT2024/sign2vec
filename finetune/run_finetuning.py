@@ -233,6 +233,18 @@ def parse_args():
         help='Test dataset path'
     )
 
+    parser.add_argument(
+        '--freeze_encoder',
+        action='store_true',
+        help='Freeze encoder'
+    )
+
+    parser.add_argument(
+        '--freeze_decoder',
+        action='store_true',
+        help='Freeze decoder'
+    )
+
 
     args = parser.parse_args()
 
@@ -351,6 +363,18 @@ def main(args):
             model_id=args.t5_model_path_or_name,
             embed_size=args.t5_embed_dim,
         )
+
+        for param in model.model.named_parameters():
+            if args.freeze_encoder:
+                if 'encoder' in param[0]:
+                    print('Freezing param:', param[0])
+                    param[1].requires_grad = False
+
+            if args.freeze_decoder:
+                if 'decoder' in param[0]:
+                    print('Freezing param:', param[0])
+                    param[1].requires_grad = False
+        
 
     elif args.experiment_type == 'sign2vec':
         pass

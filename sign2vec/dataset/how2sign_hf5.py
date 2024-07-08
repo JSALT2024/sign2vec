@@ -40,12 +40,12 @@ class How2SignDatasetForFinetuning(Dataset):
         h5_path = os.path.join( self.data_dir ,self.dataset['h5_file_path'].iloc[idx])
         sentence_idx = self.dataset['sentence_idx'].iloc[idx]
         dataset = self.loader(h5_path)
+        
         data, sentence = dataset.load_data(idx=sentence_idx)
         pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
+        
         data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
-        print(data.shape)
         data = torch.tensor(data).reshape(data.shape[0], -1)
-        print(data.shape)
 
         data = torch.tensor(data).reshape(data.shape[0], -1)
         data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)

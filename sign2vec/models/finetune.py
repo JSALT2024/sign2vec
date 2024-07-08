@@ -82,6 +82,7 @@ class T5ForSignLanguageTranslation(nn.Module):
 class T5BaseForSignLanguageTranslation(nn.Module):
     def __init__(self, model_id="t5-small", embed_size=512):
         super(T5BaseForSignLanguageTranslation, self).__init__()
+	
         self.model = T5ForConditionalGeneration.from_pretrained(model_id)
         self.linear = nn.Linear(embed_size, self.model.config.d_model)
         self.model.encoder.embed_tokens = self.linear

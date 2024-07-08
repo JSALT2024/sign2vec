@@ -44,7 +44,20 @@ class How2SignDatasetForFinetuning(Dataset):
         data, sentence = dataset.load_data(idx=sentence_idx)
         pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
         
+
+        # Add min-max scaling to each landmark
         data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
+
+        x_vals = data[:, 0].reshape(-1, 1)
+        y_vals = data[:, 1].reshape(-1, 1)
+
+        data_min_x_nonzero = np.min(x_vals[x_vals != 0])
+        data_max_x = np.max(x_vals)
+
+        data_min_y_nonzero = np.min(y_vals[y_vals != 0])
+        data_max_y = np.max(y_vals)
+
+        data = (data - [data_min_x_nonzero, data_min_y_nonzero]) / [data_max_x, data_max_y]
         data = torch.tensor(data).reshape(data.shape[0], -1)
 
         data = torch.tensor(data).reshape(data.shape[0], -1)

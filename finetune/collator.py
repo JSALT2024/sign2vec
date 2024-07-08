@@ -64,14 +64,17 @@ class DataCollatorForSign2VecFinetuning:
         features = [
             {"input_values": feature["input_values"]} for feature in features
         ]
-        # reformat list to dict and set to pytorch format
-        batch = self.feature_extractor.pad(
-            features,
-            padding=self.padding,
-            pad_to_multiple_of=self.pad_to_multiple_of,
-            return_tensors="pt",
-        )
 
+        # reformat list to dict and set to pytorch format
+        input_features = torch.nn.utils.rnn.pad_sequence(
+                [torch.tensor(feature["input_values"]) for feature in features],
+                batch_first=True,
+            ).float()
+        
+        
+        batch = {}
+
+        batch['input_values'] = input_features
         batch['input_values'] = batch['input_values'][:, :self.max_frame_length:self.skip_frames, :]
 
         batch["decoder_input_ids"] = decoder_input_ids

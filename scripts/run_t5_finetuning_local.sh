@@ -5,7 +5,7 @@ python3 finetune/run_finetuning.py  --t5_model_path_or_name='google-t5/t5-small'
                                     --output_dir='output' \
                                     --batch_size="8" \
                                     --sign2vec_embed_dim="768" \
-                                    --t5_embed_dim="512" \
+                                    --t5_embed_dim="172" \
                                     --dropout="0.1" \
                                     --mask_time_prob="0.65" \
                                     --mask_time_length="10" \
@@ -19,6 +19,4 @@ python3 finetune/run_finetuning.py  --t5_model_path_or_name='google-t5/t5-small'
                                     --train_dataset_path='pretraining/how2sign/training.csv' \
                                     --val_dataset_path='pretraining/how2sign/training.csv' \
                                     --test_dataset_path='pretraining/how2sign/training.csv' \
-                                    --token='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'  \
-                                    --freeze_encoder \
-                                    --freeze_decoder \
+                                    --token='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' 

@@ -16,7 +16,7 @@ from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 class CustomT5Model(T5ForConditionalGeneration):
     def __init__(self, config):
         super().__init__(config)
-        self.custom_linear = nn.Linear(162, config.d_model)  # Assuming input size is 128, adjust as needed
+        self.custom_linear = nn.Linear(224, config.d_model)  # Assuming input size is 128, adjust as needed
         print('Custom Linear Layer:', self.custom_linear.weight)
         # nn.init.xavier_uniform_(self.custom_linear.weight)
         # nn.init.constant_(self.custom_linear.bias, 0)

@@ -46,9 +46,9 @@ class How2SignDatasetForFinetuning(Dataset):
         data, sentence = dataset.load_data(idx=sentence_idx)
 
         # normalize sentence
-        sentence = sentence.lower()
         # remove punctuation
-        sentence = sentence.translate(str.maketrans('', '', string.punctuation))
+        # sentence = sentence.lower()
+        # sentence = sentence.translate(str.maketrans('', '', string.punctuation))
 
         pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
         

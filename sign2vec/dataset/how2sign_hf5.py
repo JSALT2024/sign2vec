@@ -51,13 +51,20 @@ class How2SignDatasetForFinetuning(Dataset):
 
         x_vals = data[:, 0].reshape(-1, 1)
         y_vals = data[:, 1].reshape(-1, 1)
-        z_vals = data[:, 2].reshape(-1, 1)
 
-        data_min_x_nonzero = np.min(x_vals[x_vals != 0])
-        data_max_x = np.max(x_vals)
+        try:
+            data_min_x_nonzero = np.min(x_vals[x_vals != 0])
+            data_max_x = np.max(x_vals)
+        except:
+            data_min_x_nonzero = 0
+            data_max_x = np.max(x_vals)
 
-        data_min_y_nonzero = np.min(y_vals[y_vals != 0])
-        data_max_y = np.max(y_vals)
+        try:
+            data_min_y_nonzero = np.min(y_vals[y_vals != 0])
+            data_max_y = np.max(y_vals)
+        except:
+            data_min_y_nonzero = 0
+            data_max_y = np.max(y_vals)
 
         # data = (data - [data_min_x_nonzero, data_min_y_nonzero, data_min_z_nonzero]) / [data_max_x, data_max_y, data_max_z]
         data[:,:,:2] = (data[:,:,:2] - [data_min_x_nonzero, data_min_y_nonzero]) / [data_max_x, data_max_y]

@@ -245,6 +245,12 @@ def parse_args():
         help='Freeze decoder'
     )
 
+    parser.add_argument(
+        '--device',
+        type=str,
+        default='cuda' if torch.cuda.is_available() else 'cpu',
+        help='Device'
+    )
 
     args = parser.parse_args()
 
@@ -384,7 +390,7 @@ def main(args):
     # TODO: Add evaluation metrics (BLEU, BLEU-1, BLEU-2, BLEU-3, BLEU-4, BLEURT, etc.)
     # TODO: Add checkpointing to huggingface
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device(args.device)
     model.to(device)
     
     # 5. Define the optimizer and scheduler
@@ -406,8 +412,6 @@ def main(args):
         gamma=0.1,
     )
 
-    bleu_score = evaluate.load('bleu')
-
 
     wandb.init(
         args.wandb_project_name if args.wandb_project_name else None,
@@ -422,6 +426,7 @@ def main(args):
         total_train_loss = 0
         
         model.train()
+        bleu_score = evaluate.load('bleu')
         progress_bar = tqdm(total=len(train_loader), desc='Training', leave=False)
         for batch_idx, batch in enumerate(train_loader):
             
@@ -438,7 +443,7 @@ def main(args):
             })
 
             if batch_idx % 100 == 0: print(f'epoch: {epoch} | loss: {loss.item()}')
-            if batch_idx % 200 == 0:
+            if batch_idx % 5 == 0:
                 tokens = model.generate(
                     input_values=batch['input_values'],
                 )
@@ -459,6 +464,17 @@ def main(args):
                     print('Generated:', generated_sentence)
                     print('References:', ground_sentence)
                     print('='*50)
+
+                    try:
+                        score = bleu_score.compute(predictions=[generated_sentence if generated_sentence else 'no-translation'], references=[ground_sentence])
+                    except:
+                        score = 0.0
+
+                    wandb.log({
+                        'bleu_score': score,
+                    })
+
+
 
             loss.backward()
             optimizer.step()

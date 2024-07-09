@@ -7,7 +7,7 @@ import wandb
 import pandas as pd
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-
+from transformers import Adafactor
 # Add the parent directory to the path so that we can import the modules
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -330,7 +330,7 @@ def main(args):
         shift_right=t5._shift_right,
         max_frame_length=args.max_frames,
         max_text_length=args.max_sequence_length,
-        skip_frames=1,
+        skip_frames=2,
     )
 
     print('Data collator created!')
@@ -388,10 +388,16 @@ def main(args):
     model.to(device)
     
     # 5. Define the optimizer and scheduler
-    optimizer = torch.optim.AdamW(
-        t5.parameters(),
+    optimizer = Adafactor(
+        model.parameters(),
         lr=args.learning_rate,
+        eps=(1e-30, 1e-3),
+        clip_threshold=1.0,
+        decay_rate=-0.8,
+        beta1=None,
         weight_decay=args.weight_decay,
+        relative_step=False,
+        scale_parameter=False,
     )
 
     scheduler = torch.optim.lr_scheduler.StepLR(
@@ -401,6 +407,7 @@ def main(args):
     )
 
     bleu_score = evaluate.load('bleu')
+
 
     wandb.init(
         args.wandb_project_name if args.wandb_project_name else None,

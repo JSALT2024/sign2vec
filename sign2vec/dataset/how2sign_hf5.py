@@ -44,12 +44,14 @@ class How2SignDatasetForFinetuning(Dataset):
         data, sentence = dataset.load_data(idx=sentence_idx)
         pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
         
-
+        # Select only the landmarks that are relevant for the sign language
+        pose_landmarks = pose_landmarks[:, [11, 12, 13, 14, 23, 24], :]
         # Add min-max scaling to each landmark
         data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
 
         x_vals = data[:, 0].reshape(-1, 1)
         y_vals = data[:, 1].reshape(-1, 1)
+        z_vals = data[:, 2].reshape(-1, 1)
 
         data_min_x_nonzero = np.min(x_vals[x_vals != 0])
         data_max_x = np.max(x_vals)
@@ -57,7 +59,8 @@ class How2SignDatasetForFinetuning(Dataset):
         data_min_y_nonzero = np.min(y_vals[y_vals != 0])
         data_max_y = np.max(y_vals)
 
-        data = (data - [data_min_x_nonzero, data_min_y_nonzero]) / [data_max_x, data_max_y]
+        # data = (data - [data_min_x_nonzero, data_min_y_nonzero, data_min_z_nonzero]) / [data_max_x, data_max_y, data_max_z]
+        data[:,:,:2] = (data[:,:,:2] - [data_min_x_nonzero, data_min_y_nonzero]) / [data_max_x, data_max_y]
         data = torch.tensor(data).reshape(data.shape[0], -1)
 
         data = torch.tensor(data).reshape(data.shape[0], -1)
@@ -252,10 +255,10 @@ class How2SignDataset(Dataset):
             data = np.concatenate(data, axis=1)
             data = data.reshape(data.shape[0], -1)
         else:
-            face_landmarks = face_landmarks[:, self.face_landmarks, 0:2]  # select only wanted KPI and  x, y
-            left_hand_landmarks = left_hand_landmarks[:, :, 0:2]
-            right_hand_landmarks = right_hand_landmarks[:, :, 0:2]
-            pose_landmarks = pose_landmarks[:, :, 0:2]
+            face_landmarks = face_landmarks[:, self.face_landmarks, :3]  # select only wanted KPI and  x, y
+            left_hand_landmarks = left_hand_landmarks[:, :, :3]
+            right_hand_landmarks = right_hand_landmarks[:, :, :3]
+            pose_landmarks = pose_landmarks[:, :, :3]
 
             data = np.concatenate((pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks),
                                   axis=1)

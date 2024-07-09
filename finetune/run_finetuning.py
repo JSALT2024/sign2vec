@@ -496,12 +496,6 @@ def main(args):
                             'bleu_score': score,
                         })
 
-
-
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
-
             progress_bar.update(1)
     
         total_val_loss = 0

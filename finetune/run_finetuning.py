@@ -401,6 +401,8 @@ def main(args):
 
     device = torch.device(args.device)
     model.to(device)
+
+    torch.autograd.set_detect_anomaly(True)
     
     # 5. Define the optimizer and scheduler
     optimizer = Adafactor(

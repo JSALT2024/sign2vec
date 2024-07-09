@@ -252,6 +252,13 @@ def parse_args():
         help='Device'
     )
 
+    parser.add_argument(
+        '--accum_iter',
+        type=int,
+        default=4,
+        help='Accumulation iterations'
+    )
+
     args = parser.parse_args()
 
     return args
@@ -362,6 +369,8 @@ def main(args):
         batch_size=args.batch_size,
     )
 
+    print('Data loaders created!')
+
     if args.experiment_type == 'baseline':
         model = T5BaseForSignLanguageTranslation(
             model_id=args.t5_model_path_or_name,
@@ -428,51 +437,62 @@ def main(args):
         model.train()
         bleu_score = evaluate.load('bleu')
         progress_bar = tqdm(total=len(train_loader), desc='Training', leave=False)
+
         for batch_idx, batch in enumerate(train_loader):
             
             batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
             
-            optimizer.zero_grad()
-            outputs = model(**batch)
+            with torch.set_grad_enabled(True):
 
-            loss = outputs.loss
-            total_train_loss += loss.item()
+                outputs = model(**batch)
+                loss = outputs.loss
 
-            wandb.log({
-                'train_loss': loss.item(),
-            })
+                # normalize loss to account for batch accumulation
+                loss = loss / args.accum_iter
 
-            if batch_idx % 100 == 0: print(f'epoch: {epoch} | loss: {loss.item()}')
-            if batch_idx % 5 == 0:
-                tokens = model.generate(
-                    input_values=batch['input_values'],
-                )
+                # backward pass
+                loss.backward(retain_graph=True)
 
-                generated_sentences = []
-                for i in range(tokens.shape[0]):
-                    generated_sentences.append(
-                        tokenizer.decode(tokens[i], skip_special_tokens=True)
+                # weights update
+                if ((batch_idx + 1) % args.accum_iter == 0) or (batch_idx + 1 == len(train_loader)):
+                    optimizer.step()
+                    optimizer.zero_grad()
+
+                wandb.log({
+                    'train_loss': loss.item(),
+                })
+
+                if batch_idx % 100 == 0: print(f'epoch: {epoch} | loss: {loss.item()}')
+                if batch_idx % 5 == 0:
+                    tokens = model.generate(
+                        input_values=batch['input_values'],
                     )
 
-                decoder_input_ids = batch['decoder_input_ids']
-                ground_sentences = tokenizer.batch_decode(
-                    decoder_input_ids,
-                    skip_special_tokens=True
-                )
+                    generated_sentences = []
+                    for i in range(tokens.shape[0]):
+                        generated_sentences.append(
+                            tokenizer.decode(tokens[i], skip_special_tokens=True)
+                        )
 
-                for generated_sentence, ground_sentence in zip( generated_sentences, ground_sentences):
-                    print('Generated:', generated_sentence)
-                    print('References:', ground_sentence)
-                    print('='*50)
+                    decoder_input_ids = batch['decoder_input_ids']
+                    ground_sentences = tokenizer.batch_decode(
+                        decoder_input_ids,
+                        skip_special_tokens=True
+                    )
 
-                    try:
-                        score = bleu_score.compute(predictions=[generated_sentence if generated_sentence else 'no-translation'], references=[ground_sentence])
-                    except:
-                        score = 0.0
+                    for generated_sentence, ground_sentence in zip( generated_sentences, ground_sentences):
+                        print('Generated:', generated_sentence)
+                        print('References:', ground_sentence)
+                        print('='*50)
 
-                    wandb.log({
-                        'bleu_score': score,
-                    })
+                        try:
+                            score = bleu_score.compute(predictions=[generated_sentence if generated_sentence else 'no-translation'], references=[ground_sentence])
+                        except:
+                            score = 0.0
+
+                        wandb.log({
+                            'bleu_score': score,
+                        })
 
 
 
@@ -492,44 +512,47 @@ def main(args):
 
             batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
 
-            outputs = model(**batch)
-            loss = outputs.loss
+            with torch.set_grad_enabled(True):
 
-            wandb.log({
-                'val_loss': loss.item(),
-            })
+                outputs = model(**batch)
+                loss = outputs.loss
 
-            tokens = model.generate(
-                input_values=batch['input_values'],
-            )
 
-            generated_sentences = []
-            for i in range(tokens.shape[0]):
-                generated_sentences.append(
-                    tokenizer.decode(tokens[i], skip_special_tokens=True)
+                wandb.log({
+                    'val_loss': loss.item(),
+                })
+
+                tokens = model.generate(
+                    input_values=batch['input_values'],
                 )
 
-            decoder_input_ids = batch['decoder_input_ids']
-            ground_sentences = tokenizer.batch_decode(
-                decoder_input_ids,
-                skip_special_tokens=True
-            )
+                generated_sentences = []
+                for i in range(tokens.shape[0]):
+                    generated_sentences.append(
+                        tokenizer.decode(tokens[i], skip_special_tokens=True)
+                    )
 
-
-            for generated_sentence, ground_sentence in zip( generated_sentences, ground_sentences):
-
-                if instance_count < 100:
-                    print('Generated:', generated_sentence)
-                    print('References:', ground_sentence)
-                    print('='*50)
-                    instance_count += 1
-
-                bleu_score.add_batch(
-                    predictions=[generated_sentence], 
-                    references=[ground_sentence]
+                decoder_input_ids = batch['decoder_input_ids']
+                ground_sentences = tokenizer.batch_decode(
+                    decoder_input_ids,
+                    skip_special_tokens=True
                 )
 
-            print(f'epoch: {epoch} | loss: {loss.item()}')
+
+                for generated_sentence, ground_sentence in zip( generated_sentences, ground_sentences):
+
+                    if instance_count < 100:
+                        print('Generated:', generated_sentence)
+                        print('References:', ground_sentence)
+                        print('='*50)
+                        instance_count += 1
+
+                    bleu_score.add_batch(
+                        predictions=[generated_sentence], 
+                        references=[ground_sentence]
+                    )
+
+                print(f'epoch: {epoch} | loss: {loss.item()}')
 
 
             total_val_loss += loss.item()

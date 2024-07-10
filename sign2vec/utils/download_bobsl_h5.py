@@ -8,6 +8,8 @@ import h5py
 from dotenv import load_dotenv
 load_dotenv()
 
+print(os.getcwd())  # should be in the root of the project
+
 def extract_tar(tar_file, dest_dir='tmp'):
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
@@ -149,6 +151,8 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size_per_h5', type=int, default=100)
     parser.add_argument('--save_dir', type=str, default='data')
     args = parser.parse_args()
+
+    os.listdir(args.save_dir)
 
     download_bobsl(
         url_file=args.url_file,

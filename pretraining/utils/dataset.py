@@ -6,6 +6,7 @@ from datasets import load_dataset, concatenate_datasets, DatasetDict
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
+from sign2vec.dataset.yasl import YouTubeASLDatasetForPretraining
 from sign2vec.dataset.how2sign_hf5 import How2SignDatasetForPretraining
 from sign2vec.modeling_sign2vec import Sign2VecFeatureEncoder
 
@@ -43,18 +44,50 @@ def prepare_dataloader(args, config, model, accelerator):
 
     # load audio files into numpy arrays
     with accelerator.main_process_first():
-        vectorized_datasets = {
-            "train": How2SignDatasetForPretraining(
-                dataset=args.train_data_path,
-                data_dir=args.data_dir,
-                max_length=max_length,
-            ),
-            "validation": How2SignDatasetForPretraining(
-                dataset=args.validation_data_path,
-                data_dir=args.data_dir,
-                max_length=max_length,
-            )
-        }
+
+        if args.dataset_name == 'how2sign':
+            vectorized_datasets = {
+                "train": How2SignDatasetForPretraining(
+                    dataset=args.train_data_path,
+                    data_dir=args.data_dir,
+                    max_length=max_length,
+                ),
+                "validation": How2SignDatasetForPretraining(
+                    dataset=args.validation_data_path,
+                    data_dir=args.data_dir,
+                    max_length=max_length,
+                )
+            }
+        elif args.dataset_name == 'bobsl':
+            vectorized_datasets = {
+                "train": BOBSLDataset(
+                    dataset=args.train_data_path,
+                    data_dir=args.data_dir,
+                    max_length=max_length,
+                    cache_file_name=cache_file_names["train"]
+                ),
+                "validation": BOBSLDataset(
+                    dataset=args.validation_data_path,
+                    data_dir=args.data_dir,
+                    max_length=max_length,
+                    cache_file_name=cache_file_names["validation"]
+                )
+            }
+        elif args.dataset_name == 'youtube-asl':
+            vectorized_datasets = {
+                "train": YouTubeASLDatasetForPretraining(
+                    dataset=args.train_data_path,
+                    data_dir=args.data_dir,
+                    max_length=max_length,
+                ),
+                "validation": YouTubeASLDatasetForPretraining(
+                    dataset=args.validation_data_path,
+                    data_dir=args.data_dir,
+                    max_length=max_length,
+                )
+            }
+        else:
+            raise ValueError('Dataset not supported!')
 
     # Activate gradient checkpointing if needed
     if args.gradient_checkpointing:

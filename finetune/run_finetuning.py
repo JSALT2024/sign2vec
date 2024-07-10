@@ -302,7 +302,7 @@ def main(args):
     print('Models loaded!')
 
     if args.env == 'dev':
-
+        
         train_dataset = How2SignDatasetForFinetuning(
             dataset=args.train_dataset_path,
             data_dir=args.data_path,
@@ -428,6 +428,16 @@ def main(args):
         args.wandb_project_name if args.wandb_project_name else None,
     )
 
+    import nltk
+    from nltk.translate.bleu_score import sentence_bleu
+    def compute_bleu_score(hypothesis, reference):
+        bleu_1 = sentence_bleu([reference], hypothesis, weights=[1.0])
+        bleu_2 = sentence_bleu([reference], hypothesis, weights=[0.5, 0.5])
+        bleu_3 = sentence_bleu([reference], hypothesis, weights=[(1./3., 1./3., 1./3.)])
+        bleu_4 = sentence_bleu([reference], hypothesis, weights=[(1./4., 1./4., 1./4., 1./4.)])
+        return bleu_1, bleu_2, bleu_3, bleu_4
+
+
     wandb.config.update(args)
     wandb.watch(model)
 
@@ -487,13 +497,19 @@ def main(args):
                         print('References:', ground_sentence)
                         print('='*50)
 
+                        bleu_1, bleu_2, bleu_3, bleu_4 = compute_bleu_score(nltk.wordpunct_tokenize(generated_sentence), nltk.wordpunct_tokenize(ground_sentence))
                         try:
-                            score = bleu_score.compute(predictions=[generated_sentence if generated_sentence else 'no-translation'], references=[ground_sentence])
+                            score = bleu_score.compute()
+                            score = score['bleu']
                         except:
                             score = 0.0
 
                         wandb.log({
                             'bleu_score': score,
+                            'bleu_1': bleu_1,
+                            'bleu_2': bleu_2,
+                            'bleu_3': bleu_3,
+                            'bleu_4': bleu_4,
                         })
 
             progress_bar.update(1)
@@ -534,7 +550,6 @@ def main(args):
                     skip_special_tokens=True
                 )
 
-
                 for generated_sentence, ground_sentence in zip( generated_sentences, ground_sentences):
 
                     if instance_count < 100:
@@ -543,10 +558,20 @@ def main(args):
                         print('='*50)
                         instance_count += 1
 
-                    bleu_score.add_batch(
-                        predictions=[generated_sentence], 
-                        references=[ground_sentence]
-                    )
+                        bleu_1, bleu_2, bleu_3, bleu_4 = compute_bleu_score(nltk.wordpunct_tokenize(generated_sentence), nltk.wordpunct_tokenize(ground_sentence))
+                        try:
+                            score = bleu_score.compute()
+                            score = score['bleu']
+                        except:
+                            score = 0.0
+
+                        wandb.log({
+                            'bleu_score': score,
+                            'bleu_1': bleu_1,
+                            'bleu_2': bleu_2,
+                            'bleu_3': bleu_3,
+                            'bleu_4': bleu_4,
+                        })
 
                 print(f'epoch: {epoch} | loss: {loss.item()}')
 

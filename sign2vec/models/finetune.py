@@ -93,7 +93,7 @@ class T5BaseForSignLanguageTranslation(nn.Module):
         outputs = self.model.generate(
 			input_ids=None,
 			inputs_embeds=inputs_embeds,
-			**kwargs
+			
 		)
 
         return outputs

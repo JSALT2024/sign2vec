@@ -102,9 +102,11 @@ class DataCollatorForWav2Vec2Pretraining:
         # [CUSTOMIZED] make sure that at least one vector is masked per sample
         for batch_idx in range(batch_size):
             if mask_time_indices[batch_idx].sum() == 1:
-                mask_time_indices[batch_idx] = torch.randint(
-                    0, mask_indices_seq_length, (1,), device=device
-                )
+                # generate boolean mask for the current batch_idx
+                mask_time_indices[batch_idx] = torch.rand(mask_time_indices[batch_idx].shape) < self.mask_time_prob
+                print('resampling mask_time_indices for batch_idx:')
+                print(mask_time_indices[batch_idx].sum() == 1)
+                print('='*50)
 
         # sample negative indices
         sampled_negative_indices = _sample_negative_indices(

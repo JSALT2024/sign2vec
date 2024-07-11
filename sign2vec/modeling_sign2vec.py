@@ -320,10 +320,6 @@ def _sample_negative_indices(
 
     for batch_idx in range(batch_size):
 
-        print('batch_idx:', batch_idx)
-        print('mask_time_indices[batch_idx]:', mask_time_indices[batch_idx])
-        print('mask_time_indices[batch_idx]:', mask_time_indices[batch_idx].sum())
-
         high = mask_time_indices[batch_idx].sum() - 1
         mapped_masked_indices = sequence_length_range[mask_time_indices[batch_idx]]
 

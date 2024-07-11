@@ -2,7 +2,8 @@ import torch
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
 from transformers import Wav2Vec2FeatureExtractor, Wav2Vec2ForPreTraining
-from sign2vec.modeling_sign2vec import _compute_mask_indices, _sample_negative_indices
+# from sign2vec.modeling_sign2vec import _compute_mask_indices, _sample_negative_indices
+from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
 
 @dataclass
 class DataCollatorForWav2Vec2Pretraining:

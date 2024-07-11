@@ -7,12 +7,23 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Pre-Training a 🤗 Sign2Vec2 model on unlabeled sign language data")
 
     parser.add_argument(
+        "--dataset_name",
+        type=str,
+        default=None,
+        help="Name of the dataset to use",
+    )
+    parser.add_argument(
+        '--sampling_rate',
+        type=int,
+        default=16000,
+        help="Sampling rate of the sign signal",
+    )
+    parser.add_argument(
         "--env",
         type=str,
         default="server",
         help="Environment to run the script. Defaults to 'local'",
     )
-
     parser.add_argument(
         "--preprocessing_num_workers",
         type=int,

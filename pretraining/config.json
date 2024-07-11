@@ -1,5 +1,5 @@
 {
-    "input_dim": 162,
+    "input_dim": 255,
     "vocab_size": 64,
     "hidden_size": 768,
     "num_hidden_layers": 12,
@@ -24,7 +24,7 @@
         512
     ],
     "conv_stride": [
-        2,
+        1,
         1,
         1,
         1

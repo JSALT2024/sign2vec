@@ -2,7 +2,7 @@ import torch
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
 from transformers import Wav2Vec2FeatureExtractor, Wav2Vec2ForPreTraining
-from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
+from sign2vec.modeling_sign2vec import _compute_mask_indices, _sample_negative_indices
 
 @dataclass
 class DataCollatorForWav2Vec2Pretraining:
@@ -56,7 +56,10 @@ class DataCollatorForWav2Vec2Pretraining:
             padding=self.padding,
             pad_to_multiple_of=self.pad_to_multiple_of,
             return_tensors="pt",
+            max_length=512,
         )
+
+        print('Batch:', batch["input_values"].shape)
 
         # make sure that `input_values` are of shape [batch_size x num_features x sequence_length]
         batch["input_values"] = batch["input_values"].transpose(1, 2)
@@ -76,7 +79,7 @@ class DataCollatorForWav2Vec2Pretraining:
             )
 
         features_shape = (batch_size, mask_indices_seq_length)
-
+    
         # sample randomly masked indices
         mask_time_indices = _compute_mask_indices(
             features_shape,

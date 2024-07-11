@@ -10,29 +10,21 @@ from sign2vec.dataset.yasl import YouTubeASLDatasetForPretraining
 from sign2vec.dataset.how2sign_hf5 import How2SignDatasetForPretraining
 from sign2vec.modeling_sign2vec import Sign2VecFeatureEncoder
 
-channel_size = {
-    'face_keypoints_2d': 70,
-    'hand_left_keypoints_2d': 21,
-    'hand_right_keypoints_2d': 21,
-    'pose_keypoints_2d': 25,
-}
 
 def prepare_dataloader(args, config, model, accelerator):
-    
-    # load the dataset
 
-    sampling_rate = 25
-    print('Sampling rate:', sampling_rate)
-    print('config:', config)
-
+    # load the feature extractor
     feature_extractor = Wav2Vec2FeatureExtractor(
-        feature_size=config.input_dim,
-        sampling_rate=sampling_rate,
+        feature_size=int(config.input_dim),
+        sampling_rate=int(args.sampling_rate),
+        padding_value=0.0,
+        do_normalize=False,
+        return_attention_mask=True,
     )
-
+    
     # set max & min audio length in number of samples
-    max_length = int(args.max_duration_in_seconds * sampling_rate)
-    min_length = int(args.min_duration_in_seconds * sampling_rate)
+    max_length = int(args.max_duration_in_seconds * args.sampling_rate)
+    min_length = int(args.min_duration_in_seconds * args.sampling_rate)
 
     # load via mapped files via path
     cache_file_names = None
@@ -41,6 +33,10 @@ def prepare_dataloader(args, config, model, accelerator):
             "train": args.train_cache_file_name, 
             "validation": args.validation_cache_file_name
         }
+
+    print('Loading dataset...')
+    print('name:', args.dataset_name)
+    print('====================')
 
     # load audio files into numpy arrays
     with accelerator.main_process_first():
@@ -88,6 +84,11 @@ def prepare_dataloader(args, config, model, accelerator):
             }
         else:
             raise ValueError('Dataset not supported!')
+        
+    sample = vectorized_datasets["train"][0]
+    print('Sample:', sample)
+    print('====================')
+    
 
     # Activate gradient checkpointing if needed
     if args.gradient_checkpointing:

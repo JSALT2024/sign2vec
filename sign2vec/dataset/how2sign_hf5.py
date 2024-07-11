@@ -17,9 +17,9 @@ class How2SignDatasetForFinetuning(Dataset):
     def __init__(self, 
                  dataset, 
                  max_length=25*20,
-                 skip_frames=True,
+                 skip_frames=False,
                  normalize=True,
-                 data_dir=None,):
+                 data_dir=None):
         
         self.data_dir = data_dir
         self.skip_frames = skip_frames
@@ -97,25 +97,35 @@ class How2SignDatasetForPretraining(Dataset):
 
     def __init__(self, 
                  dataset, 
-                 max_length=25*20, 
+                 max_length=25*20,
+                 skip_frames=True,
+                 normalize=True,
                  data_dir=None,
                  padding="max_length"):
         
         self.data_dir = data_dir
+        self.normalize = normalize
+        self.skip_frames = skip_frames
         self.feature_extractor = Wav2Vec2FeatureExtractor(
             feature_size=167,
             sampling_rate=25,
             padding_value=0.0,
         )
-        
+
+        self.face_landmarks = [
+            0, 4, 13, 14, 17, 33, 37, 
+            39, 46, 52, 55, 61, 64, 81,
+            82, 93, 133, 151, 152, 
+            159, 172, 178, 181, 263, 269, 276, 
+            282, 285, 291, 294, 311, 323, 362, 
+            386, 397, 468, 473
+        ]
+        self.pose_landmarks = [11, 12, 13, 14, 23, 24]
+
         self.max_length = max_length
         self.dataset = pd.read_csv(dataset)
         self.dataset.dropna(inplace=True)
-        self.dataset[self.dataset['video_path'].apply(lambda x: True if x else False)]
         self.loader = How2SignDataset
-
-    def __len__(self):
-        return len(self.dataset)
 
     def __len__(self):
         return len(self.dataset)
@@ -125,32 +135,48 @@ class How2SignDatasetForPretraining(Dataset):
         h5_path = os.path.join( self.data_dir ,self.dataset['h5_file_path'].iloc[idx])
         sentence_idx = self.dataset['sentence_idx'].iloc[idx]
         dataset = self.loader(h5_path)
-
+        
         data, sentence = dataset.load_data(idx=sentence_idx)
-        
+
         pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
-
-
-        face_landmarks = face_landmarks.reshape(-1, 32*2)
-        pose_landmarks = pose_landmarks.reshape(-1, 33,*2)
-        right_hand_landmarks = right_hand_landmarks.reshape(-1, 21*2)
-        left_hand_landmarks = left_hand_landmarks.reshape(-1, 21*2)
         
-        data = np.concatenate([
-            pose_landmarks, 
-            right_hand_landmarks, 
-            left_hand_landmarks, 
-            face_landmarks
-        ], axis=1)
+        # Select only the landmarks that are relevant for the sign language
+        face_landmarks = face_landmarks[:, self.face_landmarks, :]
+        pose_landmarks = pose_landmarks[:, self.pose_landmarks, :]
+
+        # Add min-max scaling to each landmark
+        data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
+
+        if self.normalize:
+            x_vals = data[:, 0].reshape(-1, 1)
+            y_vals = data[:, 1].reshape(-1, 1)
+
+            try:
+                data_min_x_nonzero = np.min(x_vals[x_vals != 0])
+                data_max_x = np.max(x_vals)
+            except:
+                data_min_x_nonzero = 0
+                data_max_x = np.max(x_vals)
+
+            try:
+                data_min_y_nonzero = np.min(y_vals[y_vals != 0])
+                data_max_y = np.max(y_vals)
+            except:
+                data_min_y_nonzero = 0
+                data_max_y = np.max(y_vals)
+
+            # data = (data - [data_min_x_nonzero, data_min_y_nonzero, data_min_z_nonzero]) / [data_max_x, data_max_y, data_max_z]
+            data[:,:,:2] = (data[:,:,:2] - [data_min_x_nonzero, data_min_y_nonzero]) / [data_max_x, data_max_y]
 
         data = torch.tensor(data).reshape(data.shape[0], -1)
-        data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
-
-        data = data / data.max()
+        if self.skip_frames: data = data[::2,:] # Skip every other frame
+        data = data[:self.max_length]
 
         return {
-            'input_values': data,
+            'input_values': data
+            # 'sentence': sentence,
         }
+
 
 
 class How2SignDataset(Dataset):

@@ -2,8 +2,8 @@ import torch
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
 from transformers import Wav2Vec2FeatureExtractor, Wav2Vec2ForPreTraining
-# from sign2vec.modeling_sign2vec import _compute_mask_indices, _sample_negative_indices
-from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
+from sign2vec.modeling_sign2vec import _compute_mask_indices, _sample_negative_indices
+# from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
 
 @dataclass
 class DataCollatorForWav2Vec2Pretraining:
@@ -98,6 +98,13 @@ class DataCollatorForWav2Vec2Pretraining:
             self.mask_time_length,
             attention_mask=batch.get("sub_attention_mask"),
         )
+
+        # [CUSTOMIZED] make sure that at least one vector is masked per sample
+        for batch_idx in range(batch_size):
+            if mask_time_indices[batch_idx].sum() == 1:
+                mask_time_indices[batch_idx] = torch.randint(
+                    0, mask_indices_seq_length, (1,), device=device
+                )
 
         # sample negative indices
         sampled_negative_indices = _sample_negative_indices(

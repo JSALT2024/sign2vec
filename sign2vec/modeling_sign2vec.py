@@ -320,7 +320,11 @@ def _sample_negative_indices(
 
     for batch_idx in range(batch_size):
 
-        high = mask_time_indices[batch_idx].sum() - 1 if mask_time_indices[batch_idx].sum() > 1 else 1
+        print('batch_idx:', batch_idx)
+        print('mask_time_indices[batch_idx]:', mask_time_indices[batch_idx])
+        print('mask_time_indices[batch_idx]:', mask_time_indices[batch_idx].sum())
+
+        high = mask_time_indices[batch_idx].sum() - 1
         mapped_masked_indices = sequence_length_range[mask_time_indices[batch_idx]]
 
         feature_indices = np.broadcast_to(np.arange(high + 1)[:, None], (high + 1, num_negatives))

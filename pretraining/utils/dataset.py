@@ -88,7 +88,7 @@ def prepare_dataloader(args, config, model, accelerator):
     sample = vectorized_datasets["train"][0]
     print('Sample:', sample)
     print('====================')
-    
+
 
     # Activate gradient checkpointing if needed
     if args.gradient_checkpointing:
@@ -130,6 +130,7 @@ def prepare_dataloader(args, config, model, accelerator):
     print(test['input_values'].shape)
     print(test['mask_time_indices'].shape)
 
+    print('test:', test['input_values'].shape)
     batch_size, channels, raw_sequence_length = test['input_values'].shape
     sequence_length = model._get_feat_extract_output_lengths(raw_sequence_length).item()
 

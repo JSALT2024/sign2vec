@@ -43,29 +43,39 @@ class DataCollatorForWav2Vec2Pretraining:
 
     model: Wav2Vec2ForPreTraining
     feature_extractor: Wav2Vec2FeatureExtractor
-    padding: Union[bool, str] = "longest"
+    padding: Union[bool, str] = "max_length"
     pad_to_multiple_of: Optional[int] = None
     mask_time_prob: Optional[float] = 0.65
     mask_time_length: Optional[int] = 10
+    max_frames: int = 512
 
     def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
 
+        # pad all features to the max input length
+        # for i, feature in enumerate(features):
+        #     print('Feature:', feature['input_values'].shape)
+
+        sequence_length = self.model._get_feat_extract_output_lengths(self.max_frames).item()
+        
         # reformat list to dict and set to pytorch format
         batch = self.feature_extractor.pad(
             features,
             padding=self.padding,
             pad_to_multiple_of=self.pad_to_multiple_of,
             return_tensors="pt",
-            max_length=512,
+            max_length=self.max_frames,
         )
 
-        print('Batch:', batch["input_values"].shape)
+        # print('Batch:', batch["input_values"].shape)
 
         # make sure that `input_values` are of shape [batch_size x num_features x sequence_length]
         batch["input_values"] = batch["input_values"].transpose(1, 2)
 
         device = batch["input_values"].device
         batch_size = batch["input_values"].shape[0]
+
+        # print('Batch:', batch["input_values"].shape)
+        # print("Input_sequence_length:", batch["input_values"].shape[-1])
 
         mask_indices_seq_length = self.model._get_feat_extract_output_lengths(batch["input_values"].shape[-1])
         # make sure masked sequence length is a Python scalar

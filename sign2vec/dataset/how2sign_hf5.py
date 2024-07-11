@@ -98,7 +98,7 @@ class How2SignDatasetForPretraining(Dataset):
     def __init__(self, 
                  dataset, 
                  max_length=25*20,
-                 skip_frames=True,
+                 skip_frames=False,
                  normalize=True,
                  data_dir=None,
                  padding="max_length"):
@@ -107,7 +107,7 @@ class How2SignDatasetForPretraining(Dataset):
         self.normalize = normalize
         self.skip_frames = skip_frames
         self.feature_extractor = Wav2Vec2FeatureExtractor(
-            feature_size=167,
+            feature_size=255,
             sampling_rate=25,
             padding_value=0.0,
         )
@@ -172,10 +172,17 @@ class How2SignDatasetForPretraining(Dataset):
         if self.skip_frames: data = data[::2,:] # Skip every other frame
         data = data[:self.max_length]
 
+        # features = self.feature_extractor(
+        #     data, 
+        #     padding='max_length',
+        #     max_length=self.max_length, 
+        #     return_tensors="pt"
+        # )
+
         return {
-            'input_values': data
-            # 'sentence': sentence,
+            'input_values': data,
         }
+            
 
 
 

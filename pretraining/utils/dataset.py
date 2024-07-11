@@ -97,6 +97,10 @@ def prepare_dataloader(args, config, model, accelerator):
     mask_time_prob = config.mask_time_prob if args.mask_time_prob is None else args.mask_time_prob
     mask_time_length = config.mask_time_length if args.mask_time_length is None else args.mask_time_length
 
+    print('Creating DataLoader...')
+    print('mask_time_prob:', mask_time_prob)
+    print('mask_time_length:', mask_time_length)
+
     data_collator = DataCollatorForWav2Vec2Pretraining(
         model=model,
         feature_extractor=feature_extractor,

@@ -20,8 +20,8 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --adam_beta2="0.98" \
                                         --adam_epsilon="1e-06" \
                                         --gradient_checkpointing \
-                                        --mask_time_prob="0.5" \
-                                        --mask_time_length="2" \
+                                        --mask_time_prob="0.65" \
+                                        --mask_time_length="10" \
                                         --train_data_path="pretraining/how2sign/val.csv" \
                                         --validation_data_path="pretraining/how2sign/val.csv" \
                                         --data_dir="pretraining/how2sign/" \

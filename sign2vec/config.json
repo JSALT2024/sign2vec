@@ -43,7 +43,7 @@
   "hidden_dropout": 0.1,
   "hidden_size": 768,
   "initializer_range": 0.02,
-  "input_dim": 162,
+  "input_dim": 340,
   "intermediate_size": 3072,
   "layer_norm_eps": 1e-05,
   "layerdrop": 0.1,

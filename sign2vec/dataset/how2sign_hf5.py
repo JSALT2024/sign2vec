@@ -26,6 +26,17 @@ class How2SignDatasetForFinetuning(Dataset):
             sampling_rate=sampling_rate,
             padding_value=padding_value,
         )
+                
+        self.data_dir = data_dir
+        self.face_landmarks = [
+            0, 4, 13, 14, 17, 33, 37, 
+            39, 46, 52, 55, 61, 64, 81,
+            82, 93, 133, 151, 152, 
+            159, 172, 178, 181, 263, 269, 276, 
+            282, 285, 291, 294, 311, 323, 362, 
+            386, 397, 468, 473
+        ]
+        self.pose_landmarks = [11, 12, 13, 14, 23, 24]
 
         
         self.max_length = max_length
@@ -47,10 +58,15 @@ class How2SignDatasetForFinetuning(Dataset):
         
         pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
 
-        face_landmarks = face_landmarks.reshape(-1, 32*2)
-        pose_landmarks = pose_landmarks.reshape(-1, 7*2)
-        right_hand_landmarks = right_hand_landmarks.reshape(-1, 21*2)
-        left_hand_landmarks = left_hand_landmarks.reshape(-1, 21*2)
+        pose_landmarks = pose_landmarks[:, self.pose_landmarks, :]
+        face_landmarks = face_landmarks[:, self.face_landmarks, :]
+
+        face_landmarks = face_landmarks.reshape( face_landmarks.shape[0], -1)
+        pose_landmarks = pose_landmarks.reshape( pose_landmarks.shape[0], -1)
+        right_hand_landmarks = right_hand_landmarks.reshape( right_hand_landmarks.shape[0], -1)
+        left_hand_landmarks = left_hand_landmarks.reshape( left_hand_landmarks.shape[0], -1)
+
+        print(face_landmarks.shape, pose_landmarks.shape, right_hand_landmarks.shape, left_hand_landmarks.shape)
         
         data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
 
@@ -80,15 +96,25 @@ class How2SignDatasetForPretraining(Dataset):
         
         self.data_dir = data_dir
         self.feature_extractor = Wav2Vec2FeatureExtractor(
-            feature_size=167,
+            feature_size=340,
             sampling_rate=25,
             padding_value=0.0,
         )
+        self.face_landmarks = [
+            0, 4, 13, 14, 17, 33, 37, 
+            39, 46, 52, 55, 61, 64, 81,
+            82, 93, 133, 151, 152, 
+            159, 172, 178, 181, 263, 269, 276, 
+            282, 285, 291, 294, 311, 323, 362, 
+            386, 397, 468, 473
+        ]
+        self.pose_landmarks = [11, 12, 13, 14, 23, 24]
+        # self.pose_landmarks = [0, 1, 2, 3, 4, 5]
         
         self.max_length = max_length
         self.dataset = pd.read_csv(dataset)
         self.dataset.dropna(inplace=True)
-        self.dataset[self.dataset['video_path'].apply(lambda x: True if x else False)]
+        # self.dataset[self.dataset['video_path'].apply(lambda x: True if x else False)]
         self.loader = How2SignDataset
 
     def __len__(self):
@@ -104,11 +130,14 @@ class How2SignDatasetForPretraining(Dataset):
         
         pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
 
-        face_landmarks = face_landmarks.reshape(-1, 32*2)
-        pose_landmarks = pose_landmarks.reshape(-1, 7*2)
-        right_hand_landmarks = right_hand_landmarks.reshape(-1, 21*2)
-        left_hand_landmarks = left_hand_landmarks.reshape(-1, 21*2)
-        
+        pose_landmarks = pose_landmarks[:, self.pose_landmarks, :]
+        face_landmarks = face_landmarks[:, self.face_landmarks, :]
+
+        face_landmarks = face_landmarks.reshape( face_landmarks.shape[0], -1)
+        pose_landmarks = pose_landmarks.reshape( pose_landmarks.shape[0], -1)
+        right_hand_landmarks = right_hand_landmarks.reshape( right_hand_landmarks.shape[0], -1)
+        left_hand_landmarks = left_hand_landmarks.reshape( left_hand_landmarks.shape[0], -1)
+
         data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
 
         data = torch.tensor(data).reshape(data.shape[0], -1)
@@ -135,15 +164,19 @@ class How2SignDatasetForPretraining(Dataset):
         sentence_idx = self.dataset['sentence_idx'].iloc[idx]
         dataset = self.loader(h5_path)
 
+
         data, sentence = dataset.load_data(idx=sentence_idx)
         
         pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
 
-        face_landmarks = face_landmarks.reshape(-1, 32*2)
-        pose_landmarks = pose_landmarks.reshape(-1, 7*2)
-        right_hand_landmarks = right_hand_landmarks.reshape(-1, 21*2)
-        left_hand_landmarks = left_hand_landmarks.reshape(-1, 21*2)
-        
+        pose_landmarks = pose_landmarks[:, self.pose_landmarks, :]
+        face_landmarks = face_landmarks[:, self.face_landmarks, :]
+
+        face_landmarks = face_landmarks.reshape( face_landmarks.shape[0], -1)
+        pose_landmarks = pose_landmarks.reshape( pose_landmarks.shape[0], -1)
+        right_hand_landmarks = right_hand_landmarks.reshape( right_hand_landmarks.shape[0], -1)
+        left_hand_landmarks = left_hand_landmarks.reshape( left_hand_landmarks.shape[0], -1)
+
         data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
 
         data = torch.tensor(data).reshape(data.shape[0], -1)
@@ -175,18 +208,6 @@ class How2SignDataset(Dataset):
         self.h5_path = h5_path
 
         self.video_names = {}
-
-        self.face_landmarks = [101, 214,  # left cheek top, bot
-                               330, 434,  # right cheek top, bot
-                               197, 195, 4, 1,  # nose rigid1, rigid2, flex, tip
-                               295, 282, 283,  # right eyebrow
-                               53, 52, 65,  # left eyebrow
-                               263, 386, 362, 374,  # right eye
-                               33, 159, 133, 145,  # left eye
-                               40, 270, 91, 321,  # outer mouth sqruare
-                               311, 81, 178, 402,  # inner mouth square
-                               78, 308  # inner mouth corners
-                               ]
         self.transform = transform
         self.kp_normalization = kp_normalization
 
@@ -243,7 +264,7 @@ class How2SignDataset(Dataset):
         #         f'Warning: video_path does not contain video with name {video_name}')
 
         if self.kp_normalization:
-            joints["face_landmarks"] = joints["face_landmarks"][:, self.face_landmarks, :]
+            joints["face_landmarks"] = joints["face_landmarks"][:, :, :]
 
             local_landmarks = {}
             global_landmarks = {}
@@ -285,10 +306,10 @@ class How2SignDataset(Dataset):
             data = np.concatenate(data, axis=1)
             data = data.reshape(data.shape[0], -1)
         else:
-            face_landmarks = face_landmarks[:, self.face_landmarks, 0:2]  # select only wanted KPI and  x, y
-            left_hand_landmarks = left_hand_landmarks[:, :, 0:2]
-            right_hand_landmarks = right_hand_landmarks[:, :, 0:2]
-            pose_landmarks = pose_landmarks[:, :, 0:2]
+            face_landmarks = face_landmarks[:, :, :]  # select only wanted KPI and  x, y
+            left_hand_landmarks = left_hand_landmarks[:, :, :]
+            right_hand_landmarks = right_hand_landmarks[:, :, :]
+            pose_landmarks = pose_landmarks[:, :, :]
 
             data = np.concatenate((pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks),
                                   axis=1)

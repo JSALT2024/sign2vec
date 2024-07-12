@@ -14,6 +14,12 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--dataset_name",
+        type=str,
+        default="how2sign"
+    )
+
+    parser.add_argument(
         "--preprocessing_num_workers",
         type=int,
         default=None,

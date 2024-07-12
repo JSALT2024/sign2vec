@@ -1,6 +1,7 @@
 TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py \
                                         --model_name_or_path="patrickvonplaten/wav2vec2-base-v2" \
                                         --output_dir="./sign2vec" \
+                                        --dataset_name="yasl" \
                                         --env="server" \
                                         --max_train_steps="20000" \
                                         --num_warmup_steps="3000" \

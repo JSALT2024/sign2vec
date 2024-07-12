@@ -213,21 +213,18 @@ class YoutubeASLForPretraining(Dataset):
 
 
         self.face_landmarks = [
-            0, 4, 13, 14, 17, 33, 37, 
-            39, 46, 52, 55, 61, 64, 81,
-            82, 93, 133, 151, 152, 
-            159, 172, 178, 181, 263, 269, 276, 
-            282, 285, 291, 294, 311, 323, 362, 
-            386, 397, 468, 473
+            0, 4, 13, 14, 17, 33, 39, 46, 52, 55, 61, 64, 81, 
+            93, 133, 151, 152, 159, 172, 178, 181, 263, 269, 276,
+            282, 285, 291, 294, 311, 323, 362, 386, 397, 402, 405, 468, 473
         ]
-        self.pose_landmarks = [11, 12, 13, 14, 23, 24]
+        self.pose_landmarks = [ 11, 12, 13, 14, 23, 24 ]
         
         self.add_noise = add_noise
         self.kp_norm = kp_norm
         self.norm = [
             "global-pose_landmarks",
-            "global-right_hand_landmarks",
-            "global-left_hand_landmarks",
+            "global-right_hand_landmarks", # "local-right_hand_landmarks",
+            "global-left_hand_landmarks", # "local-left_hand_landmarks",
             "local-face_landmarks"
         ]
             
@@ -252,30 +249,27 @@ class YoutubeASLForPretraining(Dataset):
         pose_landmarks = pose_landmarks[:, self.pose_landmarks, :]
         face_landmarks = face_landmarks[:, self.face_landmarks, :]
 
-        face_landmarks = face_landmarks.reshape( face_landmarks.shape[0], -1)
-        pose_landmarks = pose_landmarks.reshape( pose_landmarks.shape[0], -1)
-        right_hand_landmarks = right_hand_landmarks.reshape( right_hand_landmarks.shape[0], -1)
-        left_hand_landmarks = left_hand_landmarks.reshape( left_hand_landmarks.shape[0], -1)
+        face_landmarks = face_landmarks.reshape( face_landmarks.shape[0], -1 )
+        pose_landmarks = pose_landmarks.reshape( pose_landmarks.shape[0], -1 )
+        right_hand_landmarks = right_hand_landmarks.reshape( right_hand_landmarks.shape[0], -1 )
+        left_hand_landmarks = left_hand_landmarks.reshape( left_hand_landmarks.shape[0], -1 )
 
         data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
 
         data = torch.tensor(data).reshape(data.shape[0], -1)
         data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
 
-        if self.add_noise:
-            # add random noise to the data
-            noise = torch.randn(data.shape) * 0.01
-            data = data + noise
-
         data = self.feature_extractor(
             data, 
             max_length=self.max_length, 
             truncation=True, 
-            sampling_rate=25
+            sampling_rate=25,
         )
-
+        
+        data = data['input_values'][0]
+        
         return {
-            'input_values': data['input_values'][0],
+            'input_values': data,
         }
 
 
@@ -338,18 +332,16 @@ class YoutubeASL(Dataset):
             additional_landmarks = list(global_landmarks.values())
             if "pose_landmarks" in additional_landmarks:
                 additional_landmarks.remove("pose_landmarks")
-            if additional_landmarks:
-                keypoints, additional_keypoints = global_keypoint_normalization(
-                    joints,
-                    "pose_landmarks",
-                    additional_landmarks
-                )
-
-                for k,  landmark in global_landmarks.items():
-                    if landmark == "pose_landmarks":
-                        global_landmarks[k] = keypoints
-                    else:
-                        global_landmarks[k] = additional_keypoints[landmark]
+            keypoints, additional_keypoints = global_keypoint_normalization(
+                joints,
+                "pose_landmarks",
+                additional_landmarks
+            )
+            for k,  landmark in global_landmarks.items():
+                if landmark == "pose_landmarks":
+                    global_landmarks[k] = keypoints
+                else:
+                    global_landmarks[k] = additional_keypoints[landmark]
 
             all_landmarks = {**local_landmarks, **global_landmarks}
             data = []

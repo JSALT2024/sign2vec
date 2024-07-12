@@ -259,6 +259,10 @@ class YoutubeASLForPretraining(Dataset):
         data = torch.tensor(data).reshape(data.shape[0], -1)
         data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
 
+        # add random noise to the data
+        noise = torch.randn(data.shape) * 0.01
+        data = data + noise
+
         data = self.feature_extractor(
             data, 
             max_length=self.max_length, 

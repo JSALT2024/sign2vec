@@ -200,6 +200,7 @@ class YoutubeASLForPretraining(Dataset):
                  data_dir=None,
                  kp_norm=None,
                  zero_mean_unit_var_norm=None,
+                 add_noise=False,
                  padding="max_length"):
         
         self.data_dir = data_dir
@@ -210,7 +211,6 @@ class YoutubeASLForPretraining(Dataset):
             do_normalize=zero_mean_unit_var_norm
         )
 
-        self.kp_norm = kp_norm
 
         self.face_landmarks = [
             0, 4, 13, 14, 17, 33, 37, 
@@ -221,6 +221,9 @@ class YoutubeASLForPretraining(Dataset):
             386, 397, 468, 473
         ]
         self.pose_landmarks = [11, 12, 13, 14, 23, 24]
+        
+        self.add_noise = add_noise
+        self.kp_norm = kp_norm
         self.norm = [
             "global-pose_landmarks",
             "global-right_hand_landmarks",
@@ -259,9 +262,10 @@ class YoutubeASLForPretraining(Dataset):
         data = torch.tensor(data).reshape(data.shape[0], -1)
         data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
 
-        # add random noise to the data
-        noise = torch.randn(data.shape) * 0.01
-        data = data + noise
+        if self.add_noise:
+            # add random noise to the data
+            noise = torch.randn(data.shape) * 0.01
+            data = data + noise
 
         data = self.feature_extractor(
             data, 

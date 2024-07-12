@@ -18,6 +18,11 @@ def parse_args():
         default="how2sign"
     )
     parser.add_argument(
+        "--add_noise",
+        action="store_true",
+        help="Add noise to the audio data",
+    )
+    parser.add_argument(
         '--zero_mean_unit_var_norm',
         action='store_true',
         help='Whether to zero mean normalize the data',

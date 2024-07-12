@@ -19,7 +19,6 @@ channel_size = {
 def prepare_dataloader(args, config, model, accelerator):
     
     # load the dataset
-
     sampling_rate = 25
 
     feature_extractor = Wav2Vec2FeatureExtractor(
@@ -63,6 +62,7 @@ def prepare_dataloader(args, config, model, accelerator):
                     max_length=max_length,
                     kp_norm=args.kp_norm,
                     zero_mean_unit_var_norm=args.zero_mean_unit_var_norm,
+                    add_noise=args.add_noise,
                 ),
                 "validation": YoutubeASLForPretraining(
                     dataset=args.validation_data_path,
@@ -70,6 +70,7 @@ def prepare_dataloader(args, config, model, accelerator):
                     max_length=max_length,
                     kp_norm=args.kp_norm,
                     zero_mean_unit_var_norm=args.zero_mean_unit_var_norm,
+                    add_noise=args.add_noise,
                 )
             }
 

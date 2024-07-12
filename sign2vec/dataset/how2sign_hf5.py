@@ -108,7 +108,7 @@ class How2SignDatasetForPretraining(Dataset):
         ]
         self.pose_landmarks = [11, 12, 13, 14, 23, 24]
         # self.pose_landmarks = [0, 1, 2, 3, 4, 5]
-        
+
         self.max_length = max_length
         self.dataset = pd.read_csv(dataset)
         self.dataset.dropna(inplace=True)
@@ -236,44 +236,6 @@ class YoutubeASLForPretraining(Dataset):
 
         h5_path = os.path.join( self.data_dir ,self.dataset['h5_file_path'].iloc[idx])
         sentence_idx = self.dataset['sentence_idx'].iloc[idx]
-        dataset = self.loader(h5_path)
-
-        data, sentence = dataset.load_data(idx=sentence_idx)
-        
-        pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
-
-        pose_landmarks = pose_landmarks[:, self.pose_landmarks, :]
-        face_landmarks = face_landmarks[:, self.face_landmarks, :]
-
-        face_landmarks = face_landmarks.reshape( face_landmarks.shape[0], -1 )
-        pose_landmarks = pose_landmarks.reshape( pose_landmarks.shape[0], -1 )
-        right_hand_landmarks = right_hand_landmarks.reshape( right_hand_landmarks.shape[0], -1)
-        left_hand_landmarks = left_hand_landmarks.reshape( left_hand_landmarks.shape[0], -1)
-
-        data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
-
-        data = torch.tensor(data).reshape(data.shape[0], -1)
-        data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
-
-        data = self.feature_extractor(
-            data, 
-            max_length=self.max_length, 
-            truncation=True,
-            sampling_rate=25
-        )
-
-        return {
-            'input_values': data['input_values'][0],
-        }
-
-
-    def __len__(self):
-        return len(self.dataset)
-
-    def __getitem__(self, idx):
-
-        h5_path = os.path.join( self.data_dir ,self.dataset['h5_file_path'].iloc[idx])
-        sentence_idx = self.dataset['sentence_idx'].iloc[idx]
         
         if self.kp_norm:
             dataset = self.loader(h5_path, kp_normalization=self.kp_norm)
@@ -281,7 +243,6 @@ class YoutubeASLForPretraining(Dataset):
             print('Normalization:',self.kp_norm)
             print('Data shape:',data)
             print(data)
-
         else:
 
             dataset = self.loader(h5_path)

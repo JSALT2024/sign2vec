@@ -11,8 +11,8 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --min_duration_in_seconds="2.0" \
                                         --logging_steps="1" \
                                         --saving_steps="10000" \
-                                        --per_device_train_batch_size="16" \
-                                        --per_device_eval_batch_size="16" \
+                                        --per_device_train_batch_size="32" \
+                                        --per_device_eval_batch_size="32" \
                                         --adam_beta1="0.9" \
                                         --adam_beta2="0.98" \
                                         --adam_epsilon="1e-06" \
@@ -22,9 +22,9 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --use_face \
                                         --use_hands \
                                         --use_pose \
-                                        --train_data_path="how2sign/train_dataset.csv" \
-                                        --validation_data_path="how2sign/val_dataset.csv" \
-                                        --data_dir="../../../ssd1/karahan/" \
+                                        --train_data_path="/ssd2/karahan/YASL/train_dataset.csv" \
+                                        --validation_data_path="/ssd2/karahan/YASL/val_dataset.csv" \
+                                        --data_dir="/ssd2/karahan/YASL" \
                                         --config_name="pretraining/config.json" \
                                         --push_to_hub \
-                                        --hub_model_id="sign2vec-v0-how2sign"
+                                        --hub_model_id="sign2vec-v0-yasl"

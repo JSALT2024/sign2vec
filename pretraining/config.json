@@ -1,5 +1,6 @@
 {
     "input_dim": 170,
+    "temperature": 4.0,
     "vocab_size": 256,
     "hidden_size": 768,
     "num_hidden_layers": 12,
@@ -19,27 +20,18 @@
     "feat_extract_activation": "gelu",
     "conv_dim": [
         512,
-        512,
-        512,
-        512,
         512
     ],
     "conv_stride": [
         2,
-        1,
-        1,
-        1,
         1
     ],
     "conv_kernel": [
-        5,
-        3,
-        3,
         3,
         1
     ],
     "conv_bias": true,
-    "num_conv_pos_embeddings": 128,
+    "num_conv_pos_embeddings": 256,
     "num_conv_pos_embedding_groups": 16,
     "do_stable_layer_norm": true,
     "apply_spec_augment": true,
@@ -52,10 +44,10 @@
     "num_codevectors_per_group": 128,
     "num_codevector_groups": 2,
     "contrastive_logits_temperature": 0.1,
-    "num_negatives": 100,
+    "num_negatives": 200,
     "codevector_dim": 256,
     "proj_codevector_dim": 256,
-    "diversity_loss_weight": 0.5,
+    "diversity_loss_weight": 0.1,
     "ctc_loss_reduction": "sum",
     "ctc_zero_infinity": false,
     "use_weighted_layer_sum": false,

@@ -12,11 +12,16 @@ def parse_args():
         default="server",
         help="Environment to run the script. Defaults to 'local'",
     )
-
     parser.add_argument(
         "--dataset_name",
         type=str,
         default="how2sign"
+    )
+
+    parser.add_argument(
+        '--zero_mean_unit_var_norm',
+        action='store_true',
+        help='Whether to zero mean normalize the data',
     )
 
     parser.add_argument(

@@ -26,7 +26,7 @@ class How2SignDatasetForFinetuning(Dataset):
             sampling_rate=sampling_rate,
             padding_value=padding_value,
         )
-                
+
         self.data_dir = data_dir
         self.face_landmarks = [
             0, 4, 13, 14, 17, 33, 37, 
@@ -198,6 +198,8 @@ class YoutubeASLForPretraining(Dataset):
                  dataset, 
                  max_length=25*20, 
                  data_dir=None,
+                 kp_norm=None,
+                 zero_mean_unit_var_norm=None,
                  padding="max_length"):
         
         self.data_dir = data_dir
@@ -205,9 +207,11 @@ class YoutubeASLForPretraining(Dataset):
             feature_size=340,
             sampling_rate=25,
             padding_value=0.0,
-            do_normalize=None
+            do_normalize=zero_mean_unit_var_norm
         )
-        
+
+        self.kp_norm = kp_norm
+
         self.face_landmarks = [
             0, 4, 13, 14, 17, 33, 37, 
             39, 46, 52, 55, 61, 64, 81,
@@ -241,8 +245,8 @@ class YoutubeASLForPretraining(Dataset):
         pose_landmarks = pose_landmarks[:, self.pose_landmarks, :]
         face_landmarks = face_landmarks[:, self.face_landmarks, :]
 
-        face_landmarks = face_landmarks.reshape( face_landmarks.shape[0], -1)
-        pose_landmarks = pose_landmarks.reshape( pose_landmarks.shape[0], -1)
+        face_landmarks = face_landmarks.reshape( face_landmarks.shape[0], -1 )
+        pose_landmarks = pose_landmarks.reshape( pose_landmarks.shape[0], -1 )
         right_hand_landmarks = right_hand_landmarks.reshape( right_hand_landmarks.shape[0], -1)
         left_hand_landmarks = left_hand_landmarks.reshape( left_hand_landmarks.shape[0], -1)
 
@@ -254,7 +258,7 @@ class YoutubeASLForPretraining(Dataset):
         data = self.feature_extractor(
             data, 
             max_length=self.max_length, 
-            truncation=True, 
+            truncation=True,
             sampling_rate=25
         )
 
@@ -270,24 +274,34 @@ class YoutubeASLForPretraining(Dataset):
 
         h5_path = os.path.join( self.data_dir ,self.dataset['h5_file_path'].iloc[idx])
         sentence_idx = self.dataset['sentence_idx'].iloc[idx]
-        dataset = self.loader(h5_path)
-
-        data = dataset.load_data(idx=sentence_idx)
         
-        pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
+        if self.kp_norm:
+            dataset = self.loader(h5_path, kp_normalization=self.kp_norm)
+            data = dataset.load_data(idx=sentence_idx)
+            print('Normalization:',self.kp_norm)
+            print('Data shape:',data)
+            print(data)
 
-        pose_landmarks = pose_landmarks[:, self.pose_landmarks, :]
-        face_landmarks = face_landmarks[:, self.face_landmarks, :]
+        else:
 
-        face_landmarks = face_landmarks.reshape( face_landmarks.shape[0], -1)
-        pose_landmarks = pose_landmarks.reshape( pose_landmarks.shape[0], -1)
-        right_hand_landmarks = right_hand_landmarks.reshape( right_hand_landmarks.shape[0], -1)
-        left_hand_landmarks = left_hand_landmarks.reshape( left_hand_landmarks.shape[0], -1)
+            dataset = self.loader(h5_path)
+            
+            data = dataset.load_data(idx=sentence_idx)
+            
+            pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
 
-        data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
+            pose_landmarks = pose_landmarks[:, self.pose_landmarks, :]
+            face_landmarks = face_landmarks[:, self.face_landmarks, :]
 
-        data = torch.tensor(data).reshape(data.shape[0], -1)
-        data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
+            face_landmarks = face_landmarks.reshape( face_landmarks.shape[0], -1)
+            pose_landmarks = pose_landmarks.reshape( pose_landmarks.shape[0], -1)
+            right_hand_landmarks = right_hand_landmarks.reshape( right_hand_landmarks.shape[0], -1)
+            left_hand_landmarks = left_hand_landmarks.reshape( left_hand_landmarks.shape[0], -1)
+
+            data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
+
+            data = torch.tensor(data).reshape(data.shape[0], -1)
+            data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
 
         data = self.feature_extractor(
             data, 
@@ -340,6 +354,47 @@ class YoutubeASL(Dataset):
             right_hand_landmarks = f[video_name]['joints']['right_hand_landmarks'][()]
             pose_landmarks = f[video_name]['joints']['pose_landmarks'][()]
 
+        if self.kp_normalization:
+            joints["face_landmarks"] = joints["face_landmarks"][:, :, :]
+
+            local_landmarks = {}
+            global_landmarks = {}
+
+            for idx, landmarks in enumerate(self.kp_normalization):
+                prefix, landmarks = landmarks.split("-")
+                if prefix == "local":
+                    local_landmarks[idx] = landmarks
+                elif prefix == "global":
+                    global_landmarks[idx] = landmarks
+
+            # local normalization
+            for idx, landmarks in local_landmarks.items():
+                normalized_keypoints = local_keypoint_normalization(joints, landmarks, padding=0.2)
+                local_landmarks[idx] = normalized_keypoints
+
+            # global normalization
+            additional_landmarks = list(global_landmarks.values())
+            if "pose_landmarks" in additional_landmarks:
+                additional_landmarks.remove("pose_landmarks")
+            if additional_landmarks:
+                keypoints, additional_keypoints = global_keypoint_normalization(
+                    joints,
+                    "pose_landmarks",
+                    additional_landmarks
+                )
+
+                for k,  landmark in global_landmarks.items():
+                    if landmark == "pose_landmarks":
+                        global_landmarks[k] = keypoints
+                    else:
+                        global_landmarks[k] = additional_keypoints[landmark]
+
+            all_landmarks = {**local_landmarks, **global_landmarks}
+            data = []
+            for idx in range(len(self.kp_normalization)):
+                data.append(all_landmarks[idx])
+
+            return data
 
         face_landmarks = face_landmarks[:, :, :]  # select only wanted KPI and  x, y
         left_hand_landmarks = left_hand_landmarks[:, :, :]
@@ -408,8 +463,6 @@ class How2SignDataset(Dataset):
             right_hand_landmarks = f[video_name]['joints']['right_hand_landmarks'][()]
             pose_landmarks = f[video_name]['joints']['pose_landmarks'][()]
             sentence = f[video_name]['sentence'][()].decode('utf-8')
-
-    
 
         # TODO implement once visual training is relevant
         # if self.video_path is None:

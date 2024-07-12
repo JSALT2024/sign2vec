@@ -1,6 +1,7 @@
 TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py \
                                         --model_name_or_path="patrickvonplaten/wav2vec2-base-v2" \
                                         --env="local" \
+                                        --dataset_name="yasl" \
                                         --output_dir="./sign2vec" \
                                         --num_train_epochs="1000" \
                                         --max_train_steps="2" \
@@ -23,6 +24,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --use_face \
                                         --use_hands \
                                         --use_pose \
+                                        --zero_mean_unit_var_norm \
                                         --train_data_path="pretraining/how2sign/val.csv" \
                                         --validation_data_path="pretraining/how2sign/val.csv" \
                                         --data_dir="pretraining/how2sign/" \

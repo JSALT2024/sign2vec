@@ -27,6 +27,7 @@ def prepare_dataloader(args, config, model, accelerator):
     feature_extractor = Wav2Vec2FeatureExtractor(
         feature_size=config.input_dim,
         sampling_rate=sampling_rate,
+        do_normalize=False,
     )
 
     # set max & min audio length in number of samples

@@ -205,7 +205,9 @@ class YoutubeASLForPretraining(Dataset):
             feature_size=340,
             sampling_rate=25,
             padding_value=0.0,
+            do_normalize=None
         )
+        
         self.face_landmarks = [
             0, 4, 13, 14, 17, 33, 37, 
             39, 46, 52, 55, 61, 64, 81,

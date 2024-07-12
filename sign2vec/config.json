@@ -25,7 +25,7 @@
     1
   ],
   "conv_stride": [
-    1,
+    2,
     1,
     1
   ],
@@ -43,7 +43,7 @@
   "hidden_dropout": 0.1,
   "hidden_size": 768,
   "initializer_range": 0.02,
-  "input_dim": 340,
+  "input_dim": 170,
   "intermediate_size": 3072,
   "layer_norm_eps": 1e-05,
   "layerdrop": 0.1,
@@ -90,6 +90,6 @@
   "torch_dtype": "float32",
   "transformers_version": "4.42.0.dev0",
   "use_weighted_layer_sum": false,
-  "vocab_size": 64,
+  "vocab_size": 256,
   "xvector_output_dim": 512
 }

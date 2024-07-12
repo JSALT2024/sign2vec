@@ -6,8 +6,8 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --max_train_steps="200000" \
                                         --num_warmup_steps="32000" \
                                         --gradient_accumulation_steps="4" \
-                                        --learning_rate="0.0001" \
-                                        --weight_decay="0.1" \
+                                        --learning_rate="0.00001" \
+                                        --weight_decay="0.01" \
                                         --max_duration_in_seconds="30.0" \
                                         --min_duration_in_seconds="2.0" \
                                         --logging_steps="1" \
@@ -24,6 +24,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --use_hands \
                                         --use_pose \
                                         --kp_norm \
+                                        --zero_mean_unit_var_norm \
                                         --train_data_path="/ssd2/karahan/YASL/train_dataset.csv" \
                                         --validation_data_path="/ssd2/karahan/YASL/val_dataset.csv" \
                                         --data_dir="/ssd2/karahan/YASL" \

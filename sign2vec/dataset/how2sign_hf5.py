@@ -316,8 +316,6 @@ class YoutubeASL(Dataset):
         self.transform = transform
         self.kp_normalization = kp_normalization
 
-        self.get_video_names()
-
     def __getitem__(self, index):
 
         data = self.load_data(idx=index)

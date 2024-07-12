@@ -22,13 +22,6 @@ def prepare_dataloader(args, config, model, accelerator):
 
     sampling_rate = 25
 
-    # norm = [
-    #     "local-face_landmarks",
-    #     "global-pose_landmarks",
-    #     "global-right_hand_landmarks",
-    #     "global-left_hand_landmarks"
-    # ]
-
     feature_extractor = Wav2Vec2FeatureExtractor(
         feature_size=config.input_dim,
         sampling_rate=sampling_rate,
@@ -68,12 +61,14 @@ def prepare_dataloader(args, config, model, accelerator):
                     dataset=args.train_data_path,
                     data_dir=args.data_dir,
                     max_length=max_length,
+                    kp_norm=args.kp_norm,
                     zero_mean_unit_var_norm=args.zero_mean_unit_var_norm,
                 ),
                 "validation": YoutubeASLForPretraining(
                     dataset=args.validation_data_path,
                     data_dir=args.data_dir,
                     max_length=max_length,
+                    kp_norm=args.kp_norm,
                     zero_mean_unit_var_norm=args.zero_mean_unit_var_norm,
                 )
             }

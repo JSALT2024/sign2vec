@@ -23,6 +23,11 @@ def parse_args():
         help='Whether to zero mean normalize the data',
     )
     parser.add_argument(
+        '--kp_norm',
+        action='store_true',
+        help='Whether to normalize the keypoints',
+    )
+    parser.add_argument(
         "--preprocessing_num_workers",
         type=int,
         default=None,

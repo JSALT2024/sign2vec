@@ -23,6 +23,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --use_face \
                                         --use_hands \
                                         --use_pose \
+                                        --kp_norm \
                                         --zero_mean_unit_var_norm \
                                         --train_data_path="/ssd2/karahan/YASL/train_dataset.csv" \
                                         --validation_data_path="/ssd2/karahan/YASL/val_dataset.csv" \

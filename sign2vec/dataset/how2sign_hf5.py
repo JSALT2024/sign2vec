@@ -223,8 +223,8 @@ class YoutubeASLForPretraining(Dataset):
         self.kp_norm = kp_norm
         self.norm = [
             "global-pose_landmarks",
-            "global-right_hand_landmarks", # "local-right_hand_landmarks",
-            "global-left_hand_landmarks", # "local-left_hand_landmarks",
+            "local-right_hand_landmarks", # "local-right_hand_landmarks",
+            "local-left_hand_landmarks", # "local-left_hand_landmarks",
             "local-face_landmarks"
         ]
             

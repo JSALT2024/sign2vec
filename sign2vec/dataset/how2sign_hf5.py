@@ -221,7 +221,7 @@ class YoutubeASLForPretraining(Dataset):
         self.dataset = pd.read_csv(dataset)
         self.dataset.dropna(inplace=True)
         # self.dataset[self.dataset['video_path'].apply(lambda x: True if x else False)]
-        self.loader = How2SignDataset
+        self.loader = YoutubeASL
 
     def __len__(self):
         return len(self.dataset)
@@ -270,7 +270,7 @@ class YoutubeASLForPretraining(Dataset):
         sentence_idx = self.dataset['sentence_idx'].iloc[idx]
         dataset = self.loader(h5_path)
 
-        data, sentence = dataset.load_data(idx=sentence_idx)
+        data = dataset.load_data(idx=sentence_idx)
         
         pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
 
@@ -298,6 +298,55 @@ class YoutubeASLForPretraining(Dataset):
             'input_values': data['input_values'][0],
         }
 
+
+class YoutubeASL(Dataset):
+    """ Custom dataset for how2sign dataset on pose features.
+    args:
+        h5_path (str): path to h5 file
+        video_file_path (str, optional): path to video files
+        transform (callable, optional): Optional transform to be applied on a sample.
+    """
+
+    def __init__(self, h5_path, video_file_path=None, transform=None, kp_normalization: list = []):
+
+        self.video_path = video_file_path
+        self.h5_path = h5_path
+
+        self.video_names = {}
+        self.transform = transform
+        self.kp_normalization = kp_normalization
+
+        self.get_video_names()
+
+    def __getitem__(self, index):
+
+        data = self.load_data(idx=index)
+        if self.transform:
+            data = self.transform(data)
+
+        return {"data": torch.tensor(data).float()}
+
+    def __len__(self):
+        with h5py.File(self.h5_path, 'r') as f:
+            return len(f.keys())
+
+    def load_data(self, idx=0):
+
+        with h5py.File(self.h5_path, 'r') as f:
+            video_name = list(f.keys())[idx]
+            joints = {l[0]: l[1][()] for l in f[video_name]['joints'].items()}
+            face_landmarks = f[video_name]['joints']['face_landmarks'][()]
+            left_hand_landmarks = f[video_name]['joints']['left_hand_landmarks'][()]
+            right_hand_landmarks = f[video_name]['joints']['right_hand_landmarks'][()]
+            pose_landmarks = f[video_name]['joints']['pose_landmarks'][()]
+
+
+        face_landmarks = face_landmarks[:, :, :]  # select only wanted KPI and  x, y
+        left_hand_landmarks = left_hand_landmarks[:, :, :]
+        right_hand_landmarks = right_hand_landmarks[:, :, :]
+        pose_landmarks = pose_landmarks[:, :, :]
+
+        return (pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks) 
 
 
 class How2SignDataset(Dataset):
@@ -359,6 +408,8 @@ class How2SignDataset(Dataset):
             right_hand_landmarks = f[video_name]['joints']['right_hand_landmarks'][()]
             pose_landmarks = f[video_name]['joints']['pose_landmarks'][()]
             sentence = f[video_name]['sentence'][()].decode('utf-8')
+
+    
 
         # TODO implement once visual training is relevant
         # if self.video_path is None:

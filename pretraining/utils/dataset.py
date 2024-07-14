@@ -19,6 +19,7 @@ channel_size = {
 def prepare_dataloader(args, config, model, accelerator):
     
     # load the dataset
+
     sampling_rate = 25
 
     feature_extractor = Wav2Vec2FeatureExtractor(

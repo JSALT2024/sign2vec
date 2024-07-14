@@ -43,7 +43,7 @@
     "num_codevectors_per_group": 64,
     "num_codevector_groups": 2,
     "contrastive_logits_temperature": 0.1,
-    "num_negatives": 10,
+    "num_negatives": 50,
     "codevector_dim": 256,
     "proj_codevector_dim": 256,
     "diversity_loss_weight": 0.5,

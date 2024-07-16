@@ -20,14 +20,17 @@
     "conv_dim": [
         512,
         512,
+        512,
         512
     ],
     "conv_stride": [
         2,
         1,
+        1,
         1
     ],
     "conv_kernel": [
+        9,
         5,
         3,
         1
@@ -44,7 +47,7 @@
     "mask_feature_length": 10,
     "mask_feature_min_masks": 0,
     "num_codevectors_per_group": 128,
-    "num_codevector_groups": 2,
+    "num_codevector_groups": 1,
     "contrastive_logits_temperature": 0.1,
     "num_negatives": 100,
     "codevector_dim": 256,

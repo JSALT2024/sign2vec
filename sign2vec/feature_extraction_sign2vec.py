@@ -18,17 +18,18 @@ Feature extractor class for Sign2Vec
 
 from typing import List, Optional, Union
 
+import torch
 import numpy as np
 
-from transformers.feature_extraction_sequence_utils import SequenceFeatureExtractor
 from transformers.feature_extraction_utils import BatchFeature
 from transformers.utils import PaddingStrategy, TensorType, logging
-
+from .utils.normalization import local_keypoint_normalization, global_keypoint_normalization
+from transformers.models.wav2vec2.feature_extraction_wav2vec2 import Wav2Vec2FeatureExtractor
 
 logger = logging.get_logger(__name__)
 
 
-class Sign2VecFeatureExtractor(SequenceFeatureExtractor):
+class Sign2VecFeatureExtractor(Wav2Vec2FeatureExtractor):
     r"""
     Constructs a Sign2Vec feature extractor.
 
@@ -39,26 +40,20 @@ class Sign2VecFeatureExtractor(SequenceFeatureExtractor):
         feature_size (`int`, defaults to 1):
             The feature dimension of the extracted features.
         sampling_rate (`int`, defaults to 16000):
-            The sampling rate at which the audio files should be digitalized expressed in hertz (Hz).
+            The sampling rate at which pose landmarks were sampled. Defaults to 25fps.
         padding_value (`float`, defaults to 0.0):
             The value that is used to fill the padding values.
         do_normalize (`bool`, *optional*, defaults to `True`):
             Whether or not to zero-mean unit-variance normalize the input. Normalizing can help to significantly
             improve the performance for some models, *e.g.*,
             [Sign2Vec-lv60](https://huggingface.co/models?search=lv60).
+        max_duration_in_seconds (`float`, *optional*, defaults to 20.0):
+            The maximum duration in seconds of the input sequence. Longer sequences will be truncated.
         return_attention_mask (`bool`, *optional*, defaults to `False`):
             Whether or not [`~Sign2VecFeatureExtractor.__call__`] should return `attention_mask`.
-
+        kp_norm (`bool`, *optional*, defaults to `False`):
+            Whether or not to normalize the keypoints from with methodology from Spoter2 \cite{Bohacek_2022_WACV}.
             <Tip>
-
-            Sign2Vec models that have set `config.feat_extract_norm == "group"`, such as
-            [Sign2Vec-base](https://huggingface.co/facebook/Sign2Vec-base-960h), have **not** been trained using
-            `attention_mask`. For such models, `input_values` should simply be padded with 0 and no `attention_mask`
-            should be passed.
-
-            For Sign2Vec models that have set `config.feat_extract_norm == "layer"`, such as
-            [Sign2Vec-lv60](https://huggingface.co/facebook/Sign2Vec-large-960h-lv60-self), `attention_mask` should be
-            passed for batched inference.
 
             </Tip>"""
 
@@ -67,48 +62,113 @@ class Sign2VecFeatureExtractor(SequenceFeatureExtractor):
     def __init__(
         self,
         feature_size=1,
-        sampling_rate=16000,
+        sampling_rate=25,
         padding_value=0.0,
+        max_duration_in_seconds=20.0,
         return_attention_mask=False,
+        kp_norm=False,
         do_normalize=True,
         **kwargs,
     ):
-        super().__init__(feature_size=feature_size, sampling_rate=sampling_rate, padding_value=padding_value, **kwargs)
+        super().__init__(feature_size=feature_size, sampling_rate=sampling_rate, padding_value=padding_value, max_duration_in_seconds=max_duration_in_seconds, return_attention_mask=return_attention_mask, do_normalize=do_normalize)
         self.return_attention_mask = return_attention_mask
         self.do_normalize = do_normalize
 
-    @staticmethod
-    def zero_mean_unit_var_norm(
-        input_values: List[np.ndarray], attention_mask: List[np.ndarray], padding_value: float = 0.0
-    ) -> List[np.ndarray]:
+        self.feature_extractor = Wav2Vec2FeatureExtractor(
+            feature_size=feature_size,
+            sampling_rate=sampling_rate,
+            do_normalize=self.do_normalize,
+        )
+
+        self.max_duration_in_seconds = max_duration_in_seconds
+        self.padding_value = padding_value
+
+        self.kp_norm = kp_norm
+        self.max_length = int(max_duration_in_seconds * sampling_rate)
+
+        self.face_landmarks = [
+            0, 4, 13, 14, 17, 33, 39, 46, 52, 55, 61, 64, 81, 
+            93, 133, 151, 152, 159, 172, 178, 181, 263, 269, 276,
+            282, 285, 291, 294, 311, 323, 362, 386, 397, 402, 405, 468, 473
+        ]
+        self.pose_landmarks = [ 11, 12, 13, 14, 23, 24 ]
+
+        self.kp_norm = kp_norm
+        self.norm = [
+            "global-pose_landmarks",
+            "local-right_hand_landmarks", # "local-right_hand_landmarks",
+            "local-left_hand_landmarks", # "local-left_hand_landmarks",
+            "local-face_landmarks"
+        ]
+
+
+    def transform_keypoints(self, pose_landmarks):
         """
-        Every array in the list is normalized to have zero mean and unit variance
-        """
-        if attention_mask is not None:
-            attention_mask = np.array(attention_mask, np.int32)
-            normed_input_values = []
+        Transform the keypoints into a format that can be used by the model.
+        
+        Args:
+            keypoints (dict): The keypoints to be transformed.
+            """
+        if self.kp_norm:
+            local_landmarks = {}
+            global_landmarks = {}
 
-            for vector, length in zip(input_values, attention_mask.sum(-1)):
-                normed_slice = (vector - vector[:length].mean()) / np.sqrt(vector[:length].var() + 1e-7)
-                if length < normed_slice.shape[0]:
-                    normed_slice[length:] = padding_value
+            for idx, landmarks in enumerate(self.norm):
+                prefix, landmarks = landmarks.split("-")
+                if prefix == "local":
+                    local_landmarks[idx] = landmarks
+                elif prefix == "global":
+                    global_landmarks[idx] = landmarks
 
-                normed_input_values.append(normed_slice)
-        else:
-            normed_input_values = [(x - x.mean()) / np.sqrt(x.var() + 1e-7) for x in input_values]
+            # local normalization
+            for idx, landmarks in local_landmarks.items():
+                normalized_keypoints = local_keypoint_normalization(pose_landmarks, landmarks, padding=0.2)
+                local_landmarks[idx] = normalized_keypoints
 
-        return normed_input_values
+            # global normalization
+            additional_landmarks = list(global_landmarks.values())
+            if "pose_landmarks" in additional_landmarks:
+                additional_landmarks.remove("pose_landmarks")
+            keypoints, additional_keypoints = global_keypoint_normalization(
+                pose_landmarks,
+                "pose_landmarks",
+                additional_landmarks
+            )
+            for k,  landmark in global_landmarks.items():
+                if landmark == "pose_landmarks":
+                    global_landmarks[k] = keypoints
+                else:
+                    global_landmarks[k] = additional_keypoints[landmark]
+
+            all_landmarks = {**local_landmarks, **global_landmarks}
+            data = []
+            for idx in range(len(self.norm)):
+                data.append(all_landmarks[idx])
+
+            pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
+
+
+        # select only wanted KPI and  x, y coordinates
+        face_landmarks = face_landmarks[:, self.face_landmarks, :2]  
+        left_hand_landmarks = left_hand_landmarks[:, :, :2]
+        right_hand_landmarks = right_hand_landmarks[:, :, :2]
+        pose_landmarks = pose_landmarks[:, self.pose_landmarks, :2]
+
+        face_landmarks = face_landmarks.reshape( face_landmarks.shape[0], -1 )
+        pose_landmarks = pose_landmarks.reshape( pose_landmarks.shape[0], -1 )
+        right_hand_landmarks = right_hand_landmarks.reshape( right_hand_landmarks.shape[0], -1 )
+        left_hand_landmarks = left_hand_landmarks.reshape( left_hand_landmarks.shape[0], -1 )
+
+        data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
+
+        data = torch.tensor(data).reshape(data.shape[0], -1)
+        data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
+
+        return data
 
     def __call__(
         self,
-        raw_speech: Union[np.ndarray, List[float], List[np.ndarray], List[List[float]]],
-        padding: Union[bool, str, PaddingStrategy] = False,
-        max_length: Optional[int] = None,
-        truncation: bool = False,
-        pad_to_multiple_of: Optional[int] = None,
-        return_attention_mask: Optional[bool] = None,
-        return_tensors: Optional[Union[str, TensorType]] = None,
-        sampling_rate: Optional[int] = None,
+        pose_landmarks: Union[np.ndarray, List[float], List[np.ndarray], List[List[float]]],
         **kwargs,
     ) -> BatchFeature:
         """
@@ -169,72 +229,16 @@ class Sign2VecFeatureExtractor(SequenceFeatureExtractor):
             padding_value (`float`, defaults to 0.0):
         """
 
-        if sampling_rate is not None:
-            if sampling_rate != self.sampling_rate:
-                raise ValueError(
-                    f"The model corresponding to this feature extractor: {self} was trained using a sampling rate of"
-                    f" {self.sampling_rate}. Please make sure that the provided `raw_speech` input was sampled with"
-                    f" {self.sampling_rate} and not {sampling_rate}."
-                )
-        else:
-            logger.warning(
-                "It is strongly recommended to pass the ``sampling_rate`` argument to this function. "
-                "Failing to do so can result in silent errors that might be hard to debug."
-            )
+        if isinstance(pose_landmarks, list):
+            videos = [ self.transform_keypoints(landmarks) for landmarks in pose_landmarks ]
+        if isinstance(pose_landmarks, dict):
+            videos = [ self.transform_keypoints(pose_landmarks) ]
 
-        is_batched_numpy = isinstance(raw_speech, np.ndarray) and len(raw_speech.shape) > 1
-        if is_batched_numpy and len(raw_speech.shape) > 2:
-            raise ValueError(f"Only mono-channel audio is supported for input to {self}")
-        is_batched = is_batched_numpy or (
-            isinstance(raw_speech, (list, tuple)) and (isinstance(raw_speech[0], (np.ndarray, tuple, list)))
+        processed_landmarks = self.feature_extractor(
+            videos, 
+            max_length=self.max_length, 
+            truncation=True, 
+            sampling_rate=25,
         )
 
-        # always return batch
-        if not is_batched:
-            raw_speech = [raw_speech]
-
-        # convert into correct format for padding
-        encoded_inputs = BatchFeature({"input_values": raw_speech})
-
-        padded_inputs = self.pad(
-            encoded_inputs,
-            padding=padding,
-            max_length=max_length,
-            truncation=truncation,
-            pad_to_multiple_of=pad_to_multiple_of,
-            return_attention_mask=return_attention_mask,
-        )
-
-        # convert input values to correct format
-        input_values = padded_inputs["input_values"]
-        if not isinstance(input_values[0], np.ndarray):
-            padded_inputs["input_values"] = [np.asarray(array, dtype=np.float32) for array in input_values]
-        elif (
-            not isinstance(input_values, np.ndarray)
-            and isinstance(input_values[0], np.ndarray)
-            and input_values[0].dtype is np.dtype(np.float64)
-        ):
-            padded_inputs["input_values"] = [array.astype(np.float32) for array in input_values]
-        elif isinstance(input_values, np.ndarray) and input_values.dtype is np.dtype(np.float64):
-            padded_inputs["input_values"] = input_values.astype(np.float32)
-
-        # convert attention_mask to correct format
-        attention_mask = padded_inputs.get("attention_mask")
-        if attention_mask is not None:
-            padded_inputs["attention_mask"] = [np.asarray(array, dtype=np.int32) for array in attention_mask]
-
-        # zero-mean and unit-variance normalization
-        if self.do_normalize:
-            attention_mask = (
-                attention_mask
-                if self._get_padding_strategies(padding, max_length=max_length) is not PaddingStrategy.DO_NOT_PAD
-                else None
-            )
-            padded_inputs["input_values"] = self.zero_mean_unit_var_norm(
-                padded_inputs["input_values"], attention_mask=attention_mask, padding_value=self.padding_value
-            )
-
-        if return_tensors is not None:
-            padded_inputs = padded_inputs.convert_to_tensors(return_tensors)
-
-        return padded_inputs
+        return processed_landmarks

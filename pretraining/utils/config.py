@@ -258,6 +258,7 @@ class Sign2VecConfig(PretrainedConfig):
         num_multi_cue_layers=4,
         adapter_kernel_size=3,
         adapter_stride=2,
+        loss_reduction="mean",
         num_adapter_layers=3,
         output_hidden_size=None,
         adapter_attn_dim=None,
@@ -289,10 +290,13 @@ class Sign2VecConfig(PretrainedConfig):
         self.vocab_size = vocab_size
         self.do_stable_layer_norm = do_stable_layer_norm
         self.use_weighted_layer_sum = use_weighted_layer_sum
+        
+        # multi-cue config parameters
         self.input_dim = input_dim
         self.use_multi_cue = use_multi_cue
         self.num_multi_cue_layers = num_multi_cue_layers
-        
+        self.loss_reduction = loss_reduction
+
         if (
             (len(self.conv_stride) != self.num_feat_extract_layers)
             or (len(self.conv_kernel) != self.num_feat_extract_layers)

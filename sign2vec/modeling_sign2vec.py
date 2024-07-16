@@ -120,6 +120,13 @@ cue_input_dim = {
     CUE_ENUM.FACE: 37*2,
 }
 
+CUE_DIM = [
+    (0, cue_input_dim[CUE_ENUM.POSE]),
+    (cue_input_dim[CUE_ENUM.POSE], cue_input_dim[CUE_ENUM.POSE]+cue_input_dim[CUE_ENUM.RIGHT_HAND]),
+    (cue_input_dim[CUE_ENUM.POSE]+cue_input_dim[CUE_ENUM.RIGHT_HAND], cue_input_dim[CUE_ENUM.POSE]+cue_input_dim[CUE_ENUM.RIGHT_HAND]+cue_input_dim[CUE_ENUM.LEFT_HAND]),
+    (cue_input_dim[CUE_ENUM.POSE]+cue_input_dim[CUE_ENUM.RIGHT_HAND]+cue_input_dim[CUE_ENUM.LEFT_HAND], cue_input_dim[CUE_ENUM.POSE]+cue_input_dim[CUE_ENUM.RIGHT_HAND]+cue_input_dim[CUE_ENUM.LEFT_HAND]+cue_input_dim[CUE_ENUM.FACE]),
+]
+
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
@@ -175,6 +182,57 @@ class Sign2VecForPreTrainingOutput(ModelOutput):
     contrastive_loss: Optional[torch.FloatTensor] = None
     diversity_loss: Optional[torch.FloatTensor] = None
 
+@dataclass
+class MultiCueSign2VecForPreTrainingOutput(ModelOutput):
+    """
+    Output type of [` Sign2VecForPreTraining`], with potential hidden states and attentions.
+
+    Args:
+        loss (*optional*, returned when `sample_negative_indices` are passed, `torch.FloatTensor` of shape `(1,)`):
+            Total loss as the sum of the contrastive loss (L_m) and the diversity loss (L_d) as stated in the [official
+            paper](https://arxiv.org/pdf/2006.11477.pdf) . (classification) loss.
+        projected_states (`torch.FloatTensor` of shape `(batch_size, sequence_length, config.proj_codevector_dim)`):
+            Hidden-states of the model projected to *config.proj_codevector_dim* that can be used to predict the masked
+            projected quantized states.
+        projected_quantized_states (`torch.FloatTensor` of shape `(batch_size, sequence_length, config.proj_codevector_dim)`):
+            Quantized extracted feature vectors projected to *config.proj_codevector_dim* representing the positive
+            target vectors for contrastive loss.
+        hidden_states (`tuple(torch.FloatTensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `torch.FloatTensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size, sequence_length, hidden_size)`.
+
+            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+        attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+            sequence_length)`.
+
+            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
+            heads.
+        contrastive_loss (*optional*, returned when `sample_negative_indices` are passed, `torch.FloatTensor` of shape `(1,)`):
+            The contrastive loss (L_m) as stated in the [official paper](https://arxiv.org/pdf/2006.11477.pdf) .
+        diversity_loss (*optional*, returned when `sample_negative_indices` are passed, `torch.FloatTensor` of shape `(1,)`):
+            The diversity loss (L_d) as stated in the [official paper](https://arxiv.org/pdf/2006.11477.pdf) .
+    """
+
+    loss: Optional[torch.FloatTensor] = None
+    projected_states: torch.FloatTensor = None
+    projected_quantized_states: torch.FloatTensor = None
+    codevector_perplexity: torch.FloatTensor = None
+    hidden_states: Optional[Tuple[torch.FloatTensor]] = None
+    attentions: Optional[Tuple[torch.FloatTensor]] = None
+    contrastive_loss: Optional[torch.FloatTensor] = None
+    diversity_loss: Optional[torch.FloatTensor] = None
+
+    pose_diversity_loss: Optional[torch.FloatTensor] = None
+    right_hand_diversity_loss: Optional[torch.FloatTensor] = None
+    left_hand_diversity_loss: Optional[torch.FloatTensor] = None
+    face_diversity_loss: Optional[torch.FloatTensor] = None
+
+    pose_contrastive_loss: Optional[torch.FloatTensor] = None
+    right_hand_contrastive_loss: Optional[torch.FloatTensor] = None
+    left_hand_contrastive_loss: Optional[torch.FloatTensor] = None
+    face_contrastive_loss: Optional[torch.FloatTensor] = None
+    
 
 def _compute_mask_indices(
     shape: Tuple[int, int],
@@ -337,8 +395,6 @@ class Sign2VecNoLayerNormConvLayer(nn.Module):
         self.in_conv_dim = config.conv_dim[layer_id - 1] // (config.num_multi_cue_layers if config.use_multi_cue else 1) if layer_id > 0 else config.input_dim
         if layer_id == 0 and config.use_multi_cue:
             self.in_conv_dim = cue_input_dim[cue_enum]
-
-        print(f'In Conv Dim layer_id={layer_id} should be:', self.in_conv_dim, 'for cue:', cue_enum)
         self.out_conv_dim = config.conv_dim[layer_id] // config.num_multi_cue_layers if config.use_multi_cue else config.conv_dim[layer_id] 
 
         self.conv = nn.Conv1d(
@@ -362,7 +418,6 @@ class Sign2VecLayerNormConvLayer(nn.Module):
         self.in_conv_dim = config.conv_dim[layer_id - 1] // (config.num_multi_cue_layers if config.use_multi_cue else 1) if layer_id > 0 else config.input_dim
         if layer_id == 0 and config.use_multi_cue:
             self.in_conv_dim = cue_input_dim[cue_enum]
-        print(f'In Conv Dim layer_id={layer_id} should be:', self.in_conv_dim, 'for cue:', cue_enum)
         self.out_conv_dim = config.conv_dim[layer_id] // config.num_multi_cue_layers if config.use_multi_cue else config.conv_dim[layer_id] 
 
         self.conv = nn.Conv1d(
@@ -392,7 +447,6 @@ class Sign2VecGroupNormConvLayer(nn.Module):
         self.in_conv_dim = config.conv_dim[layer_id - 1] // (config.num_multi_cue_layers if config.use_multi_cue else 1) if layer_id > 0 else config.input_dim
         if layer_id == 0 and config.use_multi_cue:
             self.in_conv_dim = cue_input_dim[cue_enum]
-        print(f'In Conv Dim layer_id={layer_id} should be:', self.in_conv_dim, 'for cue:', cue_enum)
         self.out_conv_dim = config.conv_dim[layer_id] // config.num_multi_cue_layers if config.use_multi_cue else config.conv_dim[layer_id] 
 
         self.conv = nn.Conv1d(
@@ -523,12 +577,16 @@ class Sign2VecMultiCueFeatureEncoder(nn.Module):
                 conv_layers = [Sign2VecGroupNormConvLayer(config, layer_id=0, cue_enum=CUE2IDX[cue_id])] + [
                     Sign2VecNoLayerNormConvLayer(config, layer_id=i + 1, cue_enum=CUE2IDX[cue_id]) for i in range(config.num_feat_extract_layers - 1)
                 ]
-                self.multi_cue_layers.append(nn.ModuleList(conv_layers))
+                module = nn.ModuleList(conv_layers)
+                self.register_module(f"multi_cue_layers_{CUE2IDX[cue_id]}", module)
+                self.multi_cue_layers.append(module)
             elif config.feat_extract_norm == "layer":
                 conv_layers = [
                     Sign2VecLayerNormConvLayer(config, layer_id=i, cue_enum=CUE2IDX[cue_id]) for i in range(config.num_feat_extract_layers)
                 ]
-                self.multi_cue_layers.append(nn.ModuleList(conv_layers))
+                module = nn.ModuleList(conv_layers)
+                self.register_module(f"multi_cue_layers_{CUE2IDX[cue_id]}", module)
+                self.multi_cue_layers.append(module)
             else:
                 raise ValueError(
                     f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
@@ -547,19 +605,9 @@ class Sign2VecMultiCueFeatureEncoder(nn.Module):
         
         hidden_states = input_values
 
-        print('Hidden States Shape:', hidden_states.shape)
+        cues = [hidden_states[:, start:end] for start, end in CUE_DIM] 
 
-        cues = [
-            hidden_states[:, :, :12].transpose(1,2), # Pose cues 6*2
-            hidden_states[:, :, 12:12+(21*2)].transpose(1,2), # Right hand cues 21*2
-            hidden_states[:, :, 12+(21*2):12+(21*2)+(21*2)].transpose(1,2), # Left hand cues 21*2
-            hidden_states[:, :, 12+(21*2)+(21*2):12+(21*2)+(21*2)+(37*2)].transpose(1,2), # Face cues 37*2
-        ]
-
-        pose_hidden_states = cues[0]
-        right_hand_hidden_states = cues[1]
-        left_hand_hidden_states = cues[2]
-        face_hidden_states = cues[3]
+        # print('CUE SHAPES ->',cues[0].shape, cues[1].shape, cues[2].shape, cues[3].shape)
         
         for cue_idx, (cue_hidden_states, conv_layers) in enumerate(zip(cues,self.multi_cue_layers)):
 
@@ -571,7 +619,7 @@ class Sign2VecMultiCueFeatureEncoder(nn.Module):
                 if self._requires_grad and self.gradient_checkpointing and self.training:
                     cue_hidden_states = self._gradient_checkpointing_func(
                         conv_layer.__call__,
-                        hidden_states,
+                        cue_hidden_states,
                     )
                     cues[cue_idx] = cue_hidden_states
                 else:
@@ -2013,7 +2061,6 @@ class Sign2VecModel(Wav2Vec2PreTrainedModel):
         if self.config.use_multi_cue:
             extract_features = self.feature_extractor(input_values)
             extract_features = torch.cat(extract_features, dim=1)
-            print('extract_features -->', extract_features.shape)
         else:
             extract_features = self.feature_extractor(input_values)
 
@@ -2461,8 +2508,11 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
             # Add quantized cue features to list
             quantized_cue_features.append(quantized_features)
 
-
+        
         loss = contrastive_loss = diversity_loss = None
+        total_loss = []
+        total_contrastive_loss = []
+        total_diversity_loss = []
         if sampled_negative_indices is not None:
             for quantized_features in quantized_cue_features:
                 batch_size, sequence_length, hidden_size = quantized_features.shape
@@ -2507,22 +2557,62 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
                 # 8. \mathbf{L} = \mathbf{L}_m + \alpha * \mathbf{L}_d
                 loss = contrastive_loss + self.config.diversity_loss_weight * diversity_loss
 
-        
+                total_loss.append(loss)
+                total_contrastive_loss.append(contrastive_loss)
+                total_diversity_loss.append(diversity_loss)                
 
+
+        pose_contrastive_loss, right_hand_contrastive_loss, left_hand_contrastive_loss, face_contrastive_loss = None, None, None, None
+        pose_diversity_loss, right_hand_diversity_loss, left_hand_diversity_loss, face_diversity_loss = None, None, None, None
+        if loss is not None:
+            pose_contrastive_loss = total_contrastive_loss[0]
+            pose_diversity_loss = total_diversity_loss[0]
+
+            right_hand_contrastive_loss = total_contrastive_loss[1]
+            right_hand_diversity_loss = total_diversity_loss[1]
+
+            left_hand_contrastive_loss = total_contrastive_loss[2]
+            left_hand_diversity_loss = total_diversity_loss[2]
+
+            face_contrastive_loss = total_contrastive_loss[3]
+            face_diversity_loss = total_diversity_loss[3]
+        
         if not return_dict:
             if loss is not None:
                 return (loss, transformer_features, quantized_features, codevector_perplexity) + outputs[2:]
             return (transformer_features, quantized_features, codevector_perplexity) + outputs[2:]
+        
+        if loss is not None:
+            if self.config.loss_reduction == 'mean':
+                total_loss = torch.stack(total_loss).mean()
+                total_contrastive_loss = torch.stack(total_contrastive_loss).mean()
+                total_diversity_loss = torch.stack(total_diversity_loss).mean()
 
-        return Sign2VecForPreTrainingOutput(
+            elif self.config.loss_reduction == 'sum':
+                total_loss = torch.stack(total_loss).sum()
+                total_contrastive_loss = torch.stack(total_contrastive_loss).sum()
+                total_diversity_loss = torch.stack(total_diversity_loss).sum()
+
+        return MultiCueSign2VecForPreTrainingOutput(
+
             loss=loss,
             projected_states=transformer_features,
             projected_quantized_states=quantized_features,
             codevector_perplexity=codevector_perplexity,
             hidden_states=outputs.hidden_states,
+
             attentions=outputs.attentions,
             contrastive_loss=contrastive_loss,
             diversity_loss=diversity_loss,
+
+            pose_contrastive_loss=pose_contrastive_loss,
+            pose_diversity_loss=pose_diversity_loss,
+            right_hand_contrastive_loss=right_hand_contrastive_loss,
+            right_hand_diversity_loss=right_hand_diversity_loss,
+            left_hand_contrastive_loss=left_hand_contrastive_loss,
+            left_hand_diversity_loss=left_hand_diversity_loss,
+            face_contrastive_loss=face_contrastive_loss,
+            face_diversity_loss=face_diversity_loss
         )
 
 

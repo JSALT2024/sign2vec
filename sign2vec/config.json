@@ -6,7 +6,7 @@
   "add_adapter": false,
   "apply_spec_augment": true,
   "architectures": [
-    "Sign2VecForPreTraining"
+    "MultiCueSign2VecForPreTraining"
   ],
   "attention_dropout": 0.1,
   "bos_token_id": 1,
@@ -17,21 +17,24 @@
   "conv_dim": [
     512,
     512,
+    512,
     512
   ],
   "conv_kernel": [
-    3,
+    9,
+    5,
     3,
     1
   ],
   "conv_stride": [
     2,
     1,
+    1,
     1
   ],
   "ctc_loss_reduction": "sum",
   "ctc_zero_infinity": false,
-  "diversity_loss_weight": 0.1,
+  "diversity_loss_weight": 0.5,
   "do_stable_layer_norm": true,
   "eos_token_id": 2,
   "feat_extract_activation": "gelu",
@@ -47,6 +50,7 @@
   "intermediate_size": 3072,
   "layer_norm_eps": 1e-05,
   "layerdrop": 0.1,
+  "loss_reduction": "mean",
   "mask_feature_length": 10,
   "mask_feature_min_masks": 0,
   "mask_feature_prob": 0.0,
@@ -55,13 +59,14 @@
   "mask_time_prob": 0.05,
   "model_type": "wav2vec2",
   "num_adapter_layers": 3,
-  "num_attention_heads": 8,
+  "num_attention_heads": 12,
   "num_codevector_groups": 2,
-  "num_codevectors_per_group": 320,
+  "num_codevectors_per_group": 64,
   "num_conv_pos_embedding_groups": 16,
   "num_conv_pos_embeddings": 128,
-  "num_feat_extract_layers": 3,
+  "num_feat_extract_layers": 4,
   "num_hidden_layers": 12,
+  "num_multi_cue_layers": 4,
   "num_negatives": 100,
   "output_hidden_size": 768,
   "pad_token_id": 0,
@@ -89,6 +94,7 @@
   ],
   "torch_dtype": "float32",
   "transformers_version": "4.42.0.dev0",
+  "use_multi_cue": true,
   "use_weighted_layer_sum": false,
   "vocab_size": 256,
   "xvector_output_dim": 512

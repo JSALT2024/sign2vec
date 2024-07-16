@@ -58,6 +58,7 @@
     "use_weighted_layer_sum": false,
     "classifier_proj_size": 256,
     "num_multi_cue_layers": 4,
+    "loss_reduction": "mean",
     "tdnn_dim": [
         512,
         512,
@@ -88,6 +89,6 @@
     "adapter_stride": 2,
     "num_adapter_layers": 3,
     "output_hidden_size": null,
-    "use_multi_cue": false,
+    "use_multi_cue": true,
     "adapter_attn_dim": null
 }

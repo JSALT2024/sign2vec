@@ -89,6 +89,6 @@
     "adapter_stride": 2,
     "num_adapter_layers": 3,
     "output_hidden_size": null,
-    "use_multi_cue": true,
+    "use_multi_cue": false,
     "adapter_attn_dim": null
 }

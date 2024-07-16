@@ -2595,15 +2595,15 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
 
         return MultiCueSign2VecForPreTrainingOutput(
 
-            loss=loss,
+            loss=total_loss,
             projected_states=transformer_features,
             projected_quantized_states=quantized_features,
             codevector_perplexity=codevector_perplexity,
             hidden_states=outputs.hidden_states,
 
             attentions=outputs.attentions,
-            contrastive_loss=contrastive_loss,
-            diversity_loss=diversity_loss,
+            contrastive_loss=total_contrastive_loss,
+            diversity_loss=total_diversity_loss,
 
             pose_contrastive_loss=pose_contrastive_loss,
             pose_diversity_loss=pose_diversity_loss,

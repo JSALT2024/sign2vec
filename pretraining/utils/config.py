@@ -246,6 +246,7 @@ class Sign2VecConfig(PretrainedConfig):
         ctc_zero_infinity=False,
         use_weighted_layer_sum=False,
         classifier_proj_size=256,
+        use_multi_cue=False,
         tdnn_dim=(512, 512, 512, 512, 1500),
         tdnn_kernel=(5, 3, 3, 1, 1),
         tdnn_dilation=(1, 2, 3, 1, 1),
@@ -254,6 +255,7 @@ class Sign2VecConfig(PretrainedConfig):
         bos_token_id=1,
         eos_token_id=2,
         add_adapter=False,
+        num_multi_cue_layers=4,
         adapter_kernel_size=3,
         adapter_stride=2,
         num_adapter_layers=3,
@@ -288,7 +290,9 @@ class Sign2VecConfig(PretrainedConfig):
         self.do_stable_layer_norm = do_stable_layer_norm
         self.use_weighted_layer_sum = use_weighted_layer_sum
         self.input_dim = input_dim
-
+        self.use_multi_cue = use_multi_cue
+        self.num_multi_cue_layers = num_multi_cue_layers
+        
         if (
             (len(self.conv_stride) != self.num_feat_extract_layers)
             or (len(self.conv_kernel) != self.num_feat_extract_layers)

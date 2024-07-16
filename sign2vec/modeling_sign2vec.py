@@ -100,6 +100,26 @@ _FRAME_EXPECTED_OUTPUT = [0, 0]
 _XVECTOR_CHECKPOINT = "anton-l/wav2vec2-base-superb-sv"
 _XVECTOR_EXPECTED_OUTPUT = 0.98
 
+class CUE_ENUM:
+    POSE = 'pose'
+    RIGHT_HAND = 'right_hand'
+    LEFT_HAND = 'left_hand'
+    FACE = 'face'
+
+CUE2IDX = {
+    0: CUE_ENUM.POSE,
+    1: CUE_ENUM.RIGHT_HAND,
+    2: CUE_ENUM.LEFT_HAND,
+    3: CUE_ENUM.FACE,
+}
+
+cue_input_dim = {
+    CUE_ENUM.POSE: 6*2,
+    CUE_ENUM.RIGHT_HAND: 21*2,
+    CUE_ENUM.LEFT_HAND: 21*2,
+    CUE_ENUM.FACE: 37*2,
+}
+
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
@@ -312,10 +332,14 @@ def _sample_negative_indices(
 
 
 class Sign2VecNoLayerNormConvLayer(nn.Module):
-    def __init__(self, config, layer_id=0):
+    def __init__(self, config, layer_id=0, cue_enum='left_hand'):
         super().__init__()
-        self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.input_dim
-        self.out_conv_dim = config.conv_dim[layer_id]
+        self.in_conv_dim = config.conv_dim[layer_id - 1] // (config.num_multi_cue_layers if config.use_multi_cue else 1) if layer_id > 0 else config.input_dim
+        if layer_id == 0 and config.use_multi_cue:
+            self.in_conv_dim = cue_input_dim[cue_enum]
+
+        print(f'In Conv Dim layer_id={layer_id} should be:', self.in_conv_dim, 'for cue:', cue_enum)
+        self.out_conv_dim = config.conv_dim[layer_id] // config.num_multi_cue_layers if config.use_multi_cue else config.conv_dim[layer_id] 
 
         self.conv = nn.Conv1d(
             self.in_conv_dim,
@@ -333,10 +357,13 @@ class Sign2VecNoLayerNormConvLayer(nn.Module):
 
 
 class Sign2VecLayerNormConvLayer(nn.Module):
-    def __init__(self, config, layer_id=0):
+    def __init__(self, config, layer_id=0, cue_enum='left_hand'):
         super().__init__()
-        self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.input_dim
-        self.out_conv_dim = config.conv_dim[layer_id]
+        self.in_conv_dim = config.conv_dim[layer_id - 1] // (config.num_multi_cue_layers if config.use_multi_cue else 1) if layer_id > 0 else config.input_dim
+        if layer_id == 0 and config.use_multi_cue:
+            self.in_conv_dim = cue_input_dim[cue_enum]
+        print(f'In Conv Dim layer_id={layer_id} should be:', self.in_conv_dim, 'for cue:', cue_enum)
+        self.out_conv_dim = config.conv_dim[layer_id] // config.num_multi_cue_layers if config.use_multi_cue else config.conv_dim[layer_id] 
 
         self.conv = nn.Conv1d(
             self.in_conv_dim,
@@ -360,10 +387,13 @@ class Sign2VecLayerNormConvLayer(nn.Module):
 
 
 class Sign2VecGroupNormConvLayer(nn.Module):
-    def __init__(self, config, layer_id=0):
+    def __init__(self, config, layer_id=0, cue_enum='left_hand'):
         super().__init__()
-        self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.input_dim
-        self.out_conv_dim = config.conv_dim[layer_id]
+        self.in_conv_dim = config.conv_dim[layer_id - 1] // (config.num_multi_cue_layers if config.use_multi_cue else 1) if layer_id > 0 else config.input_dim
+        if layer_id == 0 and config.use_multi_cue:
+            self.in_conv_dim = cue_input_dim[cue_enum]
+        print(f'In Conv Dim layer_id={layer_id} should be:', self.in_conv_dim, 'for cue:', cue_enum)
+        self.out_conv_dim = config.conv_dim[layer_id] // config.num_multi_cue_layers if config.use_multi_cue else config.conv_dim[layer_id] 
 
         self.conv = nn.Conv1d(
             self.in_conv_dim,
@@ -451,6 +481,7 @@ class Sign2VecFeatureEncoder(nn.Module):
             raise ValueError(
                 f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
             )
+        
         self.conv_layers = nn.ModuleList(conv_layers)
         self.gradient_checkpointing = False
         self._requires_grad = True
@@ -461,6 +492,7 @@ class Sign2VecFeatureEncoder(nn.Module):
         self._requires_grad = False
 
     def forward(self, input_values):
+        
         hidden_states = input_values
 
         # make sure hidden_states require grad for gradient_checkpointing
@@ -477,6 +509,81 @@ class Sign2VecFeatureEncoder(nn.Module):
                 hidden_states = conv_layer(hidden_states)
 
         return hidden_states
+    
+
+class Sign2VecMultiCueFeatureEncoder(nn.Module):
+    """Construct the features from raw audio waveform"""
+
+    def __init__(self, config):
+        super().__init__()
+
+        self.multi_cue_layers = []
+        for cue_id in range(config.num_multi_cue_layers):
+            if config.feat_extract_norm == "group":
+                conv_layers = [Sign2VecGroupNormConvLayer(config, layer_id=0, cue_enum=CUE2IDX[cue_id])] + [
+                    Sign2VecNoLayerNormConvLayer(config, layer_id=i + 1, cue_enum=CUE2IDX[cue_id]) for i in range(config.num_feat_extract_layers - 1)
+                ]
+                self.multi_cue_layers.append(nn.ModuleList(conv_layers))
+            elif config.feat_extract_norm == "layer":
+                conv_layers = [
+                    Sign2VecLayerNormConvLayer(config, layer_id=i, cue_enum=CUE2IDX[cue_id]) for i in range(config.num_feat_extract_layers)
+                ]
+                self.multi_cue_layers.append(nn.ModuleList(conv_layers))
+            else:
+                raise ValueError(
+                    f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
+                )
+        
+        # self.conv_layers = nn.ModuleList(conv_layers)
+        self.gradient_checkpointing = False
+        self._requires_grad = True
+
+    def _freeze_parameters(self):
+        for param in self.parameters():
+            param.requires_grad = False
+        self._requires_grad = False
+
+    def forward(self, input_values):
+        
+        hidden_states = input_values
+
+        print('Hidden States Shape:', hidden_states.shape)
+
+        cues = [
+            hidden_states[:, :, :12].transpose(1,2), # Pose cues 6*2
+            hidden_states[:, :, 12:12+(21*2)].transpose(1,2), # Right hand cues 21*2
+            hidden_states[:, :, 12+(21*2):12+(21*2)+(21*2)].transpose(1,2), # Left hand cues 21*2
+            hidden_states[:, :, 12+(21*2)+(21*2):12+(21*2)+(21*2)+(37*2)].transpose(1,2), # Face cues 37*2
+        ]
+
+        pose_hidden_states = cues[0]
+        right_hand_hidden_states = cues[1]
+        left_hand_hidden_states = cues[2]
+        face_hidden_states = cues[3]
+        
+        for cue_idx, (cue_hidden_states, conv_layers) in enumerate(zip(cues,self.multi_cue_layers)):
+
+            # make sure hidden_states require grad for gradient_checkpointing
+            if self._requires_grad and self.training:
+                cue_hidden_states.requires_grad = True
+
+            for conv_layer in conv_layers:
+                if self._requires_grad and self.gradient_checkpointing and self.training:
+                    cue_hidden_states = self._gradient_checkpointing_func(
+                        conv_layer.__call__,
+                        hidden_states,
+                    )
+                    cues[cue_idx] = cue_hidden_states
+                else:
+                    cue_hidden_states = conv_layer(cue_hidden_states)
+                    cues[cue_idx] = cue_hidden_states
+
+        pose_hidden_states = cues[0]
+        right_hand_hidden_states = cues[1]
+        left_hand_hidden_states = cues[2]
+        face_hidden_states = cues[3]
+
+        return pose_hidden_states, right_hand_hidden_states, left_hand_hidden_states, face_hidden_states
 
 
 class Sign2VecFeatureProjection(nn.Module):
@@ -1797,7 +1904,7 @@ class Sign2VecModel(Wav2Vec2PreTrainedModel):
     def __init__(self, config: Wav2Vec2Config):
         super().__init__(config)
         self.config = config
-        self.feature_extractor = Sign2VecFeatureEncoder(config)
+        self.feature_extractor = Sign2VecFeatureEncoder(config) if not config.use_multi_cue else Sign2VecMultiCueFeatureEncoder(config)
         self.feature_projection = Sign2VecFeatureProjection(config)
 
         # model only needs masking vector if mask prob is > 0.0
@@ -1902,7 +2009,14 @@ class Sign2VecModel(Wav2Vec2PreTrainedModel):
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        extract_features = self.feature_extractor(input_values)
+
+        if self.config.use_multi_cue:
+            extract_features = self.feature_extractor(input_values)
+            extract_features = torch.cat(extract_features, dim=1)
+            print('extract_features -->', extract_features.shape)
+        else:
+            extract_features = self.feature_extractor(input_values)
+
         extract_features = extract_features.transpose(1, 2)
 
         if attention_mask is not None:
@@ -1948,6 +2062,11 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
         self.dropout_features = nn.Dropout(config.feat_quantizer_dropout)
 
         self.quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+
+        # self.left_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        # self.right_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        # self.pose_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        # self.face_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
 
         self.project_hid = nn.Linear(config.hidden_size, config.proj_codevector_dim)
         self.project_q = nn.Linear(config.codevector_dim, config.proj_codevector_dim)
@@ -2147,6 +2266,248 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
 
             # 8. \mathbf{L} = \mathbf{L}_m + \alpha * \mathbf{L}_d
             loss = contrastive_loss + self.config.diversity_loss_weight * diversity_loss
+
+        if not return_dict:
+            if loss is not None:
+                return (loss, transformer_features, quantized_features, codevector_perplexity) + outputs[2:]
+            return (transformer_features, quantized_features, codevector_perplexity) + outputs[2:]
+
+        return Sign2VecForPreTrainingOutput(
+            loss=loss,
+            projected_states=transformer_features,
+            projected_quantized_states=quantized_features,
+            codevector_perplexity=codevector_perplexity,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            contrastive_loss=contrastive_loss,
+            diversity_loss=diversity_loss,
+        )
+
+
+
+@add_start_docstrings("""Wav2Vec2 Model with a quantizer and `VQ` head on top.""", WAV_2_VEC_2_START_DOCSTRING)
+class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
+    def __init__(self, config: Wav2Vec2Config):
+        super().__init__(config)
+        self.wav2vec2 = Sign2VecModel(config)
+        self.dropout_features = nn.Dropout(config.feat_quantizer_dropout)
+
+        self.quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+
+        self.left_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        self.right_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        self.pose_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        self.face_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+
+        self.project_hid = nn.Linear(config.hidden_size, config.proj_codevector_dim)
+        self.project_q = nn.Linear(config.codevector_dim, config.proj_codevector_dim)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def set_gumbel_temperature(self, temperature: int):
+        """
+        Set the Gumbel softmax temperature to a given value. Only necessary for training
+        """
+        self.quantizer.temperature = temperature
+
+    def freeze_feature_extractor(self):
+        """
+        Calling this function will disable the gradient computation for the feature encoder so that its parameters will
+        not be updated during training.
+        """
+        warnings.warn(
+            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5. "
+            "Please use the equivalent `freeze_feature_encoder` method instead.",
+            FutureWarning,
+        )
+        self.freeze_feature_encoder()
+
+    def freeze_feature_encoder(self):
+        """
+        Calling this function will disable the gradient computation for the feature encoder so that its parameter will
+        not be updated during training.
+        """
+        self.wav2vec2.feature_extractor._freeze_parameters()
+
+    @staticmethod
+    def compute_contrastive_logits(
+        target_features: torch.FloatTensor,
+        negative_features: torch.FloatTensor,
+        predicted_features: torch.FloatTensor,
+        temperature: int = 0.1,
+    ):
+        """
+        Compute logits for contrastive loss based using cosine similarity as the distance measure between
+        `[positive_feature, negative_features]` and `[predicted_features]`. Additionally, temperature can be applied.
+        """
+        target_features = torch.cat([target_features, negative_features], dim=0)
+
+        logits = torch.cosine_similarity(predicted_features.float(), target_features.float(), dim=-1).type_as(
+            target_features
+        )
+
+        # apply temperature
+        logits = logits / temperature
+        return logits
+
+    @add_start_docstrings_to_model_forward(WAV_2_VEC_2_INPUTS_DOCSTRING)
+    @replace_return_docstrings(output_type=Sign2VecForPreTrainingOutput, config_class=_CONFIG_FOR_DOC)
+    def forward(
+        self,
+        input_values: Optional[torch.Tensor],
+        attention_mask: Optional[torch.Tensor] = None,
+        mask_time_indices: Optional[torch.BoolTensor] = None,
+        sampled_negative_indices: Optional[torch.BoolTensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, Sign2VecForPreTrainingOutput]:
+        r"""
+        mask_time_indices (`torch.BoolTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Indices to mask extracted features for contrastive loss. When in training mode, model learns to predict
+            masked extracted features in *config.proj_codevector_dim* space.
+        sampled_negative_indices (`torch.BoolTensor` of shape `(batch_size, sequence_length, num_negatives)`, *optional*):
+            Indices indicating which quantized target vectors are used as negative sampled vectors in contrastive loss.
+            Required input for pre-training.
+
+        Returns:
+
+        Example:
+
+        ```python
+        >>> import torch
+        >>> from transformers import AutoFeatureExtractor,Sign2VecForPreTraining
+        >>> from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
+        >>> from datasets import load_dataset
+
+        >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base")
+        >>> model =   Sign2VecForPreTraining.from_pretrained("facebook/wav2vec2-base")
+
+        >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+        >>> input_values = feature_extractor(ds[0]["audio"]["array"], return_tensors="pt").input_values  # Batch size 1
+
+        >>> # compute masked indices
+        >>> batch_size, raw_sequence_length = input_values.shape
+        >>> sequence_length = model._get_feat_extract_output_lengths(raw_sequence_length).item()
+        >>> mask_time_indices = _compute_mask_indices(
+        ...     shape=(batch_size, sequence_length), mask_prob=0.2, mask_length=2
+        ... )
+        >>> sampled_negative_indices = _sample_negative_indices(
+        ...     features_shape=(batch_size, sequence_length),
+        ...     num_negatives=model.config.num_negatives,
+        ...     mask_time_indices=mask_time_indices,
+        ... )
+        >>> mask_time_indices = torch.tensor(data=mask_time_indices, device=input_values.device, dtype=torch.long)
+        >>> sampled_negative_indices = torch.tensor(
+        ...     data=sampled_negative_indices, device=input_values.device, dtype=torch.long
+        ... )
+
+        >>> with torch.no_grad():
+        ...     outputs = model(input_values, mask_time_indices=mask_time_indices)
+
+        >>> # compute cosine similarity between predicted (=projected_states) and target (=projected_quantized_states)
+        >>> cosine_sim = torch.cosine_similarity(outputs.projected_states, outputs.projected_quantized_states, dim=-1)
+
+        >>> # show that cosine similarity is much higher than random
+        >>> cosine_sim[mask_time_indices.to(torch.bool)].mean() > 0.5
+        tensor(True)
+
+        >>> # for contrastive loss training model should be put into train mode
+        >>> model = model.train()
+        >>> loss = model(
+        ...     input_values, mask_time_indices=mask_time_indices, sampled_negative_indices=sampled_negative_indices
+        ... ).loss
+        ```"""
+
+
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        if mask_time_indices is not None:
+            mask_time_indices = mask_time_indices.to(torch.bool)
+
+        outputs = self.wav2vec2(
+            input_values,
+            attention_mask=attention_mask,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            mask_time_indices=mask_time_indices,
+            return_dict=return_dict,
+        )
+
+        # 1. project all transformed features (including masked) to final vq dim
+        transformer_features = self.project_hid(outputs[0])
+
+        # 2. quantize all (unmasked) extracted features and project to final vq dim
+        extract_features = self.dropout_features(outputs[1])
+
+        if attention_mask is not None:
+            # compute reduced attention_mask correponding to feature vectors
+            attention_mask = self._get_feature_vector_attention_mask(
+                extract_features.shape[1], attention_mask, add_adapter=False
+            )
+
+        quantized_cue_features = []
+
+        # quantize all cues on separate codebooks and project to final vq dim
+        for quantizer in [self.left_hand_quantizer, self.right_hand_quantizer, self.pose_quantizer, self.face_quantizer]:
+            quantized_features, codevector_perplexity = quantizer(
+                extract_features, mask_time_indices=mask_time_indices
+            )
+
+            quantized_features = quantized_features.to(self.project_q.weight.dtype)
+            quantized_features = self.project_q(quantized_features)
+            
+            # Add quantized cue features to list
+            quantized_cue_features.append(quantized_features)
+
+
+        loss = contrastive_loss = diversity_loss = None
+        if sampled_negative_indices is not None:
+            for quantized_features in quantized_cue_features:
+                batch_size, sequence_length, hidden_size = quantized_features.shape
+
+                # for training, we sample negatives
+                # 3. sample K negatives (distractors) quantized states for contrastive loss
+                # if attention_mask is passed, make sure that padded feature vectors cannot be sampled
+                # sample negative quantized vectors BTC => (BxT)C
+                negative_quantized_features = quantized_features.view(-1, hidden_size)[
+                    sampled_negative_indices.long().view(-1)
+                ]
+                negative_quantized_features = negative_quantized_features.view(
+                    batch_size, sequence_length, -1, hidden_size
+                ).permute(2, 0, 1, 3)
+
+                # 4. compute logits, corresponding to `logs = sim(c_t, [q_t, \sim{q}_t]) / \kappa`
+                # of equation (3) in https://arxiv.org/pdf/2006.11477.pdf
+                logits = self.compute_contrastive_logits(
+                    quantized_features[None, :],
+                    negative_quantized_features,
+                    transformer_features,
+                    self.config.contrastive_logits_temperature,
+                )
+
+                # 5. if a negative vector is identical to the positive (i.e. when codebook utilization is low),
+                # its cosine similarity will be masked
+                neg_is_pos = (quantized_features == negative_quantized_features).all(-1)
+
+                if neg_is_pos.any():
+                    logits[1:][neg_is_pos] = float("-inf")
+
+                # 6. compute contrastive loss \mathbf{L}_m = cross_entropy(logs) =
+                # -log(exp(sim(c_t, q_t)/\kappa) / \sum_{\sim{q}} exp(sim(c_t, \sim{q})/\kappa))
+                logits = logits.transpose(0, 2).reshape(-1, logits.size(0))
+                target = ((1 - mask_time_indices.long()) * -100).transpose(0, 1).flatten()
+
+                contrastive_loss = nn.functional.cross_entropy(logits.float(), target, reduction="sum")
+                # 7. compute diversity loss: \mathbf{L}_d
+                num_codevectors = self.config.num_codevectors_per_group * self.config.num_codevector_groups
+                diversity_loss = ((num_codevectors - codevector_perplexity) / num_codevectors) * mask_time_indices.sum()
+
+                # 8. \mathbf{L} = \mathbf{L}_m + \alpha * \mathbf{L}_d
+                loss = contrastive_loss + self.config.diversity_loss_weight * diversity_loss
+
+        
 
         if not return_dict:
             if loss is not None:

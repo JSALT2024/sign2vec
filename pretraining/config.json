@@ -46,8 +46,8 @@
     "mask_feature_prob": 0.0,
     "mask_feature_length": 10,
     "mask_feature_min_masks": 0,
-    "num_codevectors_per_group": 128,
-    "num_codevector_groups": 1,
+    "num_codevectors_per_group": 64,
+    "num_codevector_groups": 2,
     "contrastive_logits_temperature": 0.1,
     "num_negatives": 100,
     "codevector_dim": 256,
@@ -57,6 +57,7 @@
     "ctc_zero_infinity": false,
     "use_weighted_layer_sum": false,
     "classifier_proj_size": 256,
+    "num_multi_cue_layers": 4,
     "tdnn_dim": [
         512,
         512,
@@ -87,5 +88,6 @@
     "adapter_stride": 2,
     "num_adapter_layers": 3,
     "output_hidden_size": null,
+    "use_multi_cue": false,
     "adapter_attn_dim": null
 }

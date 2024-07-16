@@ -193,7 +193,7 @@ class Trainer:
                         "grad_norm": torch.tensor(grad_norm),
                     }
 
-                    if self.model.config.use_multi_cue:
+                    if args.use_multi_cue:
                         train_logs["pose_contrastive_loss"] = outputs.pose_contrastive_loss / num_losses
                         train_logs["pose_diversity_loss"] = outputs.pose_diversity_loss / num_losses
                         train_logs["right_hand_contrastive_loss"] = outputs.right_hand_contrastive_loss / num_losses
@@ -244,8 +244,8 @@ class Trainer:
                 "val_diversity_loss": 0,
                 "val_num_losses": 0,
             }
-            
-            if self.model.config.use_multi_cue:
+
+            if args.use_multi_cue:
                 val_logs["val_pose_contrastive_loss"] = 0
                 val_logs["val_pose_diversity_loss"] = 0
                 val_logs["val_right_hand_contrastive_loss"] = 0
@@ -265,7 +265,7 @@ class Trainer:
                 val_logs["val_diversity_loss"] += outputs.diversity_loss
                 val_logs["val_num_losses"] += batch["mask_time_indices"].sum()
 
-                if self.model.config.use_multi_cue:
+                if args.use_multi_cue:
                     val_logs["val_pose_contrastive_loss"] += outputs.pose_contrastive_loss
                     val_logs["val_pose_diversity_loss"] += outputs.pose_diversity_loss
                     val_logs["val_right_hand_contrastive_loss"] += outputs.right_hand_contrastive_loss

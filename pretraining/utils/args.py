@@ -13,6 +13,11 @@ def parse_args():
         help="Environment to run the script. Defaults to 'local'",
     )
     parser.add_argument(
+        "--use_multi_cue",
+        action="store_true",
+        help="Use multi-cue architecture",
+    )
+    parser.add_argument(
         "--dataset_name",
         type=str,
         default="how2sign"
@@ -186,7 +191,6 @@ def parse_args():
             " use of Tensor Cores on NVIDIA hardware with compute capability >= 7.5 (Volta)."
         ),
     )
-
     parser.add_argument(
         '--data_dir',
         type=str,

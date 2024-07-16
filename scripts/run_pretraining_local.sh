@@ -30,4 +30,5 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --data_dir="pretraining/how2sign/" \
                                         --config_name="pretraining/config.json" \
                                         --push_to_hub \
+                                        --use_multi_cue \
                                         --hub_model_id="sign2vec-v1-how2sign"

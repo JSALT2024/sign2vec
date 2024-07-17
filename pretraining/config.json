@@ -3,7 +3,7 @@
     "vocab_size": 256,
     "hidden_size": 768,
     "num_hidden_layers": 12,
-    "num_attention_heads": 12,
+    "num_attention_heads": 8,
     "intermediate_size": 3072,
     "hidden_act": "gelu",
     "hidden_dropout": 0.1,
@@ -20,17 +20,14 @@
     "conv_dim": [
         512,
         512,
-        512,
         512
     ],
     "conv_stride": [
         2,
         1,
-        1,
         1
     ],
     "conv_kernel": [
-        9,
         5,
         3,
         1

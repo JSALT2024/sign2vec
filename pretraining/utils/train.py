@@ -180,6 +180,10 @@ class Trainer:
                         loss = self.accelerator.gather_for_metrics(loss).sum()
                         outputs.contrastive_loss = self.accelerator.gather_for_metrics(outputs.contrastive_loss).sum()
                         outputs.diversity_loss = self.accelerator.gather_for_metrics(outputs.diversity_loss).sum()
+                        outputs.pose_diversity_loss = self.accelerator.gather_for_metrics(outputs.pose_diversity_loss).sum()
+                        outputs.right_hand_diversity_loss = self.accelerator.gather_for_metrics(outputs.right_hand_diversity_loss).sum()
+                        outputs.left_hand_diversity_loss = self.accelerator.gather_for_metrics(outputs.left_hand_diversity_loss).sum()
+                        outputs.face_diversity_loss = self.accelerator.gather_for_metrics(outputs.face_diversity_loss).sum()
                         percent_masked = self.accelerator.gather_for_metrics(percent_masked).sum()
 
                     train_logs = {

@@ -15,7 +15,7 @@ from transformers.utils import send_example_telemetry
 
 from utils.train import Trainer
 from utils.args import parse_args
-from utils.config import Sign2VecConfig
+from sign2vec.config import Sign2VecConfig
 from utils.accelerator import initialize_accelerator
 from sign2vec.modeling_sign2vec import (
     Sign2VecForPreTraining, 
@@ -52,8 +52,10 @@ def main():
         )
 
     # initialize random model
-    model = Sign2VecForPreTraining(config) if not config.use_multi_cue else MultiCueSign2VecForPreTraining(config)
-    print(model)
+    model = Sign2VecForPreTraining(config) if not args.use_multi_cue else MultiCueSign2VecForPreTraining(config)
+    if args.use_multi_cue:
+        print("Using MultiCueSign2VecForPreTraining")
+        print(model)
     # Import dataset and tokenizer
     from utils.dataset import prepare_dataloader
     train_dataloader, validation_dataloader = prepare_dataloader(args, config, model, accelerator)

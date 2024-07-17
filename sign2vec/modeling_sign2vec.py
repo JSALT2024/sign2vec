@@ -52,11 +52,9 @@ from transformers.utils import (
     logging,
     replace_return_docstrings,
 )
-from transformers.models.wav2vec2.configuration_wav2vec2 import Wav2Vec2Config
+
+from sign2vec.config import Sign2VecConfig
 from transformers.models.wav2vec2.modeling_wav2vec2 import (
-    Wav2Vec2GroupNormConvLayer,
-    Wav2Vec2LayerNormConvLayer,
-    Wav2Vec2NoLayerNormConvLayer,
     Wav2Vec2PositionalConvEmbedding,
 )
 
@@ -77,7 +75,7 @@ logger = logging.get_logger(__name__)
 _HIDDEN_STATES_START_POSITION = 2
 
 # General docstring
-_CONFIG_FOR_DOC = "Wav2Vec2Config"
+_CONFIG_FOR_DOC = "Sign2VecConfig"
 
 # Base docstring
 _CHECKPOINT_FOR_DOC = "facebook/wav2vec2-base-960h"
@@ -661,7 +659,7 @@ class Wav2Vec2Attention(nn.Module):
         is_decoder: bool = False,
         bias: bool = True,
         is_causal: bool = False,
-        config: Optional[Wav2Vec2Config] = None,
+        config: Optional[Sign2VecConfig] = None,
     ):
         super().__init__()
         self.embed_dim = embed_dim
@@ -1426,8 +1424,9 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Module):
     GUMBEL-SOFTMAX](https://arxiv.org/pdf/1611.01144.pdf) for more information.
     """
 
-    def __init__(self, config):
-        super().__init__()
+    def __init__(self, config, name="gumbel_vector_quantizer"):
+        super().__init__(  )
+        self.name=name
         self.num_groups = config.num_codevector_groups
         self.num_vars = config.num_codevectors_per_group
 
@@ -1443,6 +1442,84 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Module):
             torch.FloatTensor(1, self.num_groups * self.num_vars, config.codevector_dim // self.num_groups)
         )
         self.weight_proj = nn.Linear(config.conv_dim[-1], self.num_groups * self.num_vars)
+
+        # can be decayed for training
+        self.temperature = 2
+
+    @staticmethod
+    def _compute_perplexity(probs, mask=None):
+        if mask is not None:
+            mask_extended = mask.flatten()[:, None, None].expand(probs.shape)
+            probs = torch.where(mask_extended, probs, torch.zeros_like(probs))
+            marginal_probs = probs.sum(dim=0) / mask.sum()
+        else:
+            marginal_probs = probs.mean(dim=0)
+
+        perplexity = torch.exp(-torch.sum(marginal_probs * torch.log(marginal_probs + 1e-7), dim=-1)).sum()
+        return perplexity
+
+    def forward(self, hidden_states, mask_time_indices=None):
+        batch_size, sequence_length, hidden_size = hidden_states.shape
+
+        # project to codevector dim
+        hidden_states = self.weight_proj(hidden_states)
+        hidden_states = hidden_states.view(batch_size * sequence_length * self.num_groups, -1)
+
+        if self.training:
+            # sample code vector probs via gumbel in differentiateable way
+            codevector_probs = nn.functional.gumbel_softmax(
+                hidden_states.float(), tau=self.temperature, hard=True
+            ).type_as(hidden_states)
+
+            # compute perplexity
+            codevector_soft_dist = torch.softmax(
+                hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), dim=-1
+            )
+            perplexity = self._compute_perplexity(codevector_soft_dist, mask_time_indices)
+        else:
+            # take argmax in non-differentiable way
+            # comptute hard codevector distribution (one hot)
+            codevector_idx = hidden_states.argmax(dim=-1)
+            codevector_probs = hidden_states.new_zeros(hidden_states.shape).scatter_(
+                -1, codevector_idx.view(-1, 1), 1.0
+            )
+            codevector_probs = codevector_probs.view(batch_size * sequence_length, self.num_groups, -1)
+
+            perplexity = self._compute_perplexity(codevector_probs, mask_time_indices)
+
+        codevector_probs = codevector_probs.view(batch_size * sequence_length, -1)
+        # use probs to retrieve codevectors
+        codevectors_per_group = codevector_probs.unsqueeze(-1) * self.codevectors
+        codevectors = codevectors_per_group.view(batch_size * sequence_length, self.num_groups, self.num_vars, -1)
+        codevectors = codevectors.sum(-2).view(batch_size, sequence_length, -1)
+
+        return codevectors, perplexity
+
+
+class Wav2Vec2MultiCueVectorQuantizer(nn.Module):
+    """
+    Vector quantization using gumbel softmax. See `[CATEGORICAL REPARAMETERIZATION WITH
+    GUMBEL-SOFTMAX](https://arxiv.org/pdf/1611.01144.pdf) for more information.
+    """
+
+    def __init__(self, config, name="gumbel_vector_quantizer"):
+        super().__init__(  )
+        self.name=name
+        self.num_groups = config.num_codevector_groups
+        self.num_vars = config.num_codevectors_per_group
+
+        if config.codevector_dim % self.num_groups != 0:
+            raise ValueError(
+                f"`config.codevector_dim {config.codevector_dim} must be divisible "
+                f"by `config.num_codevector_groups` {self.num_groups} for concatenation"
+            )
+
+        # TODO: Group codevectors according to cue groups
+        # storage for codebook variables (codewords)
+        self.codevectors = nn.Parameter(
+            torch.FloatTensor(1, self.num_groups * self.num_vars, config.codevector_dim // self.num_groups)
+        )
+        self.weight_proj = nn.Linear(config.conv_dim[-1] // config.num_multi_cue_layers, self.num_groups * self.num_vars)
 
         # can be decayed for training
         self.temperature = 2
@@ -1577,7 +1654,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
     models.
     """
 
-    config_class = Wav2Vec2Config
+    config_class = Sign2VecConfig
     base_model_prefix = "wav2vec2"
     main_input_name = "input_values"
     supports_gradient_checkpointing = True
@@ -1594,6 +1671,11 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
             module.project_q._is_hf_initialized = True
         # gumbel softmax requires special init
         elif isinstance(module, Wav2Vec2GumbelVectorQuantizer):
+            module.weight_proj.weight.data.normal_(mean=0.0, std=1)
+            module.weight_proj.bias.data.zero_()
+            nn.init.uniform_(module.codevectors)
+        # multi cue gumbel softmax requires special init
+        elif isinstance(module, Wav2Vec2MultiCueVectorQuantizer):
             module.weight_proj.weight.data.normal_(mean=0.0, std=1)
             module.weight_proj.bias.data.zero_()
             nn.init.uniform_(module.codevectors)
@@ -1900,7 +1982,7 @@ WAV_2_VEC_2_START_DOCSTRING = r"""
     behavior.
 
     Parameters:
-        config ([`Wav2Vec2Config`]): Model configuration class with all the parameters of the model.
+        config ([`Sign2VecConfig`]): Model configuration class with all the parameters of the model.
             Initializing with a config file does not load the weights associated with the model, only the
             configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
 """
@@ -1949,7 +2031,7 @@ WAV_2_VEC_2_INPUTS_DOCSTRING = r"""
     WAV_2_VEC_2_START_DOCSTRING,
 )
 class Sign2VecModel(Wav2Vec2PreTrainedModel):
-    def __init__(self, config: Wav2Vec2Config):
+    def __init__(self, config: Sign2VecConfig):
         super().__init__(config)
         self.config = config
         self.feature_extractor = Sign2VecFeatureEncoder(config) if not config.use_multi_cue else Sign2VecMultiCueFeatureEncoder(config)
@@ -2051,6 +2133,7 @@ class Sign2VecModel(Wav2Vec2PreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Wav2Vec2BaseModelOutput]:
+        
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -2103,17 +2186,12 @@ class Sign2VecModel(Wav2Vec2PreTrainedModel):
 
 @add_start_docstrings("""Wav2Vec2 Model with a quantizer and `VQ` head on top.""", WAV_2_VEC_2_START_DOCSTRING)
 class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
-    def __init__(self, config: Wav2Vec2Config):
+    def __init__(self, config: Sign2VecConfig):
         super().__init__(config)
         self.wav2vec2 = Sign2VecModel(config)
         self.dropout_features = nn.Dropout(config.feat_quantizer_dropout)
 
         self.quantizer = Wav2Vec2GumbelVectorQuantizer(config)
-
-        # self.left_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
-        # self.right_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
-        # self.pose_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
-        # self.face_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
 
         self.project_hid = nn.Linear(config.hidden_size, config.proj_codevector_dim)
         self.project_q = nn.Linear(config.codevector_dim, config.proj_codevector_dim)
@@ -2334,29 +2412,35 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
 
 @add_start_docstrings("""Wav2Vec2 Model with a quantizer and `VQ` head on top.""", WAV_2_VEC_2_START_DOCSTRING)
 class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
-    def __init__(self, config: Wav2Vec2Config):
+    def __init__(self, config: Sign2VecConfig):
         super().__init__(config)
         self.wav2vec2 = Sign2VecModel(config)
         self.dropout_features = nn.Dropout(config.feat_quantizer_dropout)
 
-        self.quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        self.pose_quantizer = Wav2Vec2MultiCueVectorQuantizer(config, name="pose_quantizer")
+        self.right_hand_quantizer = Wav2Vec2MultiCueVectorQuantizer(config, name="right_hand_quantizer")
+        self.left_hand_quantizer = Wav2Vec2MultiCueVectorQuantizer(config, name="left_hand_quantizer")
+        self.face_quantizer = Wav2Vec2MultiCueVectorQuantizer(config, name="face_quantizer")
 
-        self.left_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
-        self.right_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
-        self.pose_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
-        self.face_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        # Register all quantizers with nn.ModuleList 
+        for quantizer in [self.pose_quantizer, self.right_hand_quantizer, self.left_hand_quantizer, self.face_quantizer]:
+            self.add_module(quantizer.name, quantizer)
 
-        self.project_hid = nn.Linear(config.hidden_size, config.proj_codevector_dim)
-        self.project_q = nn.Linear(config.codevector_dim, config.proj_codevector_dim)
+        self.project_hid = nn.Linear(config.hidden_size , config.proj_codevector_dim)
+        # self.project_hid = nn.Linear(config.hidden_size // config.num_multi_cue_layers , config.proj_codevector_dim)
+        self.project_q = nn.Linear(config.codevector_dim * config.num_multi_cue_layers, config.proj_codevector_dim)
 
-        # Initialize weights and apply final processing
+        # Initialize weights and apply final processings
         self.post_init()
 
     def set_gumbel_temperature(self, temperature: int):
         """
         Set the Gumbel softmax temperature to a given value. Only necessary for training
         """
-        self.quantizer.temperature = temperature
+        self.pose_quantizer.temperature = temperature
+        self.right_hand_quantizer.temperature = temperature
+        self.left_hand_quantizer.temperature = temperature
+        self.face_quantizer.temperature = temperature
 
     def freeze_feature_extractor(self):
         """
@@ -2484,9 +2568,9 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
 
         # 1. project all transformed features (including masked) to final vq dim
         transformer_features = self.project_hid(outputs[0])
-
         # 2. quantize all (unmasked) extracted features and project to final vq dim
         extract_features = self.dropout_features(outputs[1])
+        # print('extract_features-->', extract_features.shape)
 
         if attention_mask is not None:
             # compute reduced attention_mask correponding to feature vectors
@@ -2495,123 +2579,103 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
             )
 
         quantized_cue_features = []
-
+        cue_codevector_perplexities = []
         # quantize all cues on separate codebooks and project to final vq dim
-        for quantizer in [self.left_hand_quantizer, self.right_hand_quantizer, self.pose_quantizer, self.face_quantizer]:
-            quantized_features, codevector_perplexity = quantizer(
-                extract_features, mask_time_indices=mask_time_indices
+        for idx, quantizer in enumerate([self.pose_quantizer, 
+                                         self.right_hand_quantizer, 
+                                         self.left_hand_quantizer, 
+                                         self.face_quantizer]):
+    
+            cue_vector = extract_features[:, :, (self.config.conv_dim[-1] // self.config.num_multi_cue_layers) * idx: (self.config.conv_dim[-1] // self.config.num_multi_cue_layers) * (idx + 1)]
+            cue_quantized_features, cue_codevector_perplexity = quantizer(
+                cue_vector,
+                mask_time_indices=mask_time_indices
+            )
+            quantized_cue_features.append(cue_quantized_features)
+            cue_codevector_perplexities.append(cue_codevector_perplexity)
+
+        quantized_features = torch.cat(quantized_cue_features, dim=-1)
+        # ensure quantized features are concatenated along the feature dimension and require same dtype as projection layer
+        quantized_features = quantized_features.to(self.project_q.weight.dtype)
+        quantized_features = self.project_q(quantized_features)
+
+        loss = contrastive_loss = diversity_loss = None
+        pose_diversity_loss = right_hand_diversity_loss = left_hand_diversity_loss = face_diversity_loss = None
+        if sampled_negative_indices is not None:
+            batch_size, sequence_length, hidden_size = quantized_features.shape
+
+            # for training, we sample negatives
+            # 3. sample K negatives (distractors) quantized states for contrastive loss
+            # if attention_mask is passed, make sure that padded feature vectors cannot be sampled
+            # sample negative quantized vectors BTC => (BxT)C
+            negative_quantized_features = quantized_features.view(-1, hidden_size)[
+                sampled_negative_indices.long().view(-1)
+            ]
+            negative_quantized_features = negative_quantized_features.view(
+                batch_size, sequence_length, -1, hidden_size
+            ).permute(2, 0, 1, 3)
+
+            # 4. compute logits, corresponding to `logs = sim(c_t, [q_t, \sim{q}_t]) / \kappa`
+            # of equation (3) in https://arxiv.org/pdf/2006.11477.pdf
+
+            logits = self.compute_contrastive_logits(
+                quantized_features[None, :],
+                negative_quantized_features,
+                transformer_features,
+                self.config.contrastive_logits_temperature,
             )
 
-            quantized_features = quantized_features.to(self.project_q.weight.dtype)
-            quantized_features = self.project_q(quantized_features)
-            
-            # Add quantized cue features to list
-            quantized_cue_features.append(quantized_features)
+            # 5. if a negative vector is identical to the positive (i.e. when codebook utilization is low),
+            # its cosine similarity will be masked
+            neg_is_pos = (quantized_features == negative_quantized_features).all(-1)
 
-        
-        loss = contrastive_loss = diversity_loss = None
-        total_loss = []
-        total_contrastive_loss = []
-        total_diversity_loss = []
-        if sampled_negative_indices is not None:
-            for quantized_features in quantized_cue_features:
-                batch_size, sequence_length, hidden_size = quantized_features.shape
+            if neg_is_pos.any():
+                logits[1:][neg_is_pos] = float("-inf")
 
-                # for training, we sample negatives
-                # 3. sample K negatives (distractors) quantized states for contrastive loss
-                # if attention_mask is passed, make sure that padded feature vectors cannot be sampled
-                # sample negative quantized vectors BTC => (BxT)C
-                negative_quantized_features = quantized_features.view(-1, hidden_size)[
-                    sampled_negative_indices.long().view(-1)
-                ]
-                negative_quantized_features = negative_quantized_features.view(
-                    batch_size, sequence_length, -1, hidden_size
-                ).permute(2, 0, 1, 3)
+            # 6. compute contrastive loss \mathbf{L}_m = cross_entropy(logs) =
+            # -log(exp(sim(c_t, q_t)/\kappa) / \sum_{\sim{q}} exp(sim(c_t, \sim{q})/\kappa))
+            logits = logits.transpose(0, 2).reshape(-1, logits.size(0))
+            target = ((1 - mask_time_indices.long()) * -100).transpose(0, 1).flatten()
 
-                # 4. compute logits, corresponding to `logs = sim(c_t, [q_t, \sim{q}_t]) / \kappa`
-                # of equation (3) in https://arxiv.org/pdf/2006.11477.pdf
-                logits = self.compute_contrastive_logits(
-                    quantized_features[None, :],
-                    negative_quantized_features,
-                    transformer_features,
-                    self.config.contrastive_logits_temperature,
-                )
-
-                # 5. if a negative vector is identical to the positive (i.e. when codebook utilization is low),
-                # its cosine similarity will be masked
-                neg_is_pos = (quantized_features == negative_quantized_features).all(-1)
-
-                if neg_is_pos.any():
-                    logits[1:][neg_is_pos] = float("-inf")
-
-                # 6. compute contrastive loss \mathbf{L}_m = cross_entropy(logs) =
-                # -log(exp(sim(c_t, q_t)/\kappa) / \sum_{\sim{q}} exp(sim(c_t, \sim{q})/\kappa))
-                logits = logits.transpose(0, 2).reshape(-1, logits.size(0))
-                target = ((1 - mask_time_indices.long()) * -100).transpose(0, 1).flatten()
-
-                contrastive_loss = nn.functional.cross_entropy(logits.float(), target, reduction="sum")
+            contrastive_loss = nn.functional.cross_entropy(logits.float(), target, reduction="sum")
+           
+            num_codevectors = self.config.num_codevectors_per_group * self.config.num_codevector_groups
+            diversity_loss = []
+            for codevector_perplexity in cue_codevector_perplexities:
                 # 7. compute diversity loss: \mathbf{L}_d
-                num_codevectors = self.config.num_codevectors_per_group * self.config.num_codevector_groups
-                diversity_loss = ((num_codevectors - codevector_perplexity) / num_codevectors) * mask_time_indices.sum()
+                cue_diversity_loss = ((num_codevectors - codevector_perplexity) / num_codevectors) * mask_time_indices.sum()
+                diversity_loss.append(cue_diversity_loss)
 
-                # 8. \mathbf{L} = \mathbf{L}_m + \alpha * \mathbf{L}_d
-                loss = contrastive_loss + self.config.diversity_loss_weight * diversity_loss
+            pose_diversity_loss, right_hand_diversity_loss, left_hand_diversity_loss, face_diversity_loss = diversity_loss
 
-                total_loss.append(loss)
-                total_contrastive_loss.append(contrastive_loss)
-                total_diversity_loss.append(diversity_loss)                
+            if self.config.loss_reduction == 'mean':
+                diversity_loss = torch.stack(diversity_loss).mean()
+            elif self.config.loss_reduction == 'sum':
+                diversity_loss = torch.stack(diversity_loss).sum()
 
-
-        pose_contrastive_loss, right_hand_contrastive_loss, left_hand_contrastive_loss, face_contrastive_loss = None, None, None, None
-        pose_diversity_loss, right_hand_diversity_loss, left_hand_diversity_loss, face_diversity_loss = None, None, None, None
-        if loss is not None:
-            pose_contrastive_loss = total_contrastive_loss[0]
-            pose_diversity_loss = total_diversity_loss[0]
-
-            right_hand_contrastive_loss = total_contrastive_loss[1]
-            right_hand_diversity_loss = total_diversity_loss[1]
-
-            left_hand_contrastive_loss = total_contrastive_loss[2]
-            left_hand_diversity_loss = total_diversity_loss[2]
-
-            face_contrastive_loss = total_contrastive_loss[3]
-            face_diversity_loss = total_diversity_loss[3]
+            # 8. \mathbf{L} = \mathbf{L}_m + \alpha * \mathbf{L}_d
+            loss = contrastive_loss + self.config.diversity_loss_weight * diversity_loss
         
         if not return_dict:
             if loss is not None:
                 return (loss, transformer_features, quantized_features, codevector_perplexity) + outputs[2:]
             return (transformer_features, quantized_features, codevector_perplexity) + outputs[2:]
-        
-        if loss is not None:
-            if self.config.loss_reduction == 'mean':
-                total_loss = torch.stack(total_loss).mean()
-                total_contrastive_loss = torch.stack(total_contrastive_loss).mean()
-                total_diversity_loss = torch.stack(total_diversity_loss).mean()
-
-            elif self.config.loss_reduction == 'sum':
-                total_loss = torch.stack(total_loss).sum()
-                total_contrastive_loss = torch.stack(total_contrastive_loss).sum()
-                total_diversity_loss = torch.stack(total_diversity_loss).sum()
 
         return MultiCueSign2VecForPreTrainingOutput(
 
-            loss=total_loss,
+            loss=loss,
             projected_states=transformer_features,
             projected_quantized_states=quantized_features,
             codevector_perplexity=codevector_perplexity,
             hidden_states=outputs.hidden_states,
 
             attentions=outputs.attentions,
-            contrastive_loss=total_contrastive_loss,
-            diversity_loss=total_diversity_loss,
+            contrastive_loss=contrastive_loss,
+            diversity_loss=diversity_loss,
 
-            pose_contrastive_loss=pose_contrastive_loss,
             pose_diversity_loss=pose_diversity_loss,
-            right_hand_contrastive_loss=right_hand_contrastive_loss,
             right_hand_diversity_loss=right_hand_diversity_loss,
-            left_hand_contrastive_loss=left_hand_contrastive_loss,
             left_hand_diversity_loss=left_hand_diversity_loss,
-            face_contrastive_loss=face_contrastive_loss,
             face_diversity_loss=face_diversity_loss
         )
 

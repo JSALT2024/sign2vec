@@ -194,14 +194,10 @@ class Trainer:
                     }
 
                     if args.use_multi_cue:
-                        train_logs["pose_contrastive_loss"] = outputs.pose_contrastive_loss / num_losses
                         train_logs["pose_diversity_loss"] = outputs.pose_diversity_loss / num_losses
-                        train_logs["right_hand_contrastive_loss"] = outputs.right_hand_contrastive_loss / num_losses
                         train_logs["right_hand_diversity_loss"] = outputs.right_hand_diversity_loss / num_losses
-                        train_logs["left_hand_contrastive_loss"] = outputs.left_hand_contrastive_loss / num_losses
                         train_logs["left_hand_diversity_loss"] = outputs.left_hand_diversity_loss / num_losses
                         train_logs["face_diversity_loss"] = outputs.face_diversity_loss / num_losses
-                        train_logs["face_contrastive_loss"] = outputs.face_contrastive_loss / num_losses
 
                     log_str = ""
                     for k, v in train_logs.items():
@@ -246,13 +242,9 @@ class Trainer:
             }
 
             if args.use_multi_cue:
-                val_logs["val_pose_contrastive_loss"] = 0
                 val_logs["val_pose_diversity_loss"] = 0
-                val_logs["val_right_hand_contrastive_loss"] = 0
                 val_logs["val_right_hand_diversity_loss"] = 0
-                val_logs["val_left_hand_contrastive_loss"] = 0
                 val_logs["val_left_hand_diversity_loss"] = 0
-                val_logs["val_face_contrastive_loss"] = 0
                 val_logs["val_face_diversity_loss"] = 0
 
             for step, batch in enumerate(self.eval_dataloader):
@@ -266,13 +258,9 @@ class Trainer:
                 val_logs["val_num_losses"] += batch["mask_time_indices"].sum()
 
                 if args.use_multi_cue:
-                    val_logs["val_pose_contrastive_loss"] += outputs.pose_contrastive_loss
                     val_logs["val_pose_diversity_loss"] += outputs.pose_diversity_loss
-                    val_logs["val_right_hand_contrastive_loss"] += outputs.right_hand_contrastive_loss
                     val_logs["val_right_hand_diversity_loss"] += outputs.right_hand_diversity_loss
-                    val_logs["val_left_hand_contrastive_loss"] += outputs.left_hand_contrastive_loss
                     val_logs["val_left_hand_diversity_loss"] += outputs.left_hand_diversity_loss
-                    val_logs["val_face_contrastive_loss"] += outputs.face_contrastive_loss
                     val_logs["val_face_diversity_loss"] += outputs.face_diversity_loss
 
             # sum over devices in multi-processing

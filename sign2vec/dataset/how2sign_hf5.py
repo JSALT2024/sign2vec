@@ -303,7 +303,6 @@ class YoutubeASLForPretraining(Dataset):
         data = self.feature_extractor(
             data, 
             max_length=self.max_length, 
-            mi
             truncation=True, 
             sampling_rate=25,
         )

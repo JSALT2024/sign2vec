@@ -1496,7 +1496,7 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Module):
         return codevectors, perplexity
 
 
-class Wav2Vec2MultiCueVectorQuantizer(nn.Module):
+class Sign2VecMultiCueVectorQuantizer(nn.Module):
     """
     Vector quantization using gumbel softmax. See `[CATEGORICAL REPARAMETERIZATION WITH
     GUMBEL-SOFTMAX](https://arxiv.org/pdf/1611.01144.pdf) for more information.
@@ -1675,7 +1675,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
             module.weight_proj.bias.data.zero_()
             nn.init.uniform_(module.codevectors)
         # multi cue gumbel softmax requires special init
-        elif isinstance(module, Wav2Vec2MultiCueVectorQuantizer):
+        elif isinstance(module, Sign2VecMultiCueVectorQuantizer):
             module.weight_proj.weight.data.normal_(mean=0.0, std=1)
             module.weight_proj.bias.data.zero_()
             nn.init.uniform_(module.codevectors)
@@ -2417,10 +2417,10 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
         self.wav2vec2 = Sign2VecModel(config)
         self.dropout_features = nn.Dropout(config.feat_quantizer_dropout)
 
-        self.pose_quantizer = Wav2Vec2MultiCueVectorQuantizer(config, name="pose_quantizer")
-        self.right_hand_quantizer = Wav2Vec2MultiCueVectorQuantizer(config, name="right_hand_quantizer")
-        self.left_hand_quantizer = Wav2Vec2MultiCueVectorQuantizer(config, name="left_hand_quantizer")
-        self.face_quantizer = Wav2Vec2MultiCueVectorQuantizer(config, name="face_quantizer")
+        self.pose_quantizer = Sign2VecMultiCueVectorQuantizer(config, name="pose_quantizer")
+        self.right_hand_quantizer = Sign2VecMultiCueVectorQuantizer(config, name="right_hand_quantizer")
+        self.left_hand_quantizer = Sign2VecMultiCueVectorQuantizer(config, name="left_hand_quantizer")
+        self.face_quantizer = Sign2VecMultiCueVectorQuantizer(config, name="face_quantizer")
 
         # Register all quantizers with nn.ModuleList 
         for quantizer in [self.pose_quantizer, self.right_hand_quantizer, self.left_hand_quantizer, self.face_quantizer]:
@@ -2428,7 +2428,7 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
 
         self.project_hid = nn.Linear(config.hidden_size , config.proj_codevector_dim)
         # self.project_hid = nn.Linear(config.hidden_size // config.num_multi_cue_layers , config.proj_codevector_dim)
-        self.project_q = nn.Linear(config.codevector_dim * config.num_multi_cue_layers, config.proj_codevector_dim)
+        self.project_q = nn.Linear((config.codevector_dim * config.num_multi_cue_layers) if not config.use_multi_constrastive_logits else config.codevector_dim, config.proj_codevector_dim)
 
         # Initialize weights and apply final processings
         self.post_init()
@@ -2594,50 +2594,104 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
             quantized_cue_features.append(cue_quantized_features)
             cue_codevector_perplexities.append(cue_codevector_perplexity)
 
-        quantized_features = torch.cat(quantized_cue_features, dim=-1)
-        # ensure quantized features are concatenated along the feature dimension and require same dtype as projection layer
-        quantized_features = quantized_features.to(self.project_q.weight.dtype)
-        quantized_features = self.project_q(quantized_features)
+        # concatenate all quantized cues if not using separate contrastive logits
+        if not self.config.use_multi_constrastive_logits:
+            quantized_features = torch.cat(quantized_cue_features, dim=-1)
+            # ensure quantized features are concatenated along the feature dimension and require same dtype as projection layer
+            quantized_features = quantized_features.to(self.project_q.weight.dtype)
+            quantized_features = self.project_q(quantized_features)
 
         loss = contrastive_loss = diversity_loss = None
         pose_diversity_loss = right_hand_diversity_loss = left_hand_diversity_loss = face_diversity_loss = None
+        pose_contrastive_loss = right_hand_contrastive_loss = left_hand_contrastive_loss = face_contrastive_loss = None
         if sampled_negative_indices is not None:
-            batch_size, sequence_length, hidden_size = quantized_features.shape
-
-            # for training, we sample negatives
-            # 3. sample K negatives (distractors) quantized states for contrastive loss
-            # if attention_mask is passed, make sure that padded feature vectors cannot be sampled
-            # sample negative quantized vectors BTC => (BxT)C
-            negative_quantized_features = quantized_features.view(-1, hidden_size)[
-                sampled_negative_indices.long().view(-1)
-            ]
-            negative_quantized_features = negative_quantized_features.view(
-                batch_size, sequence_length, -1, hidden_size
-            ).permute(2, 0, 1, 3)
 
             # 4. compute logits, corresponding to `logs = sim(c_t, [q_t, \sim{q}_t]) / \kappa`
             # of equation (3) in https://arxiv.org/pdf/2006.11477.pdf
+            if self.config.use_multi_constrastive_logits:
+                cue_contrastive_loss = []
+                for quantized_features in quantized_cue_features:
 
-            logits = self.compute_contrastive_logits(
-                quantized_features[None, :],
-                negative_quantized_features,
-                transformer_features,
-                self.config.contrastive_logits_temperature,
-            )
+                    quantized_features = quantized_features.to(self.project_q.weight.dtype)
+                    quantized_features = self.project_q(quantized_features)
 
-            # 5. if a negative vector is identical to the positive (i.e. when codebook utilization is low),
-            # its cosine similarity will be masked
-            neg_is_pos = (quantized_features == negative_quantized_features).all(-1)
+                    batch_size, sequence_length, hidden_size = quantized_features.shape
 
-            if neg_is_pos.any():
-                logits[1:][neg_is_pos] = float("-inf")
 
-            # 6. compute contrastive loss \mathbf{L}_m = cross_entropy(logs) =
-            # -log(exp(sim(c_t, q_t)/\kappa) / \sum_{\sim{q}} exp(sim(c_t, \sim{q})/\kappa))
-            logits = logits.transpose(0, 2).reshape(-1, logits.size(0))
-            target = ((1 - mask_time_indices.long()) * -100).transpose(0, 1).flatten()
+                    # for training, we sample negatives
+                    # 3. sample K negatives (distractors) quantized states for contrastive loss
+                    # if attention_mask is passed, make sure that padded feature vectors cannot be sampled
+                    # sample negative quantized vectors BTC => (BxT)C
+                    negative_quantized_features = quantized_features.view(-1, hidden_size)[
+                        sampled_negative_indices.long().view(-1)
+                    ]
+                    negative_quantized_features = negative_quantized_features.view(
+                        batch_size, sequence_length, -1, hidden_size
+                    ).permute(2, 0, 1, 3)
 
-            contrastive_loss = nn.functional.cross_entropy(logits.float(), target, reduction="sum")
+                    logits = self.compute_contrastive_logits(
+                        quantized_features[None, :],
+                        negative_quantized_features,
+                        transformer_features,
+                        self.config.contrastive_logits_temperature,
+                    )
+
+                    # 5. if a negative vector is identical to the positive (i.e. when codebook utilization is low),
+                    # its cosine similarity will be masked
+                    neg_is_pos = (quantized_features == negative_quantized_features).all(-1)
+
+                    if neg_is_pos.any():
+                        logits[1:][neg_is_pos] = float("-inf")
+
+                    # 6. compute contrastive loss \mathbf{L}_m = cross_entropy(logs) =
+                    # -log(exp(sim(c_t, q_t)/\kappa) / \sum_{\sim{q}} exp(sim(c_t, \sim{q})/\kappa))
+                    logits = logits.transpose(0, 2).reshape(-1, logits.size(0))
+                    target = ((1 - mask_time_indices.long()) * -100).transpose(0, 1).flatten()
+
+                    contrastive_loss = nn.functional.cross_entropy(logits.float(), target, reduction="sum")
+                    cue_contrastive_loss.append(contrastive_loss)
+
+                if self.config.loss_reduction == 'mean':
+                    contrastive_loss = torch.stack(cue_contrastive_loss).mean()
+                elif self.config.loss_reduction == 'sum':
+                    contrastive_loss = torch.stack(cue_contrastive_loss).sum()
+
+                pose_contrastive_loss, right_hand_contrastive_loss, left_hand_contrastive_loss, face_contrastive_loss = cue_contrastive_loss
+
+            else:
+                batch_size, sequence_length, hidden_size = quantized_features.shape
+
+                # for training, we sample negatives
+                # 3. sample K negatives (distractors) quantized states for contrastive loss
+                # if attention_mask is passed, make sure that padded feature vectors cannot be sampled
+                # sample negative quantized vectors BTC => (BxT)C
+                negative_quantized_features = quantized_features.view(-1, hidden_size)[
+                    sampled_negative_indices.long().view(-1)
+                ]
+                negative_quantized_features = negative_quantized_features.view(
+                    batch_size, sequence_length, -1, hidden_size
+                ).permute(2, 0, 1, 3)
+
+                logits = self.compute_contrastive_logits(
+                    quantized_features[None, :],
+                    negative_quantized_features,
+                    transformer_features,
+                    self.config.contrastive_logits_temperature,
+                )
+
+                # 5. if a negative vector is identical to the positive (i.e. when codebook utilization is low),
+                # its cosine similarity will be masked
+                neg_is_pos = (quantized_features == negative_quantized_features).all(-1)
+
+                if neg_is_pos.any():
+                    logits[1:][neg_is_pos] = float("-inf")
+
+                # 6. compute contrastive loss \mathbf{L}_m = cross_entropy(logs) =
+                # -log(exp(sim(c_t, q_t)/\kappa) / \sum_{\sim{q}} exp(sim(c_t, \sim{q})/\kappa))
+                logits = logits.transpose(0, 2).reshape(-1, logits.size(0))
+                target = ((1 - mask_time_indices.long()) * -100).transpose(0, 1).flatten()
+
+                contrastive_loss = nn.functional.cross_entropy(logits.float(), target, reduction="sum")
            
             num_codevectors = self.config.num_codevectors_per_group * self.config.num_codevector_groups
             diversity_loss = []
@@ -2646,6 +2700,11 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
                 cue_diversity_loss = ((num_codevectors - codevector_perplexity) / num_codevectors) * mask_time_indices.sum()
                 diversity_loss.append(cue_diversity_loss)
 
+            if self.config.loss_reduction == 'mean':
+                codevector_perplexity = torch.stack(cue_codevector_perplexities).mean()
+            if self.config.loss_reduction == 'sum':
+                codevector_perplexity = torch.stack(cue_codevector_perplexities).sum()
+    
             pose_diversity_loss, right_hand_diversity_loss, left_hand_diversity_loss, face_diversity_loss = diversity_loss
 
             if self.config.loss_reduction == 'mean':
@@ -2676,8 +2735,12 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
             pose_diversity_loss=pose_diversity_loss,
             right_hand_diversity_loss=right_hand_diversity_loss,
             left_hand_diversity_loss=left_hand_diversity_loss,
-            face_diversity_loss=face_diversity_loss
+            face_diversity_loss=face_diversity_loss,
 
+            pose_contrastive_loss=pose_contrastive_loss,
+            right_hand_contrastive_loss=right_hand_contrastive_loss,
+            left_hand_contrastive_loss=left_hand_contrastive_loss,
+            face_contrastive_loss=face_contrastive_loss
         )
 
 

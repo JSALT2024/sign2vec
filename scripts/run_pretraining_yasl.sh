@@ -30,5 +30,6 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --data_dir="/ssd2/karahan/YASL" \
                                         --config_name="pretraining/config.json" \
                                         --use_multi_cue \
+                                        --use_multi_contrastive \
                                         --push_to_hub \
                                         --hub_model_id="sign2vec-yasl-multi-cue"

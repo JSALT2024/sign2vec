@@ -18,6 +18,11 @@ def parse_args():
         help="Use multi-cue architecture",
     )
     parser.add_argument(
+        "--use_multi_contrastive",
+        action="store_true",
+        help="Use multi-cue architecture",
+    )
+    parser.add_argument(
         "--dataset_name",
         type=str,
         default="how2sign"

@@ -55,6 +55,7 @@
     "use_weighted_layer_sum": false,
     "classifier_proj_size": 256,
     "num_multi_cue_layers": 4,
+    "use_multi_constrastive_logits": true,
     "loss_reduction": "mean",
     "tdnn_dim": [
         512,

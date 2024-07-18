@@ -203,6 +203,12 @@ class Trainer:
                         train_logs["left_hand_diversity_loss"] = outputs.left_hand_diversity_loss / num_losses
                         train_logs["face_diversity_loss"] = outputs.face_diversity_loss / num_losses
 
+                    if args.use_multi_contrastive:
+                        train_logs["pose_contrastive_loss"] = outputs.pose_contrastive_loss / num_losses
+                        train_logs["right_hand_contrastive_loss"] = outputs.right_hand_contrastive_loss / num_losses
+                        train_logs["left_hand_contrastive_loss"] = outputs.left_hand_contrastive_loss / num_losses
+                        train_logs["face_contrastive_loss"] = outputs.face_contrastive_loss / num_losses
+
                     log_str = ""
                     for k, v in train_logs.items():
                         log_str += "| {}: {:.3e}".format(k, v.item())
@@ -251,6 +257,8 @@ class Trainer:
                 val_logs["val_left_hand_diversity_loss"] = 0
                 val_logs["val_face_diversity_loss"] = 0
 
+
+
             for step, batch in enumerate(self.eval_dataloader):
                 with torch.no_grad():
                     batch.pop("sub_attention_mask", None)
@@ -266,6 +274,12 @@ class Trainer:
                     val_logs["val_right_hand_diversity_loss"] += outputs.right_hand_diversity_loss
                     val_logs["val_left_hand_diversity_loss"] += outputs.left_hand_diversity_loss
                     val_logs["val_face_diversity_loss"] += outputs.face_diversity_loss
+
+                if args.use_multi_contrastive:
+                    val_logs["val_pose_contrastive_loss"] += outputs.pose_contrastive_loss
+                    val_logs["val_right_hand_contrastive_loss"] += outputs.right_hand_contrastive_loss
+                    val_logs["val_left_hand_contrastive_loss"] += outputs.left_hand_contrastive_loss
+                    val_logs["val_face_contrastive_loss"] += outputs.face_contrastive_loss
 
             # sum over devices in multi-processing
             if self.accelerator.num_processes > 1:

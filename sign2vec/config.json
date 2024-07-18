@@ -17,18 +17,15 @@
   "conv_dim": [
     512,
     512,
-    512,
     512
   ],
   "conv_kernel": [
-    9,
     5,
     3,
     1
   ],
   "conv_stride": [
     2,
-    1,
     1,
     1
   ],
@@ -59,12 +56,12 @@
   "mask_time_prob": 0.05,
   "model_type": "wav2vec2",
   "num_adapter_layers": 3,
-  "num_attention_heads": 12,
+  "num_attention_heads": 8,
   "num_codevector_groups": 2,
   "num_codevectors_per_group": 64,
   "num_conv_pos_embedding_groups": 16,
   "num_conv_pos_embeddings": 128,
-  "num_feat_extract_layers": 4,
+  "num_feat_extract_layers": 3,
   "num_hidden_layers": 12,
   "num_multi_cue_layers": 4,
   "num_negatives": 100,
@@ -94,6 +91,7 @@
   ],
   "torch_dtype": "float32",
   "transformers_version": "4.42.0.dev0",
+  "use_multi_constrastive_logits": true,
   "use_multi_cue": true,
   "use_weighted_layer_sum": false,
   "vocab_size": 256,

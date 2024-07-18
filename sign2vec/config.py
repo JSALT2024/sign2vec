@@ -245,6 +245,7 @@ class Sign2VecConfig(PretrainedConfig):
         ctc_loss_reduction="sum",
         ctc_zero_infinity=False,
         use_weighted_layer_sum=False,
+        use_multi_constrastive_logits=False,
         classifier_proj_size=256,
         use_multi_cue=False,
         tdnn_dim=(512, 512, 512, 512, 1500),
@@ -295,6 +296,7 @@ class Sign2VecConfig(PretrainedConfig):
         self.input_dim = input_dim
         self.use_multi_cue = use_multi_cue
         self.num_multi_cue_layers = num_multi_cue_layers
+        self.use_multi_constrastive_logits = use_multi_constrastive_logits
         self.loss_reduction = loss_reduction
 
         if (

@@ -7,9 +7,6 @@ from transformers import (
     Wav2Vec2ForPreTraining,
 )
 
-from torchviz import make_dot
-
-
 import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
@@ -56,7 +53,7 @@ def main():
 
     # initialize random model
     model = Sign2VecForPreTraining(config) if not args.use_multi_cue else MultiCueSign2VecForPreTraining(config)
-    if args.use_multi_cue:
+    if config.use_multi_cue:
         print("Using MultiCueSign2VecForPreTraining")
         print(model)
     # Import dataset and tokenizer

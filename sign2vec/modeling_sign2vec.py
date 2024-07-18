@@ -112,7 +112,7 @@ CUE2IDX = {
 }
 
 cue_input_dim = {
-    CUE_ENUM.POSE: 6*2,
+    CUE_ENUM.POSE: 25*2,
     CUE_ENUM.RIGHT_HAND: 21*2,
     CUE_ENUM.LEFT_HAND: 21*2,
     CUE_ENUM.FACE: 37*2,
@@ -2677,6 +2677,7 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
             right_hand_diversity_loss=right_hand_diversity_loss,
             left_hand_diversity_loss=left_hand_diversity_loss,
             face_diversity_loss=face_diversity_loss
+
         )
 
 

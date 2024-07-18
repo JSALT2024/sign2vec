@@ -43,7 +43,7 @@
     "mask_feature_prob": 0.0,
     "mask_feature_length": 10,
     "mask_feature_min_masks": 0,
-    "num_codevectors_per_group": 64,
+    "num_codevectors_per_group": 128,
     "num_codevector_groups": 1,
     "contrastive_logits_temperature": 0.1,
     "num_negatives": 100,

@@ -204,6 +204,14 @@ class YoutubeASLForPretraining(Dataset):
                  padding="max_length"):
         
         self.data_dir = data_dir
+
+        self.face_landmarks = [
+            0, 4, 13, 14, 17, 33, 39, 46, 52, 55, 61, 64, 81, 
+            93, 133, 151, 152, 159, 172, 178, 181, 263, 269, 276,
+            282, 285, 291, 294, 311, 323, 362, 386, 397, 402, 405, 468, 473
+        ]
+        self.pose_landmarks = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 ]
+        
         self.feature_extractor = Wav2Vec2FeatureExtractor(
             feature_size=340,
             sampling_rate=25,
@@ -211,14 +219,6 @@ class YoutubeASLForPretraining(Dataset):
             do_normalize=zero_mean_unit_var_norm
         )
 
-
-        self.face_landmarks = [
-            0, 4, 13, 14, 17, 33, 39, 46, 52, 55, 61, 64, 81, 
-            93, 133, 151, 152, 159, 172, 178, 181, 263, 269, 276,
-            282, 285, 291, 294, 311, 323, 362, 386, 397, 402, 405, 468, 473
-        ]
-        self.pose_landmarks = [ 11, 12, 13, 14, 23, 24 ]
-        
         self.add_noise = add_noise
         self.kp_norm = kp_norm
         self.norm = [
@@ -255,7 +255,6 @@ class YoutubeASLForPretraining(Dataset):
         left_hand_landmarks = left_hand_landmarks.reshape( left_hand_landmarks.shape[0], -1 )
 
         data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
-
         data = torch.tensor(data).reshape(data.shape[0], -1)
         data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
 

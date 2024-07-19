@@ -41,6 +41,7 @@ def parse_args():
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('--layer_to_extract', type=int, default=-1)
     parser.add_argument('--model_name', type=str, default=model_name)
     parser.add_argument('--data_dir', type=str, default=data_dir)
     parser.add_argument('--output_path', type=str, default=output_path)
@@ -168,7 +169,12 @@ if __name__ == '__main__':
                         # pad the video to have at least 10 frames
                         features = torch.cat([features, torch.zeros(1, 170, 100 - features.shape[2])], dim=2)
                     try:
-                        features = model(input_values=features).last_hidden_state.detach().numpy()[0]
+                        features = model(input_values=features.to('cuda:0'), output_hidden_states=True)
+                        if args.layer_to_extract > 0:
+                            features = features.hidden_states[args.layer_to_extract].detach().cpu().numpy()[0]
+                        else:
+                            features = features.last_hidden_state.detach().cpu().numpy()[0]
+                        # features = model(input_values=features.to('cuda:0')).last_hidden_state.detach().cpu().numpy()[0]
                     except Exception as e:
                         features = np.zeros((10, 768))
 

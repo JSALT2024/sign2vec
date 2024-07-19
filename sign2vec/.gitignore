@@ -2,3 +2,5 @@ step_*
 epoch_*
 wandb/
 .env
+*.safetensors
+*.safetensors

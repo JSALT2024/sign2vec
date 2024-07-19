@@ -31,24 +31,23 @@ from sign2vec.feature_extraction_sign2vec import Sign2VecFeatureExtractor
 import argparse
 
 def parse_args():
-    dataset_file = "pretraining/how2sign/H2S_val.csv"
     model_name = "karahansahin/sign2vec-yasl-k10-c128-d0.5"
     data_dir = "pretraining/how2sign"
     output_path = "pretraining/how2sign"
-    input_file = "H2S_val.h5"
-    output_file = "H2S_val-sign2vec.h5"
-    annotation_file = 'sign2vec/how2sign/h2s.annotations.dev.json'
+    input_file = "H2S_train.h5"
+    output_file = "sign2vec.train.0.h5"
+    annotation_file = 'sign2vec/how2sign/h2s.annotations.train.json'
+    metadata_file = 'metadata_sign2vec.train.json'
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--dataset_file', type=str, default=dataset_file)
     parser.add_argument('--model_name', type=str, default=model_name)
     parser.add_argument('--data_dir', type=str, default=data_dir)
     parser.add_argument('--output_path', type=str, default=output_path)
     parser.add_argument('--input_file', type=str, default=input_file)
     parser.add_argument('--output_file', type=str, default=output_file)
     parser.add_argument('--annotation_file', type=str, default=annotation_file)
-
+    parser.add_argument('--metadata_file', type=str, default=metadata_file)
     
     return parser.parse_args()
 
@@ -97,6 +96,13 @@ def transform_h5_to_pointer(annotation_csv):
 
     return h5_file_path, video_ids, clip_ids, sentence_ids
 
+def generate_metadata_file(metadata_file, video_ids, h5_file_idx):
+    metadata = {video_id: h5_file_idx for video_id in video_ids}
+    with open(metadata_file, 'w') as file:
+        json.dump(metadata, file)
+    
+
+
 
 def save_to_h5(fetures_list_h5, label, index_dataset, chunk_batch, chunk_size):
     if index_dataset == chunk_batch * chunk_size:
@@ -121,12 +127,13 @@ if __name__ == '__main__':
         token=token,
     )
 
-
     annotation_csv = read_annotation_file(args.annotation_file, os.path.join(args.data_dir, args.input_file))
 
     annotation_csv.to_csv(os.path.join(args.output_path, 'annotation.csv'), index=False)
 
     fpaths, video_ids, clip_ids, sentence_ids = transform_h5_to_pointer(annotation_csv)
+
+    generate_metadata_file(args.metadata_file, video_ids, args.output_file.split('.')[-2])
 
     train_data = YoutubeASLForPretraining(
         dataset=os.path.join(args.output_path, 'annotation.csv'),
@@ -137,11 +144,7 @@ if __name__ == '__main__':
         pose_version='yasl'
     )
 
-
     with h5py.File(os.path.join(args.output_path, args.output_file), 'a') as f_out:
-
-        # special data type for numpy array with variable length
-        dt = h5py.vlen_dtype(np.dtype('float64'))
 
         for i in tqdm(range(0, len(video_ids))):      # iterating over videos
             video = video_ids[i]
@@ -168,9 +171,9 @@ if __name__ == '__main__':
                         features = model(input_values=features).last_hidden_state.detach().numpy()[0]
                     except Exception as e:
                         features = np.zeros((10, 768))
-                # AND CONCATE THEM TO features
-                # OR DO CYCLE OVER THE FRAMES AND SAVE features TO H5 BATCH BY BATCH
-                fetures_list_h5 = video_h5.create_dataset(clip, shape=(len(features),), maxshape=(None,), dtype=dt)
+
+                features = features.astype(np.float16)
+                fetures_list_h5 = video_h5.create_dataset(clip, shape=features.shape, maxshape=(None, features.shape[1]), dtype=np.dtype('float16'))
                 num_full_chunks = len(features) // chunk_size
                 last_chunk_size = len(features) % chunk_size
                 for c in range(num_full_chunks):

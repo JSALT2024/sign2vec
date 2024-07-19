@@ -216,8 +216,6 @@ class YoutubeASLForPretraining(Dataset):
         if pose_version == "yasl":
             self.pose_landmarks = [ 11, 12, 13, 14, 23, 24 ]
 
-        print("Pose landmarks: ", len(self.pose_landmarks))
-
         # Maybe not normalize face landmarks
         # Extreme change in face landmarks can cause the model gradient to explode
         # Look at codebooks (pose, right_hand, left_hand, face)

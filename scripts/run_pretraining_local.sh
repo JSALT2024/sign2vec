@@ -21,14 +21,11 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
                                         --gradient_checkpointing \
                                         --mask_time_prob="0.65" \
                                         --mask_time_length="10" \
-                                        --use_face \
-                                        --use_hands \
-                                        --use_pose \
                                         --zero_mean_unit_var_norm \
                                         --train_data_path="pretraining/how2sign/val.csv" \
                                         --validation_data_path="pretraining/how2sign/val.csv" \
                                         --data_dir="pretraining/how2sign/" \
-                                        --config_name="pretraining/config.json" \
+                                        --config_name="pretraining/training_configuration/yasl_baseline_mc_div=1.0.yaml" \
                                         --push_to_hub \
                                         --use_multi_cue \
                                         --use_multi_contrastive \

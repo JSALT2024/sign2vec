@@ -85,6 +85,12 @@ model_args:
   vocab_size: 256
   xvector_output_dim: 512
 training_params:
+  tags:
+  - single-cue
+  - single-contrast
+  - 64-codevectors
+  - 4-codevector-groups
+  - 1.0-diversity-loss-weight
   # The following parameters are used to train the model
   adam_beta1: 0.9
   adam_beta2: 0.98

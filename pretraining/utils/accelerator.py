@@ -34,6 +34,7 @@ def initialize_accelerator(args, experiment_configuration):
             wandb.init(
                 project=args.output_dir.split("/")[-1],
                 config=experiment_configuration,
+                tags=args.tags,
             )
     else:
         datasets.utils.logging.set_verbosity_error()

@@ -605,7 +605,6 @@ class Sign2VecMultiCueFeatureEncoder(nn.Module):
 
         cues = [hidden_states[:, start:end] for start, end in CUE_DIM] 
 
-        # print('CUE SHAPES ->',cues[0].shape, cues[1].shape, cues[2].shape, cues[3].shape)
         
         for cue_idx, (cue_hidden_states, conv_layers) in enumerate(zip(cues,self.multi_cue_layers)):
 
@@ -2140,7 +2139,6 @@ class Sign2VecModel(Wav2Vec2PreTrainedModel):
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-
         if self.config.use_multi_cue:
             extract_features = self.feature_extractor(input_values)
             extract_features = torch.cat(extract_features, dim=1)
@@ -2570,7 +2568,6 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
         transformer_features = self.project_hid(outputs[0])
         # 2. quantize all (unmasked) extracted features and project to final vq dim
         extract_features = self.dropout_features(outputs[1])
-        # print('extract_features-->', extract_features.shape)
 
         if attention_mask is not None:
             # compute reduced attention_mask correponding to feature vectors
@@ -2651,9 +2648,9 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
                     contrastive_loss = nn.functional.cross_entropy(logits.float(), target, reduction="sum")
                     cue_contrastive_loss.append(contrastive_loss)
 
-                if self.config.loss_reduction == 'mean':
+                if self.config.contrastive_loss_reduction == 'mean':
                     contrastive_loss = torch.stack(cue_contrastive_loss).mean()
-                elif self.config.loss_reduction == 'sum':
+                elif self.config.contrastive_loss_reduction == 'sum':
                     contrastive_loss = torch.stack(cue_contrastive_loss).sum()
 
                 pose_contrastive_loss, right_hand_contrastive_loss, left_hand_contrastive_loss, face_contrastive_loss = cue_contrastive_loss
@@ -2707,9 +2704,9 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
     
             pose_diversity_loss, right_hand_diversity_loss, left_hand_diversity_loss, face_diversity_loss = diversity_loss
 
-            if self.config.loss_reduction == 'mean':
+            if self.config.diversity_loss_reduction == 'mean':
                 diversity_loss = torch.stack(diversity_loss).mean()
-            elif self.config.loss_reduction == 'sum':
+            elif self.config.diversity_loss_reduction == 'sum':
                 diversity_loss = torch.stack(diversity_loss).sum()
 
             # 8. \mathbf{L} = \mathbf{L}_m + \alpha * \mathbf{L}_d

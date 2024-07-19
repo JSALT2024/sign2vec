@@ -9,8 +9,10 @@ from transformers import (
 
 import os
 import sys
+import yaml
+from pathlib import Path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
-
+from argparse import Namespace
 from transformers.utils import send_example_telemetry
 
 from utils.train import Trainer
@@ -22,7 +24,6 @@ from sign2vec.modeling_sign2vec import (
     MultiCueSign2VecForPreTraining
 )
 
-
 logger = get_logger(__name__)
 
 def main():
@@ -30,6 +31,18 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
     args = parse_args()
+
+    experiment_configuration = yaml.safe_load(Path(args.config_name).read_text())
+    training_args = Namespace(**experiment_configuration['training_params'])
+
+    model_args = experiment_configuration['model_args']
+    for key, value in model_args.items():
+        args.__dict__[key] = value
+        args.__dict__.update(training_args.__dict__)
+    
+    config = Sign2VecConfig(
+        **model_args
+    )
 
     # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
@@ -39,23 +52,12 @@ def main():
     accelerator, api, repo_id = initialize_accelerator(args)
 
     # Initialize random model before training
-    # config = Wav2Vec2Config.from_pretrained(args.model_name_or_path)
-    config = Sign2VecConfig(**json.load(open(args.config_name)))
-
-
-    # pretraining is only supported for "newer" stable layer norm architecture
-    # apply_spec_augment has to be True, mask_feature_prob has to be 0.0
-    if not config.do_stable_layer_norm or config.feat_extract_norm != "layer":
-        raise ValueError(
-            "PreTraining is only supported for ``config.do_stable_layer_norm=True`` and"
-            " ``config.feat_extract_norm='layer'"
-        )
 
     # initialize random model
     model = Sign2VecForPreTraining(config) if not args.use_multi_cue else MultiCueSign2VecForPreTraining(config)
     if config.use_multi_cue:
-        print("Using MultiCueSign2VecForPreTraining")
         print(model)
+
     # Import dataset and tokenizer
     from utils.dataset import prepare_dataloader
     train_dataloader, validation_dataloader = prepare_dataloader(args, config, model, accelerator)

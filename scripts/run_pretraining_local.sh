@@ -1,32 +1,8 @@
 TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py \
-                                        --model_name_or_path="patrickvonplaten/wav2vec2-base-v2" \
-                                        --env="local" \
-                                        --dataset_name="yasl" \
-                                        --output_dir="./sign2vec" \
-                                        --num_train_epochs="1000" \
-                                        --max_train_steps="5" \
-                                        --num_warmup_steps="3" \
-                                        --gradient_accumulation_steps="4" \
-                                        --learning_rate="0.001" \
-                                        --weight_decay="0.01" \
-                                        --max_duration_in_seconds="20.0" \
-                                        --min_duration_in_seconds="2.0" \
-                                        --logging_steps="1" \
-                                        --saving_steps="10000" \
-                                        --per_device_train_batch_size="8" \
-                                        --per_device_eval_batch_size="8" \
-                                        --adam_beta1="0.9" \
-                                        --adam_beta2="0.98" \
-                                        --adam_epsilon="1e-06" \
-                                        --gradient_checkpointing \
-                                        --mask_time_prob="0.65" \
-                                        --mask_time_length="10" \
-                                        --zero_mean_unit_var_norm \
-                                        --train_data_path="pretraining/how2sign/val.csv" \
-                                        --validation_data_path="pretraining/how2sign/val.csv" \
-                                        --data_dir="pretraining/how2sign/" \
-                                        --config_name="pretraining/training_configuration/yasl_baseline_mc_div=1.0.yaml" \
-                                        --push_to_hub \
-                                        --use_multi_cue \
-                                        --use_multi_contrastive \
-                                        --hub_model_id="sign2vec-v1-how2sign"
+                                                    --config_name="pretraining/training_configuration/youtube_asl_sc_sc.yaml" 
+
+TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py \
+                                                    --config_name="pretraining/training_configuration/youtube_asl_mc_sc.yaml" 
+
+TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py \
+                                                    --config_name="pretraining/training_configuration/youtube_asl_mc_mc.yaml" 

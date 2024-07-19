@@ -259,6 +259,8 @@ class Sign2VecConfig(PretrainedConfig):
         num_multi_cue_layers=4,
         adapter_kernel_size=3,
         adapter_stride=2,
+        diversity_loss_reduction="mean",
+        contrastive_loss_reduction="mean",
         loss_reduction="mean",
         num_adapter_layers=3,
         output_hidden_size=None,
@@ -298,6 +300,8 @@ class Sign2VecConfig(PretrainedConfig):
         self.num_multi_cue_layers = num_multi_cue_layers
         self.use_multi_constrastive_logits = use_multi_constrastive_logits
         self.loss_reduction = loss_reduction
+        self.diversity_loss_reduction = diversity_loss_reduction
+        self.contrastive_loss_reduction = contrastive_loss_reduction
 
         if (
             (len(self.conv_stride) != self.num_feat_extract_layers)

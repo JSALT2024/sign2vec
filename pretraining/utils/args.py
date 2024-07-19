@@ -90,7 +90,6 @@ def parse_args():
         "--model_name_or_path",
         type=str,
         help="Path to pretrained model or model identifier from huggingface.co/models.",
-        required=True,
     )
     parser.add_argument(
         "--train_cache_file_name",

@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 
 kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
 
-def initialize_accelerator(args):
+def initialize_accelerator(args, experiment_configuration):
 
     # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
     accelerator = Accelerator(kwargs_handlers=[kwargs])
@@ -32,7 +32,8 @@ def initialize_accelerator(args):
             import wandb
 
             wandb.init(
-                project=args.output_dir.split("/")[-1]
+                project=args.output_dir.split("/")[-1],
+                config=experiment_configuration,
             )
     else:
         datasets.utils.logging.set_verbosity_error()

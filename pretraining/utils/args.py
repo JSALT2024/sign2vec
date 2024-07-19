@@ -33,6 +33,12 @@ def parse_args():
         help="Add noise to the audio data",
     )
     parser.add_argument(
+        '--run_name',
+        type=str,
+        default="sign2vec-pretraining",
+        help="A name to identify the run",
+    )
+    parser.add_argument(
         '--zero_mean_unit_var_norm',
         action='store_true',
         help='Whether to zero mean normalize the data',

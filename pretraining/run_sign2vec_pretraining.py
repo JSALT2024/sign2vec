@@ -29,7 +29,7 @@ logger = get_logger(__name__)
 def main():
     # See all possible arguments in src/transformers/args.py
     # or by passing the --help flag to this script.
-    # We now keep distinct sets of args, for a cleaner separation of concerns.
+    # We now keep distinct sets of args, for a cleanxwwer separation of concerns.
     args = parse_args()
 
     experiment_configuration = yaml.safe_load(Path(args.config_name).read_text())
@@ -49,7 +49,7 @@ def main():
     send_example_telemetry("run_wav2vec2_pretraining_no_trainer", args)
 
     # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
-    accelerator, api, repo_id = initialize_accelerator(args)
+    accelerator, api, repo_id = initialize_accelerator(args, experiment_configuration)
 
     # Initialize random model before training
 

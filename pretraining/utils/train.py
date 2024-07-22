@@ -172,17 +172,17 @@ class Trainer:
                         args.min_gumbel_temperature
                     )
                     
-                    # diversity_loss_weight = max(
-                    #     args.diversity_loss_weight - ( ((args.diversity_loss_weight - args.min_diversity_loss_weight) / args.max_train_steps) * completed_steps),
-                    #     args.min_diversity_loss_weight
-                    # )
+                    diversity_loss_weight = max(
+                        args.diversity_loss_weight - ( ((args.diversity_loss_weight - args.min_diversity_loss_weight) / args.max_train_steps) * completed_steps),
+                        args.min_diversity_loss_weight
+                    )
 
                     if hasattr(self.model, "module"):
                         self.model.module.set_gumbel_temperature(gumbel_temperature)
-                        # self.model.module.set_diversity_loss_weight(diversity_loss_weight)
+                        self.model.module.set_diversity_loss_weight(diversity_loss_weight)
                     else:
                         self.model.set_gumbel_temperature(gumbel_temperature)
-                        # self.model.set_diversity_loss_weight(diversity_loss_weight)
+                        self.model.set_diversity_loss_weight(diversity_loss_weight)
 
                     progress_bar.update(1)
                     completed_steps += 1

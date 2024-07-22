@@ -1,6 +1,6 @@
 model_args:
   # Main Parameters
-  diversity_loss_weight: 1.0
+  diversity_loss_weight: 0.5
   num_codevector_groups: 8
   num_codevectors_per_group: 64
   conv_dim:
@@ -90,7 +90,7 @@ training_params:
   - single-contrast
   - 64-codevectors
   - 4-codevector-groups
-  - 1.0-diversity-loss-weight
+  - 0.5-diversity-loss-weight
   # The following parameters are used to train the model
   adam_beta1: 0.9
   adam_beta2: 0.98
@@ -115,7 +115,7 @@ training_params:
   validation_data_path: /ssd2/karahan/YASL/val_dataset.csv
   gradient_checkpointing: true
   run_name: sign2vec-yasl-single-cue-single-constrast
-  hub_model_id: sign2vec-yasl-sc-sc-64-8
+  hub_model_id: sign2vec-yasl-sc-sc-64-8-d0.5
   logging_steps: 1
   lr_scheduler_type: linear
   mask_time_prob: 0.65

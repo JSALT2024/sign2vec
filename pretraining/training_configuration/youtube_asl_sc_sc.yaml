@@ -128,7 +128,7 @@ training_params:
   # Diversity loss decay parameters
   min_diversity_loss_weight: 0.1
   # Additional parameters for the training
-  max_duration_in_seconds: 30.0
+  max_duration_in_seconds: 20.0
   min_duration_in_seconds: 2.0
   model_name_or_path: patrickvonplaten/wav2vec2-base-v2
   num_train_epochs: 1000

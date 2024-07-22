@@ -1,8 +1,8 @@
 model_args:
   # Main Parameters
-  diversity_loss_weight: 0.5
-  num_codevector_groups: 8
-  num_codevectors_per_group: 64
+  diversity_loss_weight: 1.0
+  num_codevector_groups: 4
+  num_codevectors_per_group: 80
   conv_dim:
   - 512
   - 512
@@ -91,6 +91,7 @@ training_params:
   - 64-codevectors
   - 4-codevector-groups
   - 0.5-diversity-loss-weight
+  - diversity-loss-decay
   # The following parameters are used to train the model
   adam_beta1: 0.9
   adam_beta2: 0.98
@@ -115,7 +116,7 @@ training_params:
   validation_data_path: /ssd2/karahan/YASL/val_dataset.csv
   gradient_checkpointing: true
   run_name: sign2vec-yasl-single-cue-single-constrast
-  hub_model_id: sign2vec-yasl-sc-sc-64-8-d0.5
+  hub_model_id: sign2vec-yasl-sc-sc-80-4-d1-decay
   logging_steps: 1
   lr_scheduler_type: linear
   mask_time_prob: 0.65
@@ -124,8 +125,10 @@ training_params:
   max_gumbel_temperature: 2.0
   min_gumbel_temperature: 0.5
   gumbel_temperature_decay: 0.999995
+  # Diversity loss decay parameters
+  min_diversity_loss_weight: 0.1
   # Additional parameters for the training
-  max_duration_in_seconds: 20.0
+  max_duration_in_seconds: 30.0
   min_duration_in_seconds: 2.0
   model_name_or_path: patrickvonplaten/wav2vec2-base-v2
   num_train_epochs: 1000

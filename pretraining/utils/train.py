@@ -98,6 +98,15 @@ class Trainer:
         completed_steps = 0
         starting_epoch = 0
 
+
+        print("***** Running training *****")
+        print(f"  Num examples = {len(self.train_dataloader.dataset)}")
+        print(f"  Num Epochs = {args.num_train_epochs}")
+        print(f"  Instantaneous batch size per device = {args.per_device_train_batch_size}")
+        print(f"  Total train batch size (w. parallel, distributed & accumulation) = {self.total_batch_size}")
+        print(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
+        print(f"  Total optimization steps = {args.max_train_steps}")
+
         # Only show the progress bar once on each machine.
         progress_bar = tqdm(range(args.max_train_steps), disable=not self.accelerator.is_local_main_process)
         completed_steps = 0
@@ -160,12 +169,20 @@ class Trainer:
                     # update gumbel temperature
                     gumbel_temperature = max(
                         args.max_gumbel_temperature * args.gumbel_temperature_decay**completed_steps,
-                        args.min_gumbel_temperature,
+                        args.min_gumbel_temperature
                     )
+                    
+                    diversity_loss_weight = max(
+                        args.diversity_loss_weight - ( ((args.diversity_loss_weight - args.min_diversity_loss_weight) / args.max_train_steps) * completed_steps),
+                        args.min_diversity_loss_weight
+                    )
+
                     if hasattr(self.model, "module"):
                         self.model.module.set_gumbel_temperature(gumbel_temperature)
+                        self.model.module.set_diversity_loss_weight(diversity_loss_weight)
                     else:
                         self.model.set_gumbel_temperature(gumbel_temperature)
+                        self.model.set_diversity_loss_weight(diversity_loss_weight)
 
                     progress_bar.update(1)
                     completed_steps += 1
@@ -199,6 +216,7 @@ class Trainer:
                         "%_mask_idx": percent_masked / self.accelerator.num_processes,
                         "ppl": outputs.codevector_perplexity,
                         "lr": torch.tensor(self.optimizer.param_groups[0]["lr"]),
+                        "diversity_loss_weight": torch.tensor(diversity_loss_weight),
                         "temp": torch.tensor(gumbel_temperature),
                         "grad_norm": torch.tensor(grad_norm),
                     }

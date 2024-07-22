@@ -33,6 +33,16 @@ def parse_args():
         help="Add noise to the audio data",
     )
     parser.add_argument(
+        "--diversity_weight_decay",
+        type=float,
+        default=0.999995,
+    )
+    parser.add_argument(
+        "--min_diversity_loss_weight",
+        type=float,
+        default=0.1,
+    )
+    parser.add_argument(
         '--run_name',
         type=str,
         default="sign2vec-pretraining",

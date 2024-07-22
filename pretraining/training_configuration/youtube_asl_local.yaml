@@ -85,6 +85,8 @@ model_args:
   vocab_size: 256
   xvector_output_dim: 512
 training_params:
+  tags:
+  - testing 
   # The following parameters are used to train the model
   adam_beta1: 0.9
   adam_beta2: 0.98
@@ -109,8 +111,8 @@ training_params:
   train_data_path: pretraining/how2sign/val.csv
   validation_data_path: pretraining/how2sign/val.csv
   gradient_checkpointing: true
-  run_name: sign2vec-yasl-multi-cue-single-constrast
-  hub_model_id: sign2vec-v1-how2sign
+  run_name: sign2vec-youtube-asl-local-test
+  hub_model_id: sign2vec-youtube-asl-local-test
   logging_steps: 1
   lr_scheduler_type: linear
   mask_time_prob: 0.65
@@ -119,8 +121,10 @@ training_params:
   max_gumbel_temperature: 2.0
   min_gumbel_temperature: 0.5
   gumbel_temperature_decay: 0.999995
+  # Diversity loss decay parameters
+  min_diversity_loss_weight: 0.1
   # Additional parameters for the training
-  max_duration_in_seconds: 20.0
+  max_duration_in_seconds: 30.0
   min_duration_in_seconds: 2.0
   model_name_or_path: patrickvonplaten/wav2vec2-base-v2
   num_train_epochs: 1000
@@ -129,7 +133,7 @@ training_params:
   pad_to_multiple_of: null
   preprocessing_num_workers: null
   preprocessing_only: false
-  push_to_hub: true
+  push_to_hub: false
   saving_steps: 10000
   seed: 42
   stride: 1

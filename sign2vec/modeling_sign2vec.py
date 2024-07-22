@@ -2420,6 +2420,8 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
         self.left_hand_quantizer = Sign2VecMultiCueVectorQuantizer(config, name="left_hand_quantizer")
         self.face_quantizer = Sign2VecMultiCueVectorQuantizer(config, name="face_quantizer")
 
+        self.diversity_loss_weight = config.diversity_loss_weight
+
         # Register all quantizers with nn.ModuleList 
         for quantizer in [self.pose_quantizer, self.right_hand_quantizer, self.left_hand_quantizer, self.face_quantizer]:
             self.add_module(quantizer.name, quantizer)
@@ -2439,6 +2441,12 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
         self.right_hand_quantizer.temperature = temperature
         self.left_hand_quantizer.temperature = temperature
         self.face_quantizer.temperature = temperature
+
+    def set_diversity_loss_weight(self, diversity_loss_weight: float):
+        """
+        Set the weight for the diversity loss. Only necessary for training
+        """
+        self.diversity_loss_weight = diversity_loss_weight
 
     def freeze_feature_extractor(self):
         """
@@ -2710,7 +2718,7 @@ class MultiCueSign2VecForPreTraining(Wav2Vec2PreTrainedModel):
                 diversity_loss = torch.stack(diversity_loss).sum()
 
             # 8. \mathbf{L} = \mathbf{L}_m + \alpha * \mathbf{L}_d
-            loss = contrastive_loss + self.config.diversity_loss_weight * diversity_loss
+            loss = contrastive_loss + self.diversity_loss_weight * diversity_loss
         
         if not return_dict:
             if loss is not None:

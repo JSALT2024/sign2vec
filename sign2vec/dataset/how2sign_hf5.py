@@ -349,11 +349,11 @@ class YoutubeASL(Dataset):
             right_hand_landmarks = f[video_name]['joints']['right_hand_landmarks'][()]
             pose_landmarks = f[video_name]['joints']['pose_landmarks'][()]
 
-            # Change nan values to 0
-            face_landmarks = np.nan_to_num(face_landmarks, nan=0.0, posinf=0.0, neginf=0.0)
-            left_hand_landmarks = np.nan_to_num(left_hand_landmarks, nan=0.0, posinf=0.0, neginf=0.0)
-            right_hand_landmarks = np.nan_to_num(right_hand_landmarks, nan=0.0, posinf=0.0, neginf=0.0)
-            pose_landmarks = np.nan_to_num(pose_landmarks, nan=0.0, posinf=0.0, neginf=0.0)
+            # # Change nan values to 0
+            # face_landmarks = np.nan_to_num(face_landmarks, nan=0.0, posinf=0.0, neginf=0.0)
+            # left_hand_landmarks = np.nan_to_num(left_hand_landmarks, nan=0.0, posinf=0.0, neginf=0.0)
+            # right_hand_landmarks = np.nan_to_num(right_hand_landmarks, nan=0.0, posinf=0.0, neginf=0.0)
+            # pose_landmarks = np.nan_to_num(pose_landmarks, nan=0.0, posinf=0.0, neginf=0.0)
 
         if self.kp_normalization:
             local_landmarks = {}

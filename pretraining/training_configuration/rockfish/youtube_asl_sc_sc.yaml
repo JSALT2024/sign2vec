@@ -92,6 +92,7 @@ training_params:
   - 4-codevector-groups
   - 0.5-diversity-loss-weight
   - diversity-loss-decay
+  - rockfish
   # The following parameters are used to train the model
   adam_beta1: 0.9
   adam_beta2: 0.98
@@ -111,12 +112,12 @@ training_params:
   fps: 25
   env: server
   dataset_name: yasl
-  data_dir: /ssd2/karahan/YASL
-  train_data_path: /ssd2/karahan/YASL/train_dataset.csv
-  validation_data_path: /ssd2/karahan/YASL/val_dataset.csv
+  data_dir: /scratch4/clsp/SignLLM/YASL_poses
+  train_data_path: /scratch4/clsp/SignLLM/sign2vec/datasets/train_dataset.csv
+  validation_data_path: /scratch4/clsp/SignLLM/sign2vec/datasets/val_dataset.csv
   gradient_checkpointing: true
-  run_name: sign2vec-yasl-single-cue-single-constrast
-  hub_model_id: sign2vec-yasl-sc-sc-80-4-d1-decay
+  run_name: sign2vec-yasl-rockfish
+  hub_model_id: sign2vec-yasl-rockfish
   logging_steps: 1
   lr_scheduler_type: linear
   mask_time_prob: 0.65

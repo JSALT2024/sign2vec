@@ -113,7 +113,7 @@ training_params:
   fps: 25
   env: server
   dataset_name: yasl
-  data_dir: /scratch4/clsp/SignLLM
+  data_dir: /scratch4/clsp/SignLLM/YASL_poses
   train_data_path: /scratch4/clsp/SignLLM/sign2vec/train_dataset.csv
   validation_data_path: /scratch4/clsp/SignLLM/sign2vec/val_dataset.csv
   gradient_checkpointing: true

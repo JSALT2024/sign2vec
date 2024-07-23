@@ -211,7 +211,7 @@ class Trainer:
 
                     train_logs = {
                         "loss": (loss * args.gradient_accumulation_steps) / num_losses,
-                        "constrast_loss": outputs.contrastive_loss / num_losses,
+                        "contrast_loss": outputs.contrastive_loss / num_losses,
                         "div_loss": outputs.diversity_loss / num_losses,
                         "%_mask_idx": percent_masked / self.accelerator.num_processes,
                         "ppl": outputs.codevector_perplexity,

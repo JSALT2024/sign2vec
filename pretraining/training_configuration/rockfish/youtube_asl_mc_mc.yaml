@@ -114,8 +114,8 @@ training_params:
   env: server
   dataset_name: yasl
   data_dir: /scratch4/clsp/SignLLM/YASL_poses
-  train_data_path: /scratch4/clsp/SignLLM/sign2vec/train_dataset.csv
-  validation_data_path: /scratch4/clsp/SignLLM/sign2vec/val_dataset.csv
+  train_data_path: /scratch4/clsp/SignLLM/sign2vec/datasets/train_dataset.csv
+  validation_data_path: /scratch4/clsp/SignLLM/sign2vec/datasets/val_dataset.csv
   gradient_checkpointing: true
   run_name: sign2vec-yasl-multi-cue-multi-contrast
   hub_model_id: sign2vec-yasl-mc-mc-64-2-d1-decay

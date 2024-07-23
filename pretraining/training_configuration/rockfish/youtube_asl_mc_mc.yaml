@@ -102,8 +102,8 @@ training_params:
   learning_rate: 0.001
   max_train_steps: 25000
   num_warmup_steps: 5000
-  per_device_eval_batch_size: 32
-  per_device_train_batch_size: 32
+  per_device_eval_batch_size: 16
+  per_device_train_batch_size: 16
   gradient_accumulation_steps: 4
   cache_dir: null
   # Sign2vec specific parameters
@@ -117,8 +117,8 @@ training_params:
   train_data_path: /scratch4/clsp/SignLLM/sign2vec/datasets/train_dataset.csv
   validation_data_path: /scratch4/clsp/SignLLM/sign2vec/datasets/val_dataset.csv
   gradient_checkpointing: true
-  run_name: sign2vec-yasl-multi-cue-multi-contrast
-  hub_model_id: sign2vec-yasl-mc-mc-64-2-d1-decay
+  run_name: sign2vec-yasl-rockfish
+  hub_model_id: sign2vec-yasl-rockfish
   logging_steps: 1
   lr_scheduler_type: linear
   mask_time_prob: 0.65

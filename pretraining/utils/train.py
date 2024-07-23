@@ -173,7 +173,7 @@ class Trainer:
                     )
                     
                     diversity_loss_weight = max(
-                        args.diversity_loss_weight - ( ((args.diversity_loss_weight - args.min_diversity_loss_weight) / args.max_train_steps) * completed_steps),
+                        args.diversity_loss_weight - ( ((args.diversity_loss_weight - args.min_diversity_loss_weight) / args.num_warmup_steps) * completed_steps),
                         args.min_diversity_loss_weight
                     )
 

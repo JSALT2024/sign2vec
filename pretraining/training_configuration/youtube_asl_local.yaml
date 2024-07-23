@@ -120,7 +120,7 @@ training_params:
   # Gumbel softmax parameters - [will check out in future experiments]
   max_gumbel_temperature: 2.0
   min_gumbel_temperature: 0.5
-  gumbel_temperature_decay: 0.999995
+  gumbel_temperature_decay: 0.99995
   # Diversity loss decay parameters
   min_diversity_loss_weight: 0.1
   # Additional parameters for the training

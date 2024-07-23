@@ -64,7 +64,7 @@ class Sign2VecFeatureExtractor(Wav2Vec2FeatureExtractor):
         feature_size=1,
         sampling_rate=25,
         padding_value=0.0,
-        max_duration_in_seconds=30.0,
+        max_duration_in_seconds=20.0,
         return_attention_mask=False,
         kp_norm=False,
         do_normalize=True,
@@ -102,13 +102,20 @@ class Sign2VecFeatureExtractor(Wav2Vec2FeatureExtractor):
         ]
 
 
-    def transform_keypoints(self, landmarks):
+    def transform_keypoints(self, pose_landmarks):
         """
         Transform the keypoints into a format that can be used by the model.
         
         Args:
             keypoints (dict): The keypoints to be transformed.
             """
+
+
+            # # Change nan values to 0
+            # face_landmarks = np.nan_to_num(face_landmarks, nan=0.0, posinf=0.0, neginf=0.0)
+            # left_hand_landmarks = np.nan_to_num(left_hand_landmarks, nan=0.0, posinf=0.0, neginf=0.0)
+            # right_hand_landmarks = np.nan_to_num(right_hand_landmarks, nan=0.0, posinf=0.0, neginf=0.0)
+            # pose_landmarks = np.nan_to_num(pose_landmarks, nan=0.0, posinf=0.0, neginf=0.0)
 
         if self.norm:
             local_landmarks = {}
@@ -123,7 +130,7 @@ class Sign2VecFeatureExtractor(Wav2Vec2FeatureExtractor):
 
             # local normalization
             for idx, landmarks in local_landmarks.items():
-                normalized_keypoints = local_keypoint_normalization(landmarks, landmarks, padding=0.2)
+                normalized_keypoints = local_keypoint_normalization(pose_landmarks, landmarks, padding=0.2)
                 local_landmarks[idx] = normalized_keypoints
 
             # global normalization
@@ -131,7 +138,7 @@ class Sign2VecFeatureExtractor(Wav2Vec2FeatureExtractor):
             if "pose_landmarks" in additional_landmarks:
                 additional_landmarks.remove("pose_landmarks")
             keypoints, additional_keypoints = global_keypoint_normalization(
-                landmarks,
+                pose_landmarks,
                 "pose_landmarks",
                 additional_landmarks
             )
@@ -147,7 +154,7 @@ class Sign2VecFeatureExtractor(Wav2Vec2FeatureExtractor):
                 data.append(all_landmarks[idx])
 
             pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
-
+        
         # select only wanted KPI and  x, y coordinates
         pose_landmarks = pose_landmarks[:, self.pose_landmarks, :2]
         right_hand_landmarks = right_hand_landmarks[:, :, :2]

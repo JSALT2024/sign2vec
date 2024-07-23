@@ -98,8 +98,8 @@ training_params:
   adam_epsilon: 1.0e-06
   weight_decay: 0.01
   learning_rate: 0.001
-  max_train_steps: 20000
-  num_warmup_steps: 4000
+  max_train_steps: 25000
+  num_warmup_steps: 5000
   per_device_eval_batch_size: 32
   per_device_train_batch_size: 32
   gradient_accumulation_steps: 4
@@ -124,7 +124,7 @@ training_params:
   # Gumbel softmax parameters - [will check out in future experiments]
   max_gumbel_temperature: 2.0
   min_gumbel_temperature: 0.5
-  gumbel_temperature_decay: 0.999995
+  gumbel_temperature_decay: 0.99995
   # Diversity loss decay parameters
   min_diversity_loss_weight: 0.1
   # Additional parameters for the training

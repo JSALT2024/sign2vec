@@ -35,6 +35,7 @@ def initialize_accelerator(args, experiment_configuration):
                 project=args.output_dir.split("/")[-1],
                 config=experiment_configuration,
                 tags=args.tags,
+                entity='boun-pilab'
             )
     else:
         datasets.utils.logging.set_verbosity_error()

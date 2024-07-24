@@ -92,6 +92,7 @@ training_params:
   - 2-codevector-groups
   - 0.5-diversity-loss-weight
   - diversity-loss-decay
+  - warmup-decay
   # The following parameters are used to train the model
   adam_beta1: 0.9
   adam_beta2: 0.98
@@ -100,8 +101,8 @@ training_params:
   learning_rate: 0.001
   max_train_steps: 25000
   num_warmup_steps: 5000
-  per_device_eval_batch_size: 32
-  per_device_train_batch_size: 32
+  per_device_eval_batch_size: 48
+  per_device_train_batch_size: 48
   gradient_accumulation_steps: 4
   cache_dir: null
   # Sign2vec specific parameters
@@ -116,7 +117,7 @@ training_params:
   validation_data_path: /scratch4/clsp/SignLLM/sign2vec/datasets/val_dataset.csv
   gradient_checkpointing: true
   run_name: sign2vec-yasl-multi-cue-single-constrasts
-  hub_model_id: sign2vec-yasl-mc-sc-64-2-d1-decay
+  hub_model_id: sign2vec-yasl-mc-sc-64-2-d1-warmup-decay
   logging_steps: 1
   lr_scheduler_type: linear
   mask_time_prob: 0.65

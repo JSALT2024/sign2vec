@@ -2,13 +2,13 @@
 #SBATCH --account=msaraclar
 #SBATCH --partition=palamut-cuda
 #SBATCH --job-name=sign2vec_pretrain
-#SBATCH --output=%A.out
-#SBATCH --error=%A.err
+#SBATCH --output=slurm/%A.out
+#SBATCH --error=slurm/%A.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:2
 #SBATCH --cpus-per-task=32
-#SBATCH	--time=16:00:00
+#SBATCH	--time=24:00:00
 ###SBATCH --mal-user= your_email_address
 ###SBATCH --mail-type=BEGIN,END,FAIL
 ###SBATCH --mail-type=ALL

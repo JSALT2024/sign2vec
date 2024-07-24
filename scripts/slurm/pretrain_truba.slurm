@@ -53,7 +53,7 @@ echo "Start generating pointer file."
 
 # Run the get pointer script
 python3 sign2vec/utils/generate_pointer.py --pose_dir /localscratch/msaraclar/data/YASL \
-                                           --output_path /localscratch/msaraclar/data/YASL
+                                           --output_path /localscratch/msaraclar/data
 
 echo "Finish generating pointer file."
 

@@ -24,8 +24,12 @@ eval "$(/truba/home/$USER/miniconda3/bin/conda shell.bash hook)"
 conda activate pyt-env
 which python
 
+# Change the directory to the sign2vec repository
+cd /truba/home/msaraclar/sign2vec
+
 # Change the directory to the YASL poses
 mkdir -p /localscratch/msaraclar/data/
+mkdir -p /localscratch/msaraclar/sign2vec/
 cp -r /truba/home/msaraclar/data/YASL /localscratch/msaraclar/data/
 
 # Set environment variables
@@ -42,6 +46,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch pretraining/run_sign2vec_pretraining.py 
 
 # Remove the YASL poses
 rm -rf /localscratch/msaraclar/data
+rm -rf /localscratch/msaraclar/sign2vec
 
 # Save the job info
 scontrol show job $SLURM_JOB_ID >> ${SLURM_JOB_ID}.info

@@ -135,7 +135,7 @@ training_params:
   min_duration_in_seconds: 2.0
   model_name_or_path: patrickvonplaten/wav2vec2-base-v2
   num_train_epochs: 1000
-  output_dir: ./sign2vec
+  output_dir: /localscratch/msaraclar/sign2vec
   overwrite_cache: false
   pad_to_multiple_of: null
   preprocessing_num_workers: null

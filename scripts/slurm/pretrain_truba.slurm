@@ -7,7 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:2
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=32
 #SBATCH	--time=16:00:00
 ###SBATCH --mal-user= your_email_address
 ###SBATCH --mail-type=BEGIN,END,FAIL

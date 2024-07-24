@@ -1,3 +1,7 @@
+rm -rf /ssd1/karahan/sign2vec.train.0.h5
+rm -rf /ssd1/karahan/sign2vec.dev.0.h5
+rm -rf /ssd1/karahan/sign2vec.test.0.h5
+
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/sign2vec-yasl-sc-sc-64-8-d1 \
                                                  --data_dir /ssd1/karahan/ \
                                                  --output_path /ssd1/karahan/ \

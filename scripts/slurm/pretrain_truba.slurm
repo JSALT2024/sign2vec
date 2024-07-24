@@ -20,7 +20,7 @@ hostname
 nvidia-smi
 
 # Load conda environment
-eval “$(/truba/home/$USER/miniconda3/bin/conda shell.bash hook)”
+eval "$(/truba/home/$USER/miniconda3/bin/conda shell.bash hook)"
 conda activate pyt-env
 which python
 

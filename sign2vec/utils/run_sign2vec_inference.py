@@ -171,6 +171,7 @@ if __name__ == '__main__':
                         else:
                             features = features.last_hidden_state.detach().cpu().numpy()[0]
                         # features = model(input_values=features.to('cuda:0')).last_hidden_state.detach().cpu().numpy()[0]
+                        print('Extracted features for video:', video, 'clip:', clip, 'shape:', features.shape)
                     except Exception as e:
                         print()
                         print('Cannot extract features for video:', video, 'clip:', clip, 'error:', e, 'shape:', input_features.shape)

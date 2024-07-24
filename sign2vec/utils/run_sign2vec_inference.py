@@ -166,7 +166,7 @@ if __name__ == '__main__':
                 with torch.no_grad():
                     if input_features.shape[2] < 10:
                         print('padding input features for video:', video, 'clip:', clip, 'shape:', input_features.shape)
-                        input_features = torch.cat([input_features, torch.zeros((1, input_features[1], 15 - input_features.shape[2]))], dim=2)
+                        input_features = torch.cat([input_features, torch.zeros((1, input_features[1], 15 - input_features.shape[2]))], dim=1)
                         print('padded input features for video:', input_features.shape)
                     try:
                         features = model(input_values=input_features.to('cuda:0'), output_hidden_states=True)

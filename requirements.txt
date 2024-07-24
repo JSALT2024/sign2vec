@@ -9,5 +9,4 @@ librosa
 transformers
 wandb
 accelerate
-opencv-python
 h5py

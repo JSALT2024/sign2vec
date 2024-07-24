@@ -99,8 +99,16 @@ def transform_h5_to_pointer(annotation_csv):
 
 def generate_metadata_file(metadata_file, video_ids, h5_file_idx):
     metadata = {video_id: h5_file_idx for video_id in video_ids}
-    with open(metadata_file, 'w') as file:
-        json.dump(metadata, file)
+    if os.path.exists(metadata_file):
+        with open(metadata_file, 'r') as file:
+            metadata_old = json.load(file)
+
+        with open(metadata_file, 'w') as file:
+            metadata_old.update(metadata)
+            json.dump(metadata_old, file)
+    else:
+        with open(metadata_file, 'w') as file:
+            json.dump(metadata, file)
 
 def save_to_h5(fetures_list_h5, label, index_dataset, chunk_batch, chunk_size):
     if index_dataset == chunk_batch * chunk_size:
@@ -139,7 +147,7 @@ if __name__ == '__main__':
         max_length=500,
         kp_norm=True,
         zero_mean_unit_var_norm=True,
-        pose_version='yasl'
+        pose_version='full'
     )
     
     model.to('cuda:0')

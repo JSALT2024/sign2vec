@@ -139,7 +139,7 @@ if __name__ == '__main__':
         max_length=500,
         kp_norm=True,
         zero_mean_unit_var_norm=True,
-        pose_version='yasl'
+        pose_version='full'
     )
     
     model.to('cuda:0')
@@ -175,6 +175,7 @@ if __name__ == '__main__':
                             features = features.last_hidden_state.detach().cpu().numpy()[0]
                         # features = model(input_values=features.to('cuda:0')).last_hidden_state.detach().cpu().numpy()[0]
                     except Exception as e:
+                        print('Cannot extract features for video:', video, 'clip:', clip)
                         features = np.zeros((10, 768))
 
                 features = features.astype(np.float16)

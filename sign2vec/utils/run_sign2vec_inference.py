@@ -113,6 +113,8 @@ def save_to_h5(fetures_list_h5, label, index_dataset, chunk_batch, chunk_size):
 
 if __name__ == '__main__':
 
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')   
+
     args = parse_args()
 
     load_dotenv()
@@ -142,7 +144,7 @@ if __name__ == '__main__':
         pose_version='full'
     )
     
-    model.to('cuda:0')
+    model.to(device)
         
     with h5py.File(os.path.join(args.output_path, args.output_file), 'a') as f_out:
 
@@ -165,19 +167,14 @@ if __name__ == '__main__':
                 # pose landmarks are in list_of_features[i][idx]
                 with torch.no_grad():
                     if input_features.shape[2] < 10:
-                        print('padding input features for video:', video, 'clip:', clip, 'shape:', input_features.shape)
-                        input_features = torch.cat([input_features, torch.zeros((1, input_features[1], 15 - input_features.shape[2]))], dim=1)
-                        print('padded input features for video:', input_features.shape)
+                        input_features = torch.cat([input_features, torch.zeros((1, input_features.shape[1], 15 - input_features.shape[2] ))], dim=2)
                     try:
-                        features = model(input_values=input_features.to('cuda:0'), output_hidden_states=True)
+                        features = model(input_values=input_features.to(device), output_hidden_states=True)
                         if args.layer_to_extract > 0:
                             features = features.hidden_states[args.layer_to_extract].detach().cpu().numpy()[0]
                         else:
                             features = features.last_hidden_state.detach().cpu().numpy()[0]
-                        # features = model(input_values=features.to('cuda:0')).last_hidden_state.detach().cpu().numpy()[0]
-                        print('Extracted features for video:', video, 'clip:', clip, 'shape:', input_features.shape)
                     except Exception as e:
-                        print()
                         print('Cannot extract features for video:', video, 'clip:', clip, 'error:', e, 'shape:', input_features.shape)
                         features = np.zeros((10, 768))
 

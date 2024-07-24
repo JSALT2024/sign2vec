@@ -72,5 +72,9 @@ echo "Removing the data from the local scratch."
 rm -rf /localscratch/msaraclar/data
 rm -rf /localscratch/msaraclar/sign2vec
 
+echo "Finish removing the data from the local scratch."
+
+date
+
 # Save the job info
 scontrol show job $SLURM_JOB_ID >> ${SLURM_JOB_ID}.info

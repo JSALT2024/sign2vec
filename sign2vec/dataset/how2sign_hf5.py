@@ -1,5 +1,4 @@
 import os
-import cv2
 import h5py
 import torch
 import datetime
@@ -521,31 +520,3 @@ class How2SignDataset(Dataset):
             #                       axis=1).reshape(len(face_landmarks), 214)
 
         return (pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks), sentence
-
-    def plot_points2video(self, index, video_name):
-        if self.video_path is None:
-            raise ValueError("Error: video_path is None, cannot plot. \n Aborting.")
-        item = self.__getitem__(index)
-        plot_metadata = item['plot_metadata']
-
-        cap = cv2.VideoCapture(item['metadata']['VIDEO_PATH'])
-
-        # Check if the video file opened successfully
-        if not cap.isOpened():
-            raise ValueError(f'Error: Couldnt open the video file. \n {video_path} \n Aborting.')
-
-        ret, frame = cap.read()
-
-        height, width, layers = frame.shape
-        idx = 0
-        video = cv2.VideoWriter(video_name, 0, 3, (width, height))
-
-        while ret:
-            frame = self.anotate_img(frame, plot_metadata, idx, (125, 255, 10))
-            video.write(frame)
-            ret, frame = cap.read()
-            idx += 1
-
-        cap.release()
-        cv2.destroyAllWindows()
-        video.release()

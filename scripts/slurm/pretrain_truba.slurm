@@ -40,6 +40,8 @@ mkdir -p /localscratch/msaraclar/data
 mkdir -p /localscratch/msaraclar/sign2vec
 cp -r /truba/home/msaraclar/data/YASL /localscratch/msaraclar/data/
 
+ls /localscratch/msaraclar/data/
+
 echo "Finish copying to the local scratch."
 date
     
@@ -50,8 +52,8 @@ export WANDB_API_KEY="45373c78d8dfa3b3cfd4694785b7f1f0ffbcf570"
 echo "Start generating pointer file."
 
 # Run the get pointer script
-python3 sign2vec/utils/generate_pointer.py --pose_dir /localscratch/msaraclar/data \
-                                           --output_path /localscratch/msaraclar/data
+python3 sign2vec/utils/generate_pointer.py --pose_dir /localscratch/msaraclar/data/YASL \
+                                           --output_path /localscratch/msaraclar/data/YASL
 
 echo "Finish generating pointer file."
 

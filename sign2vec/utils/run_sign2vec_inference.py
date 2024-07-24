@@ -164,9 +164,6 @@ if __name__ == '__main__':
                 # ADD PREDICTION OF YOUR MODEL HERE
                 # pose landmarks are in list_of_features[i][idx]
                 with torch.no_grad():
-                    if features.shape[2] < 10:
-                        # pad the video to have at least 10 frames
-                        features = torch.cat([features, torch.zeros(1, 170, 100 - features.shape[2])], dim=2)
                     try:
                         features = model(input_values=features.to('cuda:0'), output_hidden_states=True)
                         if args.layer_to_extract > 0:

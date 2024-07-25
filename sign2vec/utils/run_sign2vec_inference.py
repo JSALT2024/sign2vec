@@ -161,9 +161,10 @@ if __name__ == '__main__':
                         'sentence_idx': idx,
                         'h5_file_path': shard,
                     })
+        with open(os.path.join(args.output_path, 'metadata_sign2vec.train.0.json'), 'w') as file:
+            json.dump({video_id: 0 for video_id in video_ids}, file)
 
         annotation_csv = pd.DataFrame.from_records(annotation_csv)
-
         annotation_csv.to_csv(os.path.join(args.output_path, 'annotation.csv'), index=False)
                     
     else:

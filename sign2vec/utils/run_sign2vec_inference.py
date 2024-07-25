@@ -139,6 +139,8 @@ if __name__ == '__main__':
         
         req_ids = list(annotation.keys())
 
+        print('tst',req_ids[:10])
+
         video_ids = []
         clip_ids = []
         sentence_ids = []

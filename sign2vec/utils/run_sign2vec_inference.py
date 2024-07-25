@@ -153,7 +153,7 @@ if __name__ == '__main__':
                         clip_ids.append([])
                         sentence_ids.append([])
                     clip_ids[-1].append(clip)
-                    sentence_ids[-1].append(clip)
+                    sentence_ids[-1].append(idx)
                     fpaths.append(shard)
                     annotation_csv.append({
                         'video_id': video_id,

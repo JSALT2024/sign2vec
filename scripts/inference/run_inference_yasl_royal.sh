@@ -1,4 +1,4 @@
-mkdir /pfs/lustrep2/scratch/project_465000977/data/YoutubeASL/features/sign2vec
+rm -rf /ssd2/karahan/YASL/sign2vec.train.0.h5
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/sign2vec-yasl-sc-sc-64-8-d1 \
                                                  --data_dir /ssd2/karahan/YASL \

@@ -152,7 +152,7 @@ if __name__ == '__main__':
                 clips = list(f.keys())
                 for idx, clip in enumerate(clips):
                     video_id = clip.split('.')[0]
-                    if clip not in req_ids:
+                    if video_id not in req_ids:
                         continue
                     if current_video != video_id:
                         current_video = video_id

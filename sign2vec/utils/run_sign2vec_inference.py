@@ -76,8 +76,7 @@ def read_annotation_file(file_path, h5_file_path):
             })
 
     return pd.DataFrame.from_records(dataset)
-            
-    
+
 def transform_h5_to_pointer(annotation_csv):
 
     video_ids = []
@@ -111,7 +110,6 @@ def save_to_h5(fetures_list_h5, label, index_dataset, chunk_batch, chunk_size):
     fetures_list_h5[index_dataset:index_dataset + chunk_size] = label
     index_dataset += chunk_size
     return index_dataset, chunk_batch
-
 
 if __name__ == '__main__':
 
@@ -161,6 +159,7 @@ if __name__ == '__main__':
                         'sentence_idx': idx,
                         'h5_file_path': shard,
                     })
+
         with open(os.path.join(args.output_path, 'metadata_sign2vec.train.0.json'), 'w') as file:
             json.dump({video_id: 0 for video_id in video_ids}, file)
 
@@ -191,7 +190,7 @@ if __name__ == '__main__':
 
         for i in tqdm(range(0, len(video_ids))):      # iterating over videos
             video = video_ids[i]
-            video_h5 = f_out.create_group(video)
+            video_h5 = f_out.create_group(video) if video not in f_out.keys() else f_out[video]
             for idx, clip in enumerate(clip_ids[i]):    # iterating over clips of the video
                 # set starting index and starting chunk
                 index_dataset = 0

@@ -91,20 +91,20 @@ training_params:
   - single-constrast
   - 64-codevectors
   - 2-codevector-groups
-  - 0.5-diversity-loss-weight
-  - diversity-loss-decay
+  - 1-diversity-loss-weight
+  - diversity-loss-warmup-decay
   - truba
-  - batch-size-64
+  - batch-size-128
   # The following parameters are used to train the model
   adam_beta1: 0.9
   adam_beta2: 0.98
   adam_epsilon: 1.0e-06
   weight_decay: 0.01
   learning_rate: 0.001
-  max_train_steps: 25000
-  num_warmup_steps: 5000
-  per_device_eval_batch_size: 64
-  per_device_train_batch_size: 64
+  max_train_steps: 10000
+  num_warmup_steps: 2000
+  per_device_eval_batch_size: 128
+  per_device_train_batch_size: 128
   gradient_accumulation_steps: 4
   cache_dir: null
   # Sign2vec specific parameters
@@ -114,9 +114,6 @@ training_params:
   fps: 25
   env: server
   dataset_name: yasl
-  data_dir: /localscratch/msaraclar/data/YASL
-  train_data_path: /localscratch/msaraclar/data/train_dataset.csv
-  validation_data_path: /localscratch/msaraclar/data/val_dataset.csv
   gradient_checkpointing: true
   run_name: sign2vec-yasl-truba
   hub_model_id: sign2vec-yasl-truba
@@ -135,7 +132,6 @@ training_params:
   min_duration_in_seconds: 2.0
   model_name_or_path: patrickvonplaten/wav2vec2-base-v2
   num_train_epochs: 1000
-  output_dir: /localscratch/msaraclar/sign2vec
   overwrite_cache: false
   pad_to_multiple_of: null
   preprocessing_num_workers: null

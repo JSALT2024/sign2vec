@@ -9,7 +9,7 @@
 #SBATCH --gres=gpu:2
 #SBATCH --cpus-per-task=32
 #SBATCH	--time=30:00:00
-#SBATCH --workdir=/truba/scratch/msaraclar/sign2vec
+#SBATCH --chdir=/truba/scratch/msaraclar/sign2vec
 ###SBATCH --mal-user= your_email_address
 ###SBATCH --mail-type=BEGIN,END,FAIL
 ###SBATCH --mail-type=ALL

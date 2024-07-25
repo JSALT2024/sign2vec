@@ -140,6 +140,7 @@ if __name__ == '__main__':
         req_ids = list(annotation.keys())
 
         print('tst',req_ids[:10])
+        print('tst shards',shards[:10])
 
         video_ids = []
         clip_ids = []
@@ -150,6 +151,7 @@ if __name__ == '__main__':
         for shard in shards:
             with h5py.File(shard, 'r') as f:
                 clips = list(f.keys())
+                print('clips',clips[:10])
                 for idx, clip in enumerate(clips):
                     video_id = clip.split('.')[0]
                     if video_id not in req_ids:

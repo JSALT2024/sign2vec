@@ -6,6 +6,6 @@ python3 sign2vec/utils/run_sign2vec_inference_yasl.py --model_name karahansahin/
                                                  --input_file YouTubeASL.keypoints.train.0.h5 \
                                                  --output_file sign2vec.train.0.h5 \
                                                  --metadata_file metadata_sign2vec.train.json \
-                                                 --annotation_file /ssd2/karahan/YASL/yasl.annotations.train.json
-
+                                                 --annotation_file /ssd2/karahan/YASL/yasl.annotations.train.json \
+                                                 --use_shards
 

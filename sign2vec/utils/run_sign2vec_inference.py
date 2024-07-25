@@ -49,6 +49,8 @@ def parse_args():
     parser.add_argument('--output_file', type=str, default=output_file)
     parser.add_argument('--annotation_file', type=str, default=annotation_file)
     parser.add_argument('--metadata_file', type=str, default=metadata_file)
+    parser.add_argument('--use_shards', action='store_true')
+    parser.add_argument('--shard_prefix', type=str, default='yasl_poses')
     
     return parser.parse_args()
 
@@ -127,11 +129,36 @@ if __name__ == '__main__':
         token=token,
     )
 
-    annotation_csv = read_annotation_file(args.annotation_file, os.path.join(args.data_dir, args.input_file))
+    if args.use_shards:
 
-    annotation_csv.to_csv(os.path.join(args.output_path, 'annotation.csv'), index=False)
+        shards = [
+            os.path.join(args.data_dir, file_name) for file_name in os.listdir(args.data_dir) if file_name.startswith(args.shard_prefix)
+        ]
 
-    fpaths, video_ids, clip_ids, sentence_ids = transform_h5_to_pointer(annotation_csv)
+        video_ids = []
+        clip_ids = []
+        sentence_ids = []
+        h5_file_path = []
+        current_video = None
+        for shard in shards:
+            with h5py.File(shard, 'r') as f:
+                clips = list(f.keys())
+                for clip in clips:
+                    video_id = clip.split('_')[0]
+                    if current_video != video_id:
+                        current_video = video_id
+                        video_ids.append(current_video)
+                        clip_ids.append([])
+                        sentence_ids.append([])
+                    clip_ids[-1].append(clip)
+                    sentence_ids[-1].append(clip)
+                    h5_file_path.append(shard)
+    else:
+        annotation_csv = read_annotation_file(args.annotation_file, os.path.join(args.data_dir, args.input_file))
+
+        annotation_csv.to_csv(os.path.join(args.output_path, 'annotation.csv'), index=False)
+
+        fpaths, video_ids, clip_ids, sentence_ids = transform_h5_to_pointer(annotation_csv)
 
     generate_metadata_file(args.metadata_file, video_ids, args.output_file.split('.')[-2])
 

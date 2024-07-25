@@ -135,6 +135,7 @@ if __name__ == '__main__':
             os.path.join(args.data_dir, file_name) for file_name in os.listdir(args.data_dir) if file_name.startswith(args.shard_prefix)
         ]
 
+        print('Shards:', shards)
         video_ids = []
         clip_ids = []
         sentence_ids = []

@@ -139,7 +139,7 @@ if __name__ == '__main__':
         video_ids = []
         clip_ids = []
         sentence_ids = []
-        h5_file_path = []
+        fpaths = []
         annotation_csv = []
         current_video = None
         for shard in shards:
@@ -154,7 +154,7 @@ if __name__ == '__main__':
                         sentence_ids.append([])
                     clip_ids[-1].append(clip)
                     sentence_ids[-1].append(clip)
-                    h5_file_path.append(shard)
+                    fpaths.append(shard)
                     annotation_csv.append({
                         'video_id': video_id,
                         'clip_id': clip,

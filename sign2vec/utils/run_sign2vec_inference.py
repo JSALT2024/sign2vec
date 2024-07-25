@@ -158,7 +158,7 @@ if __name__ == '__main__':
                     annotation_csv.append({
                         'video_id': video_id,
                         'clip_id': clip,
-                        'sentence_idx': clip,
+                        'sentence_idx': idx,
                         'h5_file_path': shard,
                     })
 

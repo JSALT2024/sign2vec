@@ -146,7 +146,7 @@ if __name__ == '__main__':
             with h5py.File(shard, 'r') as f:
                 clips = list(f.keys())
                 for idx, clip in enumerate(clips):
-                    video_id = video_id.split('.')[0]
+                    video_id = clip.split('.')[0]
                     if current_video != video_id:
                         current_video = video_id
                         video_ids.append(current_video)

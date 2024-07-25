@@ -82,4 +82,4 @@ echo "Finished removing the files from the local scratch."
 date
 
 # Save the job info
-scontrol show job $SLURM_JOB_ID >> ${SLURM_JOB_ID}.info
+scontrol show job $SLURM_JOB_ID >> slurm/${SLURM_JOB_ID}.info

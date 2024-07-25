@@ -128,7 +128,11 @@ if __name__ == '__main__':
     )
 
     if args.use_shards:
-
+        
+        print('Using shards')
+        print('Data dir:', args.data_dir)
+        print('Shard prefix:', args.shard_prefix)
+        print('shards:', os.listdir(args.data_dir))
         shards = [
             os.path.join(args.data_dir, file_name) for file_name in os.listdir(args.data_dir) if file_name.startswith(args.shard_prefix)
         ]

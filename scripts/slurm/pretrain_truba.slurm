@@ -27,9 +27,13 @@ which python
 
 # # Change the directory to the sign2vec repository
 # cd /truba/scratch/msaraclar/sign2vec
-
+export DATA_DIR="/truba/home/msaraclar/data"
 export LOCALDIR="/localscratch/msaraclar/${SLURM_JOB_ID}"
+
+echo "local directory: "
 echo ${LOCALDIR}
+echo "data directory: "
+echo ${DATA_DIR}
 
 if [ -d  ${LOCALDIR} ]; then
     echo "Directory exists. Cleaning the directory."
@@ -43,7 +47,7 @@ echo "Copying the data to the local scratch. Creating the directory."
 mkdir -p ${LOCALDIR}
 mkdir -p ${LOCALDIR}/sign2vec
 mkdir -p ${LOCALDIR}/data
-cp -r /truba/home/msaraclar/data/YASL ${LOCALDIR}/data
+cp -r ${DATA_DIR}/YASL ${LOCALDIR}/data
 
 ls ${LOCALDIR}/data
 

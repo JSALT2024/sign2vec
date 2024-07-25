@@ -116,7 +116,7 @@ training_params:
   dataset_name: yasl
   gradient_checkpointing: true
   run_name: sign2vec-yasl-truba
-  hub_model_id: sign2vec-yasl-truba
+  hub_model_id: sign2vec-yasl-mc-sc-64-2-d1-6k
   logging_steps: 1
   lr_scheduler_type: linear
   mask_time_prob: 0.65

@@ -133,7 +133,12 @@ if __name__ == '__main__':
             os.path.join(args.data_dir, file_name) for file_name in os.listdir(args.data_dir) if file_name.startswith(args.shard_prefix)
         ]
 
-        print('Shards:', shards)
+        annotation_file = os.path.join(args.output_path, args.annotation_file)
+        with open(annotation_file, 'r') as file:
+            annotation = json.load(file)
+        
+        req_ids = list(annotation.keys())
+
         video_ids = []
         clip_ids = []
         sentence_ids = []
@@ -144,6 +149,8 @@ if __name__ == '__main__':
             with h5py.File(shard, 'r') as f:
                 clips = list(f.keys())
                 for idx, clip in enumerate(clips):
+                    if clip not in req_ids:
+                        continue
                     video_id = clip.split('.')[0]
                     if current_video != video_id:
                         current_video = video_id
@@ -159,13 +166,14 @@ if __name__ == '__main__':
                         'sentence_idx': idx,
                         'h5_file_path': shard,
                     })
-
-        with open(os.path.join(args.output_path, 'metadata_sign2vec.train.0.json'), 'w') as file:
+        
+        dataset_type = args.output_file.split('.')[-2]
+        metadata_file = f'metadata_sign2vec.{dataset_type}.0.json'
+        with open(os.path.join(args.output_path, metadata_file), 'w') as file:
             json.dump({video_id: 0 for video_id in video_ids}, file)
 
         annotation_csv = pd.DataFrame.from_records(annotation_csv)
         annotation_csv.to_csv(os.path.join(args.output_path, 'annotation.csv'), index=False)
-                    
     else:
         annotation_csv = read_annotation_file(args.annotation_file, os.path.join(args.data_dir, args.input_file))
 

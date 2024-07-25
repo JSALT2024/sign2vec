@@ -139,6 +139,7 @@ if __name__ == '__main__':
         clip_ids = []
         sentence_ids = []
         h5_file_path = []
+        annotation_csv = []
         current_video = None
         for shard in shards:
             with h5py.File(shard, 'r') as f:
@@ -153,6 +154,17 @@ if __name__ == '__main__':
                     clip_ids[-1].append(clip)
                     sentence_ids[-1].append(clip)
                     h5_file_path.append(shard)
+                    annotation_csv.append({
+                        'video_id': video_id,
+                        'clip_id': clip,
+                        'sentence_idx': clip,
+                        'h5_file_path': shard,
+                    })
+
+        annotation_csv = pd.DataFrame.from_records(annotation_csv)
+
+        annotation_csv.to_csv(os.path.join(args.output_path, 'annotation.csv'), index=False)
+                    
     else:
         annotation_csv = read_annotation_file(args.annotation_file, os.path.join(args.data_dir, args.input_file))
 

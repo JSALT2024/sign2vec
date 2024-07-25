@@ -1487,6 +1487,10 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Module):
             perplexity = self._compute_perplexity(codevector_probs, mask_time_indices)
 
         codevector_probs = codevector_probs.view(batch_size * sequence_length, -1)
+        print(codevector_probs)
+        print(codevector_probs.shape)
+        print(codevector_probs.argmax(dim=-1))
+        print(codevector_probs.argmax(dim=-1).shape)
         # use probs to retrieve codevectors
         codevectors_per_group = codevector_probs.unsqueeze(-1) * self.codevectors
         codevectors = codevectors_per_group.view(batch_size * sequence_length, self.num_groups, self.num_vars, -1)
@@ -1565,12 +1569,17 @@ class Sign2VecMultiCueVectorQuantizer(nn.Module):
             perplexity = self._compute_perplexity(codevector_probs, mask_time_indices)
 
         codevector_probs = codevector_probs.view(batch_size * sequence_length, -1)
+        print(self.name, 'codebook-probs',codevector_probs.view(batch_size, sequence_length, self.num_groups, self.num_vars, -1).shape)
+        print(self.name, 'codebook-probs-max',codevector_probs.view(batch_size, sequence_length, self.num_groups, self.num_vars, -1).argmax(dim=3).shape)
+        print(self.name, 'codebook-probs-max',codevector_probs.view(batch_size, sequence_length, self.num_groups, self.num_vars, -1).argmax(dim=3).shape)
+        codebook_indices = codevector_probs.view(batch_size, sequence_length, self.num_groups, self.num_vars, -1).argmax(dim=3)
+        print(self.name, 'codebook-indices',codebook_indices)
         # use probs to retrieve codevectors
         codevectors_per_group = codevector_probs.unsqueeze(-1) * self.codevectors
         codevectors = codevectors_per_group.view(batch_size * sequence_length, self.num_groups, self.num_vars, -1)
         codevectors = codevectors.sum(-2).view(batch_size, sequence_length, -1)
 
-        return codevectors, perplexity
+        return codevectors, perplexity, codebook_indices
 
 
 class Wav2Vec2Adapter(nn.Module):

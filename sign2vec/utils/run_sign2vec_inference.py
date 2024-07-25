@@ -169,6 +169,8 @@ if __name__ == '__main__':
                         'h5_file_path': shard,
                     })
         
+        print(annotation_csv[:10])
+        
         dataset_type = args.output_file.split('.')[-2]
         metadata_file = f'metadata_sign2vec.{dataset_type}.0.json'
         with open(os.path.join(args.output_path, metadata_file), 'w') as file:

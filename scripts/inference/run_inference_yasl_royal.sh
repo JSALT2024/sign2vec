@@ -8,5 +8,5 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/sign2
                                                  --metadata_file metadata_sign2vec.train.json \
                                                  --annotation_file /ssd2/karahan/YASL/yasl.annotations.train.json \
                                                  --use_shards \
-                                                 --shard_prefix 'yasl_poses'
+                                                 --shard_prefix 'yasl_pose'
 

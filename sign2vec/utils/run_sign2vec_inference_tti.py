@@ -49,6 +49,8 @@ def parse_args():
     parser.add_argument('--output_file', type=str, default=output_file)
     parser.add_argument('--annotation_file', type=str, default=annotation_file)
     parser.add_argument('--metadata_file', type=str, default=metadata_file)
+    parser.add_argument('--use_shards', action='store_true')
+    parser.add_argument('--shard_prefix', type=str, default='yasl_poses')
     
     return parser.parse_args()
 
@@ -66,22 +68,22 @@ def read_annotation_file(file_path, h5_file_path):
     for video_id in video_ids:
         clip_ids = list(annotation[video_id]['clip_order'])
         for clip_id in clip_ids:
-            dataset.append({
-                'video_id': video_id,
-                'clip_id': clip_id,
-                'sentence_idx': key2idx[clip_id],
-                'h5_file_path': h5_file_path,
-                'sentence': annotation[video_id][clip_id]['translation']
-            })
+            try:
+                dataset.append({
+                    'video_id': video_id,
+                    'clip_id': clip_id,
+                    'sentence_idx': key2idx[clip_id],
+                    'h5_file_path': h5_file_path,
+                })
+            except Exception as e:
+                print('Error:', e, 'video_id:', video_id, 'Missing:', clip_id)
 
     return pd.DataFrame.from_records(dataset)
-            
-    
+
 def transform_h5_to_pointer(annotation_csv):
 
     video_ids = []
     clip_ids = []
-    translation = []
     sentence_ids = []
     h5_file_path = []
     current_video = None
@@ -91,15 +93,13 @@ def transform_h5_to_pointer(annotation_csv):
             current_video = row['video_id']
             video_ids.append(current_video)
             clip_ids.append([])
-            translation.append([])
             sentence_ids.append([])
         
         clip_ids[-1].append(row['clip_id'])
         sentence_ids[-1].append(row['sentence_idx'])
         h5_file_path.append(row['h5_file_path'])
-        translation[-1].append(row['sentence'])
 
-    return h5_file_path, video_ids, clip_ids, sentence_ids, translation
+    return h5_file_path, video_ids, clip_ids, sentence_ids
 
 def generate_metadata_file(metadata_file, video_ids, h5_file_idx):
     metadata = {video_id: h5_file_idx for video_id in video_ids}
@@ -114,10 +114,10 @@ def save_to_h5(fetures_list_h5, label, index_dataset, chunk_batch, chunk_size):
     index_dataset += chunk_size
     return index_dataset, chunk_batch
 
-
 if __name__ == '__main__':
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')   
+    # device = torch.device('cpu')
 
     args = parse_args()
 

@@ -67,16 +67,16 @@ def read_annotation_file(file_path, h5_file_path):
     dataset = []
     for video_id in video_ids:
         clip_ids = list(annotation[video_id]['clip_order'])
-        try:
-            for clip_id in clip_ids:
+        for clip_id in clip_ids:
+            try:
                 dataset.append({
                     'video_id': video_id,
                     'clip_id': clip_id,
                     'sentence_idx': key2idx[clip_id],
                     'h5_file_path': h5_file_path,
                 })
-        except Exception as e:
-            print('Error:', e, 'video_id:', video_id, 'clip_ids:', clip_ids)
+            except Exception as e:
+                print('Error:', e, 'video_id:', video_id, 'Missing:', clip_id)
 
     return pd.DataFrame.from_records(dataset)
 

@@ -179,7 +179,7 @@ if __name__ == '__main__':
         annotation_csv.to_csv(os.path.join(args.output_path, 'annotation.csv'), index=False)
         fpaths, video_ids, clip_ids, sentence_ids = transform_h5_to_pointer(annotation_csv)
 
-    generate_metadata_file(args.metadata_file, video_ids, args.output_file.split('.')[-2])
+    generate_metadata_file(os.path.join(args.output_path,args.metadata_file), video_ids, args.output_file.split('.')[-2])
 
     train_data = YoutubeASLForPretraining(
         dataset=os.path.join(args.output_path, 'annotation.csv'),

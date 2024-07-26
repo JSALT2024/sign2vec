@@ -59,7 +59,6 @@ def read_annotation_file(file_path, h5_file_path):
 
     with h5py.File(h5_file_path, 'r') as file:
         key2idx = {key: i for i, key in enumerate(file.keys())}
-        print( list(file.keys())[:10])
 
     with open(file_path, 'r') as file:
         annotation = json.load(file)
@@ -117,7 +116,8 @@ def save_to_h5(fetures_list_h5, label, index_dataset, chunk_batch, chunk_size):
 
 if __name__ == '__main__':
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')   
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')   
+    device = torch.device('cpu')
 
     args = parse_args()
 

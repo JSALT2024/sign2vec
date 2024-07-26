@@ -129,10 +129,6 @@ if __name__ == '__main__':
 
     if args.use_shards:
         
-        print('Using shards')
-        print('Data dir:', args.data_dir)
-        print('Shard prefix:', args.shard_prefix)
-        print('shards:', os.listdir(args.data_dir))
         shards = [
             os.path.join(args.data_dir, file_name) for file_name in os.listdir(args.data_dir) if file_name.startswith(args.shard_prefix)
         ]
@@ -143,9 +139,6 @@ if __name__ == '__main__':
         
         req_ids = list(annotation.keys())
 
-        print('tst',req_ids[:10])
-        print('tst shards',shards[:10])
-
         video_ids = []
         clip_ids = []
         sentence_ids = []
@@ -155,7 +148,6 @@ if __name__ == '__main__':
         for shard in shards:
             with h5py.File(shard, 'r') as f:
                 clips = list(f.keys())
-                print('clips',clips[:10])
                 for idx, clip in enumerate(clips):
                     video_id = clip.split('.')[0]
                     if video_id not in req_ids:
@@ -175,8 +167,6 @@ if __name__ == '__main__':
                         'h5_file_path': shard,
                     })
         
-        print(annotation_csv[:10])
-        
         dataset_type = args.output_file.split('.')[-2]
         metadata_file = f'metadata_sign2vec.{dataset_type}.0.json'
         with open(os.path.join(args.output_path, metadata_file), 'w') as file:
@@ -186,9 +176,7 @@ if __name__ == '__main__':
         annotation_csv.to_csv(os.path.join(args.output_path, 'annotation.csv'), index=False)
     else:
         annotation_csv = read_annotation_file(args.annotation_file, os.path.join(args.data_dir, args.input_file))
-
         annotation_csv.to_csv(os.path.join(args.output_path, 'annotation.csv'), index=False)
-
         fpaths, video_ids, clip_ids, sentence_ids = transform_h5_to_pointer(annotation_csv)
 
     generate_metadata_file(args.metadata_file, video_ids, args.output_file.split('.')[-2])

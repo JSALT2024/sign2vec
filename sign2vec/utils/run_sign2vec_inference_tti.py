@@ -49,8 +49,6 @@ def parse_args():
     parser.add_argument('--output_file', type=str, default=output_file)
     parser.add_argument('--annotation_file', type=str, default=annotation_file)
     parser.add_argument('--metadata_file', type=str, default=metadata_file)
-    parser.add_argument('--use_shards', action='store_true')
-    parser.add_argument('--shard_prefix', type=str, default='yasl_poses')
     
     return parser.parse_args()
 
@@ -74,16 +72,19 @@ def read_annotation_file(file_path, h5_file_path):
                     'clip_id': clip_id,
                     'sentence_idx': key2idx[clip_id],
                     'h5_file_path': h5_file_path,
+                    'sentence': annotation[video_id][clip_id]['translation']
                 })
-            except Exception as e:
-                print('Error:', e, 'video_id:', video_id, 'Missing:', clip_id)
+            except KeyError:
+                print('Cannot find key:', clip_id, 'in h5 file:', h5_file_path)
 
     return pd.DataFrame.from_records(dataset)
-
+            
+    
 def transform_h5_to_pointer(annotation_csv):
 
     video_ids = []
     clip_ids = []
+    translation = []
     sentence_ids = []
     h5_file_path = []
     current_video = None
@@ -93,13 +94,15 @@ def transform_h5_to_pointer(annotation_csv):
             current_video = row['video_id']
             video_ids.append(current_video)
             clip_ids.append([])
+            translation.append([])
             sentence_ids.append([])
         
         clip_ids[-1].append(row['clip_id'])
         sentence_ids[-1].append(row['sentence_idx'])
         h5_file_path.append(row['h5_file_path'])
+        translation[-1].append(row['sentence'])
 
-    return h5_file_path, video_ids, clip_ids, sentence_ids
+    return h5_file_path, video_ids, clip_ids, sentence_ids, translation
 
 def generate_metadata_file(metadata_file, video_ids, h5_file_idx):
     metadata = {video_id: h5_file_idx for video_id in video_ids}
@@ -114,10 +117,10 @@ def save_to_h5(fetures_list_h5, label, index_dataset, chunk_batch, chunk_size):
     index_dataset += chunk_size
     return index_dataset, chunk_batch
 
+
 if __name__ == '__main__':
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')   
-    # device = torch.device('cpu')
 
     args = parse_args()
 
@@ -184,12 +187,12 @@ if __name__ == '__main__':
             if not os.path.exists(os.path.join(args.output_path, 'features')):
                 os.makedirs(os.path.join(args.output_path, 'features'))
     
-            write_file = os.path.join(args.output_path, 'features' , f'H2S_{dataset_type}_{clip}.npy')
+            write_file = os.path.join(args.output_path, 'features' , f'h2s_{dataset_type}_{clip}.npy')
 
-            with open(os.path.join(args.output_path, f'H2S_{dataset_type}.wrd'), 'a') as file:
+            with open(os.path.join(args.output_path, f'h2s_{dataset_type}.wrd'), 'a') as file:
                 file.write(translation[i][idx] + '\n')
 
-            with open(os.path.join(args.output_path, f'H2S_{dataset_type}.idx'), 'a') as file:
+            with open(os.path.join(args.output_path, f'h2s_{dataset_type}.idx'), 'a') as file:
                 file.write(f'{write_file}\n')
             
             with open(write_file, 'wb') as file:

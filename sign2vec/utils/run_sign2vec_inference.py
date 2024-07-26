@@ -68,6 +68,8 @@ def read_annotation_file(file_path, h5_file_path):
     dataset = []
     for video_id in video_ids:
         clip_ids = list(annotation[video_id]['clip_order'])
+        print('clip_ids:', clip_ids)
+        print('key2idx:', list(key2idx.items())[:10])
         for clip_id in clip_ids:
             dataset.append({
                 'video_id': video_id,

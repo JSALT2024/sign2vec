@@ -30,4 +30,4 @@ python3 sign2vec/utils/run_sign2vec_inference_tti.py --model_name karahansahin/s
 
 
 
-tar -czvf /ssd1/karahan/h2_t5_tti.tar.gz /ssd1/karahan/tti
+tar -czvf /ssd1/karahan/h2_t5_tti.tar.gz /ssd1/karahan/How2Sign/tti

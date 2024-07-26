@@ -59,6 +59,7 @@ def read_annotation_file(file_path, h5_file_path):
 
     with h5py.File(h5_file_path, 'r') as file:
         key2idx = {key: i for i, key in enumerate(file.keys())}
+        print( enumerate(file.keys())[:10])
 
     with open(file_path, 'r') as file:
         annotation = json.load(file)

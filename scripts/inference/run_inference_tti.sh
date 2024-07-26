@@ -1,9 +1,5 @@
 export OUTPUT_DIR=/ssd1/karahan/
 
-rm -rf ${OUTPUT_DIR}/How2Sign/sign2vec/sign2vec.train.0.h5
-rm -rf ${OUTPUT_DIR}/How2Sign/sign2vec/sign2vec.dev.0.h5
-rm -rf ${OUTPUT_DIR}/How2Sign/sign2vec/sign2vec.test.0.h5
-
 mkdir -p ${OUTPUT_DIR}/How2Sign/
 mkdir -p ${OUTPUT_DIR}/How2Sign/tti
 

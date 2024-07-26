@@ -308,6 +308,27 @@ class YoutubeASLForPretraining(Dataset):
         return {
             'input_values': data,
         }
+    
+    def get_raw_landmarks(self, h5_path, sentence_idx):
+        
+        dataset = self.loader(h5_path, kp_normalization=self.norm if self.kp_norm else [])
+        data = dataset.load_data(idx=sentence_idx)
+        
+        pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
+
+        pose_landmarks = pose_landmarks[:, self.pose_landmarks, :]
+        face_landmarks = face_landmarks[:, self.face_landmarks, :]
+
+        face_landmarks = face_landmarks.reshape( face_landmarks.shape[0], -1 )
+        pose_landmarks = pose_landmarks.reshape( pose_landmarks.shape[0], -1 )
+        right_hand_landmarks = right_hand_landmarks.reshape( right_hand_landmarks.shape[0], -1 )
+        left_hand_landmarks = left_hand_landmarks.reshape( left_hand_landmarks.shape[0], -1 )
+
+        data = np.concatenate([pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks], axis=1)
+        data = torch.tensor(data).reshape(data.shape[0], -1)
+        data = torch.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
+        
+        return data.detach().numpy()
 
 class YoutubeASL(Dataset):
     """ Custom dataset for how2sign dataset on pose features.

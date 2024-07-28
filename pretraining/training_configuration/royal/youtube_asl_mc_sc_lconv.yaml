@@ -7,6 +7,7 @@ model_args:
   - 512
   - 512
   - 512
+  - 512
   conv_kernel:
   - 9
   - 5

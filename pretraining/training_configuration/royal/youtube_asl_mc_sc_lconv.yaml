@@ -93,7 +93,7 @@ training_params:
   - single-contrast
   - 64-codevectors
   - 2-codevector-groups
-  - diversity-loss-decay
+  - diversity-loss-warmup-decay
   - long-conv
   # The following parameters are used to train the model
   adam_beta1: 0.9
@@ -101,8 +101,8 @@ training_params:
   adam_epsilon: 1.0e-06
   weight_decay: 0.01
   learning_rate: 0.001
-  max_train_steps: 25000
-  num_warmup_steps: 5000
+  max_train_steps: 10000
+  num_warmup_steps: 4000
   per_device_eval_batch_size: 128
   per_device_train_batch_size: 128
   gradient_accumulation_steps: 4
@@ -127,7 +127,7 @@ training_params:
   # Gumbel softmax parameters - [will check out in future experiments]
   max_gumbel_temperature: 2.0
   min_gumbel_temperature: 0.5
-  gumbel_temperature_decay: 0.99995
+  gumbel_temperature_decay: 0.99986
   # Diversity loss decay parameters
   min_diversity_loss_weight: 0.1
   # Additional parameters for the training

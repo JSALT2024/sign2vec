@@ -2,7 +2,7 @@ model_args:
   # Main Parameters
   diversity_loss_weight: 1.0
   num_codevector_groups: 2
-  num_codevectors_per_group: 64
+  num_codevectors_per_group: 128
   conv_dim:
   - 512
   - 512
@@ -91,7 +91,7 @@ training_params:
   tags:
   - multi-cue
   - single-contrast
-  - 64-codevectors
+  - 128-codevectors
   - 2-codevector-groups
   - diversity-loss-warmup-decay
   - long-conv
@@ -119,7 +119,7 @@ training_params:
   validation_data_path: /ssd2/karahan/YASL/val_dataset.csv
   gradient_checkpointing: true
   run_name: sign2vec-yasl-multi-cue-single-constrasts
-  hub_model_id: sign2vec-yasl-mc-sc-64-2-lconv
+  hub_model_id: sign2vec-yasl-mc-sc-lconv-128
   logging_steps: 1
   lr_scheduler_type: linear
   mask_time_prob: 0.65

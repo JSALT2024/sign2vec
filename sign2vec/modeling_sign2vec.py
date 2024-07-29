@@ -2189,6 +2189,7 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
         self.wav2vec2 = Sign2VecModel(config)
         self.dropout_features = nn.Dropout(config.feat_quantizer_dropout)
 
+        self.diversity_loss_weight = config.diversity_loss_weight
         self.quantizer = Wav2Vec2GumbelVectorQuantizer(config)
 
         self.project_hid = nn.Linear(config.hidden_size, config.proj_codevector_dim)
@@ -2196,6 +2197,12 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
+
+    def set_diversity_loss_weight(self, diversity_loss_weight: float):
+        """
+        Set whether to use diversity loss or not. Only necessary for training.
+        """
+        self.diversity_loss_weight = diversity_loss_weight
 
     def set_gumbel_temperature(self, temperature: int):
         """
@@ -2388,7 +2395,7 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
             diversity_loss = ((num_codevectors - codevector_perplexity) / num_codevectors) * mask_time_indices.sum()
 
             # 8. \mathbf{L} = \mathbf{L}_m + \alpha * \mathbf{L}_d
-            loss = contrastive_loss + self.config.diversity_loss_weight * diversity_loss
+            loss = contrastive_loss + self.diversity_loss_weight * diversity_loss
 
         if not return_dict:
             if loss is not None:

@@ -2,7 +2,7 @@ export OUTPUT_DIR=/ssd1/karahan/
 
 mkdir -p ${OUTPUT_DIR}/How2Sign/
 
-MODEL_NAME=karahansahin/sign2vec-yasl-sc-sc-64-8-d1
+MODEL_NAME=sign2vec-yasl-sc-sc-64-8-d1
 
 LAYER=-1
 mkdir -p ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME}_layer=${LAYER}

@@ -2,9 +2,9 @@ export OUTPUT_DIR=/ssd1/karahan/
 
 mkdir -p ${OUTPUT_DIR}/How2Sign/
 
-export MODEL_NAME=sign2vec-yasl-mc-sc-lconv-128
+MODEL_NAME=sign2vec-yasl-mc-sc-lconv-128
 
-export LAYER=-1
+LAYER=-1
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \

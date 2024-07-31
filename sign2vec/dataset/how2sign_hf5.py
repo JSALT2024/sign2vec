@@ -186,7 +186,7 @@ class YoutubeASLForPretraining(Dataset):
     def get_pose_landmarks(self, h5_path, sentence_idx):
         
         dataset = self.loader(h5_path, kp_normalization=self.norm if self.kp_norm else [])
-        data, sentence = dataset.load_data(idx=sentence_idx)
+        data = dataset.load_data(idx=sentence_idx)
         
         pose_landmarks, right_hand_landmarks, left_hand_landmarks, face_landmarks = data
 
@@ -213,7 +213,6 @@ class YoutubeASLForPretraining(Dataset):
 
         return {
             'input_values': data,
-            'sentence': sentence
         }
     
     def get_raw_landmarks(self, h5_path, sentence_idx):

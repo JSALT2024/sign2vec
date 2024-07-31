@@ -5,6 +5,7 @@ mkdir -p ${OUTPUT_DIR}/How2Sign/
 MODEL_NAME=sign2vec-yasl-mc-sc-lconv-128
 
 LAYER=-1
+mkdir -p ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME}_layer=${LAYER}
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
@@ -36,6 +37,7 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MOD
 
 
 export LAYER=3
+mkdir -p ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME}_layer=${LAYER}
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
@@ -67,6 +69,7 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MOD
 
 
 export LAYER=6
+mkdir -p ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME}_layer=${LAYER}
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
@@ -98,6 +101,7 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MOD
 
 
 export LAYER=9
+mkdir -p ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME}_layer=${LAYER}
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
@@ -106,7 +110,7 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MOD
                                                  --output_file sign2vec.train.0.h5 \
                                                  --metadata_file metadata_sign2vec.train.json \
                                                  --annotation_file datasets/H2S.annotations.train.json \
-                                                 --layer_to_extract ${LAYER}
+                      s                           --layer_to_extract ${LAYER}
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \

@@ -216,7 +216,7 @@ if __name__ == '__main__':
                 # ADD PREDICTION OF YOUR MODEL HERE
                 # pose landmarks are in list_of_features[i][idx]
                 with torch.no_grad():
-                    if input_features.shape[2] < 25:
+                    if input_features.shape[2] < 35:
                         input_features = torch.cat([input_features, torch.zeros((1, input_features.shape[1], 35 - input_features.shape[2] ))], dim=2)
                     try:
                         features = model(input_values=input_features.to(device), output_hidden_states=True)

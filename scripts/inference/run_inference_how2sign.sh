@@ -8,7 +8,7 @@ LAYER=-1
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
-                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec \
+                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME} \
                                                  --input_file H2S_train.h5 \
                                                  --output_file sign2vec.train.0.h5 \
                                                  --metadata_file metadata_sign2vec.train.json \
@@ -17,7 +17,7 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MOD
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
-                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec \
+                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME} \
                                                  --input_file H2S_val.h5 \
                                                  --output_file sign2vec.dev.0.h5 \
                                                  --metadata_file metadata_sign2vec.dev.json \
@@ -26,7 +26,7 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MOD
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
-                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec \
+                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME} \
                                                  --input_file H2S_test.h5 \
                                                  --output_file sign2vec.test.0.h5 \
                                                  --metadata_file metadata_sign2vec.test.json \
@@ -39,7 +39,7 @@ export LAYER=3
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
-                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec \
+                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME} \
                                                  --input_file H2S_train.h5 \
                                                  --output_file sign2vec.train.0.h5 \
                                                  --metadata_file metadata_sign2vec.train.json \
@@ -48,7 +48,7 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MOD
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
-                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec \
+                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME} \
                                                  --input_file H2S_val.h5 \
                                                  --output_file sign2vec.dev.0.h5 \
                                                  --metadata_file metadata_sign2vec.dev.json \
@@ -57,7 +57,7 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MOD
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
-                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec \
+                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME} \
                                                  --input_file H2S_test.h5 \
                                                  --output_file sign2vec.test.0.h5 \
                                                  --metadata_file metadata_sign2vec.test.json \
@@ -70,7 +70,7 @@ export LAYER=6
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
-                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec \
+                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME} \
                                                  --input_file H2S_train.h5 \
                                                  --output_file sign2vec.train.0.h5 \
                                                  --metadata_file metadata_sign2vec.train.json \
@@ -79,7 +79,7 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MOD
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
-                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec \
+                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME} \
                                                  --input_file H2S_val.h5 \
                                                  --output_file sign2vec.dev.0.h5 \
                                                  --metadata_file metadata_sign2vec.dev.json \
@@ -88,7 +88,7 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MOD
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
-                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec \
+                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME} \
                                                  --input_file H2S_test.h5 \
                                                  --output_file sign2vec.test.0.h5 \
                                                  --metadata_file metadata_sign2vec.test.json \
@@ -101,7 +101,7 @@ export LAYER=9
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
-                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec \
+                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME} \
                                                  --input_file H2S_train.h5 \
                                                  --output_file sign2vec.train.0.h5 \
                                                  --metadata_file metadata_sign2vec.train.json \
@@ -110,7 +110,7 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MOD
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
-                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec \
+                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME} \
                                                  --input_file H2S_val.h5 \
                                                  --output_file sign2vec.dev.0.h5 \
                                                  --metadata_file metadata_sign2vec.dev.json \
@@ -119,7 +119,7 @@ python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MOD
 
 python3 sign2vec/utils/run_sign2vec_inference.py --model_name karahansahin/${MODEL_NAME} \
                                                  --data_dir ${OUTPUT_DIR}/How2Sign \
-                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec \
+                                                 --output_path ${OUTPUT_DIR}/How2Sign/sign2vec/${MODEL_NAME} \
                                                  --input_file H2S_test.h5 \
                                                  --output_file sign2vec.test.0.h5 \
                                                  --metadata_file metadata_sign2vec.test.json \

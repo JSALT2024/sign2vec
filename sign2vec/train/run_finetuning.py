@@ -33,17 +33,17 @@ def parse_args():
 
     # Training arguments
     parser.add_argument("--model_id", type=str, default="t5-small")
-    parser.add_argument("--num_train_epochs", type=int, default=2)
-    parser.add_argument("--eval_steps", type=int, default=5)
+    parser.add_argument("--num_train_epochs", type=int, default=20)
+    parser.add_argument("--eval_steps", type=int, default=100)
     parser.add_argument("--per_device_train_batch_size", type=int, default=16)
-    parser.add_argument("--per_device_eval_batch_size", type=int, default=16)
+    parser.add_argument("--per_device_eval_batch_size", type=int, default=1)
     parser.add_argument("--gradient_accumulation_steps", type=float, default=4)
     parser.add_argument("--learning_rate", type=float, default=0.001)
     parser.add_argument("--weight_decay", type=float, default=0.01)
     parser.add_argument("--fp16", action="store_true")
     parser.add_argument("--push_to_hub", action="store_true")
     parser.add_argument("--report_to", type=str, default=None)
-    parser.add_argument("--logging_steps", type=int, default=100)
+    parser.add_argument("--logging_steps", type=int, default=5)
 
     # Running arguments
     parser.add_argument("--dev", action="store_true")
@@ -134,16 +134,13 @@ if __name__ == "__main__":
         result = {k: round(v, 4) for k, v in result.items()}
 
         return result
-    
 
     # Configure the wandb logger
     os.environ["WANDB_PROJECT"] = "h2s-t5"
     os.environ["WANDB_NAME"] = args.model_name
     os.environ["WANDB_LOG_MODEL"] = "true"
     os.environ["WANDB_WATCH"] = "all"
-
     os.environ["WANDB_DISABLED"] = "true" if not args.dev else "false"
-
 
     # Add model and data to device
     model.to("cuda")
@@ -154,7 +151,8 @@ if __name__ == "__main__":
         eval_steps=args.eval_steps,
         logging_steps=args.logging_steps,
         num_train_epochs=args.num_train_epochs,
-        per_device_train_batch_size=args.per_device_train_batch_size,
+        auto_find_batch_size=True,
+        eval_accumulation_steps=1,
         per_device_eval_batch_size=args.per_device_eval_batch_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         learning_rate=args.learning_rate,

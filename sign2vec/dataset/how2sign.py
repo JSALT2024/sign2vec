@@ -33,7 +33,7 @@ class How2SignDataset(Dataset):
         self.h5file = h5py.File(h5_fpath, "r")
 
     def __len__(self):
-        return len(list(self.h5file.keys())[:40])
+        return len(list(self.h5file.keys()))
 
     def __getitem__(self, idx):
 

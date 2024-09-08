@@ -121,6 +121,9 @@ if __name__ == "__main__":
     os.environ["WANDB_NAME"] = args.model_name
     os.environ["WANDB_LOG_MODEL"] = "true"
 
+    # Add model and data to device
+    model.to("cuda")
+
     training_args = Seq2SeqTrainingArguments(
         output_dir=args.output_dir,
         evaluation_strategy="epoch",
@@ -137,6 +140,8 @@ if __name__ == "__main__":
         hub_model_id=f"{args.model_name}",
     )
 
+    print('Model device:', training_args.device)
+
     trainer = Seq2SeqTrainer(
         model=model,
         args=training_args,
@@ -146,6 +151,7 @@ if __name__ == "__main__":
         data_collator=collate_fn,
         compute_metrics=compute_metrics,
     )
+
 
     trainer.train()
 

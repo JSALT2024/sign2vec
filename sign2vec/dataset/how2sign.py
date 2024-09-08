@@ -1,127 +1,192 @@
-import pandas as pd
-from transformers import AutoTokenizer
-from torch.utils.data import Dataset
+import os
+import h5py
+
 import torch
-import json
-import glob
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import Dataset
 
-class How2SignDatasetForPretraining(Dataset):
+from transformers import AutoTokenizer
 
-    def __init__(self,
-                 dataframe: pd.DataFrame,
-                 keypoint_path: str,
-                 tokenizer: AutoTokenizer,
-                 max_frames: int = 250,
-                 ) -> None:
-        super().__init__()
+from sign2vec.utils.normalization import normalize_local, normalize_global
 
-        self.dataframe = dataframe
-        self.keypoint_path = keypoint_path
-        self.tokenizer = tokenizer
-        self.max_frames = max_frames
+POSE_landmarks = [11, 12, 13, 14, 23, 24]
+
+FACE_landmarks = [
+    0, 4, 13, 14, 17, 33, 37, 39, 46,
+    52, 55, 61, 64, 81, 82, 93,
+    133, 151, 152, 159, 172, 178, 181, 
+    263, 269, 276, 282, 285, 291, 294,
+    311, 323, 362, 386, 397,
+    468, 473 
+]
+
+
+class How2SignDataset(Dataset):
+
+    def __init__(
+        self,
+        h5_fpath,
+        transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
+    ):
+        self.transform = transform
+        self.h5file = h5py.File(h5_fpath, "r")
 
     def __len__(self):
-        return self.dataframe.shape[0]
-    
+        return len(list(self.h5file.keys()))
 
-    def __getitem__(self, idx: int) -> dict:
-        row = self.dataframe.iloc[idx]
+    def __getitem__(self, idx):
 
-        keypoints = {
-            'pose': [],
-            'face': [],
-            'left_hand': [],
-            'right_hand': []
-        }
-        sorted_files = sorted(glob.glob(row['POSE_PATH']+'*.json'))
-        for file in sorted_files:
-            with open(file) as f:
-                for person in json.load(f)['people']:
-                    keypoints['pose'].append(person['pose_keypoints_2d'])
-                    keypoints['face'].append(person['face_keypoints_2d'])
-                    keypoints['left_hand'].append(person['hand_left_keypoints_2d'])
-                    keypoints['right_hand'].append(person['hand_right_keypoints_2d'])
-        
-        # truncate or pad to max_frames
-        keypoints['face'] = keypoints['face'][:self.max_frames]
-        keypoints['pose'] = keypoints['pose'][:self.max_frames]
-        keypoints['left_hand'] = keypoints['left_hand'][:self.max_frames]
-        keypoints['right_hand'] = keypoints['right_hand'][:self.max_frames]
+        data = self.h5file[list(self.h5file.keys())[idx]]
 
-        # convert to tensor
-        pose = torch.tensor(keypoints['pose']) # (T, 75)
-        face = torch.tensor(keypoints['face'])
-        left_hand = torch.tensor(keypoints['left_hand'])
-        right_hand = torch.tensor(keypoints['right_hand'])
+        pose_landmarks = data["joints"]["pose_landmarks"][()]
+        face_landmarks = data["joints"]["face_landmarks"][()]
+        left_hand_landmarks = data["joints"]["left_hand_landmarks"][()]
+        right_hand_landmarks = data["joints"]["right_hand_landmarks"][()]
+        sentence = data["sentence"][()].decode("utf-8")
 
-        # # reshape to (T, N, C)
-        # pose = pose.view(-1, 25, 3)
-        # face = face.view(-1, 70, 3)
-        # left_hand = left_hand.view(-1, 21, 3)
-        # right_hand = right_hand.view(-1, 21, 3)
+        if self.transform:
+            for norm in self.transform:
+                if norm[0] == "pose_landmarks":
+                    if norm[1] == "local":
+                        pose_landmarks = self.normalize_local(pose_landmarks, "pose")
+                    elif norm[1] == "global":
+                        pose_landmarks = self.normalize_global(pose_landmarks, "pose")
+                    else:
+                        raise ValueError("Unknown normalization method")
+                elif norm[0] == "face_landmarks":
+                    if norm[1] == "local":
+                        face_landmarks = self.normalize_local(face_landmarks, "face")
+                    elif norm[1] == "global":
+                        face_landmarks = self.normalize_global(face_landmarks, "face")
+                    else:
+                        raise ValueError("Unknown normalization method")
+                elif norm[0] == "left_hand_landmarks":
+                    if norm[1] == "local":
+                        left_hand_landmarks = self.normalize_local(
+                            left_hand_landmarks, "hand"
+                        )
+                    elif norm[1] == "global":
+                        left_hand_landmarks = self.normalize_global(
+                            left_hand_landmarks, "hand"
+                        )
+                    else:
+                        raise ValueError("Unknown normalization method")
+                elif norm[0] == "right_hand_landmarks":
+                    if norm[1] == "local":
+                        right_hand_landmarks = self.normalize_local(
+                            right_hand_landmarks, "hand"
+                        )
+                    elif norm[1] == "global":
+                        right_hand_landmarks = self.normalize_global(
+                            right_hand_landmarks, "hand"
+                        )
+                    else:
+                        raise ValueError("Unknown normalization method")
+                else:
+                    raise ValueError("Unknown keypoint type")
 
-        # concatenate all keypoints
-        keypoints = torch.cat([
-            pose, face, left_hand, right_hand
-        ], dim=1)
+        # Select only the keypoints that are needed
+        pose_landmarks = pose_landmarks[:, POSE_landmarks, :]
+        face_landmarks = face_landmarks[:, FACE_landmarks, :]
+
+        # Remove last 1 channel (visibility)
+        pose_landmarks = pose_landmarks[:, :, :-1]
+        face_landmarks = face_landmarks[:, :, :-1]
+        left_hand_landmarks = left_hand_landmarks[:, :, :-1]
+        right_hand_landmarks = right_hand_landmarks[:, :, :-1]
+
+        # Convert keypoints to tensor
+        pose_landmarks = torch.tensor(pose_landmarks, dtype=torch.float)
+        face_landmarks = torch.tensor(face_landmarks, dtype=torch.float)
+        left_hand_landmarks = torch.tensor(left_hand_landmarks, dtype=torch.float)
+        right_hand_landmarks = torch.tensor(right_hand_landmarks, dtype=torch.float)
+
+        # Concatenate all keypoints
+        keypoints = torch.cat(
+            (pose_landmarks, face_landmarks, left_hand_landmarks, right_hand_landmarks),
+            dim=1,
+        )
+        # Reduce the keypoints (T, N, C) -> (T, N*C)
+        keypoints = keypoints.view(keypoints.size(0), -1)
+        # Check if keypoints are in the correct shape
+        assert keypoints.shape[-1] == 255, "Key points are not in the correct shape"
+
+        return keypoints, sentence
+
+
+class How2SignForSLT(How2SignDataset):
+
+    def __init__(
+        self,
+        h5_fpath,
+        transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
+        skip_frames=True,
+        max_token_length=128,
+        max_sequence_length=250,
+        tokenizer="google-t5/t5-small",
+    ):
+
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+        self.max_token_length = max_token_length
+        self.max_sequence_length = max_sequence_length
+        self.skip_frames = skip_frames
+
+        super(How2SignForSLT, self).__init__(h5_fpath, transform)
+
+    def __getitem__(self, idx):
+        # Get the keypoints and the sentence
+        keypoints, sentence = super(How2SignForSLT, self).__getitem__(idx)
+
+        # Tokenize the sentence
+        decoder_input_ids = self.tokenizer(
+            sentence,
+            max_length=self.max_token_length,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
+        ).input_ids
+
+        # Shift the token ids using tokenizer._shift_tokens_right
+        # decoder_input_ids = self.tokenizer._shift_right(decoder_input_ids)
+
+        # Skip frames for the keypoints
+        if self.skip_frames:
+            keypoints = keypoints[::2]
+        # Trim the keypoints to the max sequence length
+        keypoints = keypoints[: self.max_sequence_length]
+        attention_mask = torch.ones(len(keypoints))
 
         return {
-            'keypoints': keypoints,
-            'text': row['SENTENCE'],
-            'keypoints_path': row['SENTENCE_NAME'],
-            'frames': len(sorted_files),
-            'decoder_input_ids': self.tokenizer(row['SENTENCE'], return_tensors='pt').input_ids
+            "inputs": keypoints,
+            "sentence": sentence,
+            "labels": decoder_input_ids,
+            "attention_mask": attention_mask,
         }
 
 
-import os
-import pandas as pd
-import matplotlib.pyplot as plt
+class How2SignForPretraining(How2SignDataset):
 
-def check_file_exists(x): return len(glob.glob(x+'*.json'))
+    def __init__(
+        self,
+        h5_fpath,
+        transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
+        skip_frames=True,
+        max_sequence_length=128,
+    ):
 
-def get_how2sign_dataset(DATASET_PATH = 'how2sign/', verbose=False):
-    """
-    Load the How2Sign dataset and return the train, val, test
-    splits as dataframes.
-    
-    Args:
-        DATASET_PATH: str
-        verbose: bool
+        self.max_sequence_length = max_sequence_length
+        self.skip_frames = skip_frames
 
-    Returns:
-        train_df: pd.DataFrame
-        val_df: pd.DataFrame
-        test_df: pd.DataFrame    
-    """
+        super(How2SignForPretraining, self).__init__(h5_fpath, transform)
 
-    train_df = pd.read_csv(
-        os.path.join(DATASET_PATH, 'labels','how2sign_realigned_train.csv'), sep='\t'
-    )
+    def __getitem__(self, idx):
+        keypoints, _ = super(How2SignForPretraining, self).__getitem__(idx)
 
-    val_df = pd.read_csv(
-        os.path.join(DATASET_PATH, 'labels','how2sign_val.csv'), sep='\t'
-    )
+        # Skip frames for the keypoints
+        if self.skip_frames:
+            keypoints = keypoints[::2]
+        # Trim the keypoints to the max sequence length
+        keypoints = keypoints[: self.max_sequence_length]
 
-    test_df = pd.read_csv(
-        os.path.join(DATASET_PATH, 'labels','how2sign_realigned_test.csv'), sep='\t'
-    )
-
-    train_df['POSE_PATH'] = train_df['SENTENCE_NAME'].apply(lambda x: os.path.join(DATASET_PATH,f'pose/train/json/{x}/'))
-    val_df['POSE_PATH'] = val_df['SENTENCE_NAME'].apply(lambda x: os.path.join(DATASET_PATH,f'pose/val/json/{x}/'))
-    test_df['POSE_PATH'] = test_df['SENTENCE_NAME'].apply(lambda x: os.path.join(DATASET_PATH,f'pose/test/json/{x}/'))
-    
-    train_df['FRAMES'] = train_df['POSE_PATH'].apply(check_file_exists)
-    val_df['FRAMES'] = val_df['POSE_PATH'].apply(check_file_exists)
-    test_df['FRAMES'] = test_df['POSE_PATH'].apply(check_file_exists)
-
-    if verbose:
-
-        test_df.FRAMES.plot(kind='hist', bins=100)
-
-        plt.figure(figsize=(20, 5))
-        val_df.FRAMES.plot(kind='hist', bins=100)
-
-        plt.show()
-
-    return train_df, val_df, test_df
+        return keypoints

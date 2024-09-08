@@ -1,4 +1,5 @@
 import os
+import math
 import torch
 import evaluate
 import numpy as np
@@ -9,7 +10,6 @@ from transformers import (
     T5Config,
     Adafactor
 )
-
 from sign2vec.model.t5 import T5ModelForSLT
 from sign2vec.dataset.how2sign import How2SignForSLT
 from sign2vec.utils.translation import collate_fn, postprocess_text
@@ -21,7 +21,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Required parameters
-    parser.add_argument("--model_name", type=str, default="h2s-t5-pose-no-norm")
+    parser.add_argument("--model_name", type=str, default="h2s-test")
     parser.add_argument("--h2s_dir", type=str, default='/home/kara-nlp/Documents/Repositories/Thesis/SLT/Datasets/How2Sign/Mediapipe')
     parser.add_argument("--output_dir", default='./results',type=str)
     parser.add_argument("--seed", type=int, default=42)
@@ -33,7 +33,7 @@ def parse_args():
 
     # Training arguments
     parser.add_argument("--model_id", type=str, default="t5-small")
-    parser.add_argument("--num_train_epochs", type=int, default=20)
+    parser.add_argument("--max_training_steps", type=int, default=20_000)
     parser.add_argument("--eval_steps", type=int, default=100)
     parser.add_argument("--per_device_train_batch_size", type=int, default=16)
     parser.add_argument("--per_device_eval_batch_size", type=int, default=1)
@@ -43,13 +43,14 @@ def parse_args():
     parser.add_argument("--fp16", action="store_true")
     parser.add_argument("--push_to_hub", action="store_true")
     parser.add_argument("--report_to", type=str, default=None)
-    parser.add_argument("--logging_steps", type=int, default=5)
+    parser.add_argument("--logging_steps", type=int, default=10)
+
 
     # Running arguments
     parser.add_argument("--dev", action="store_true")
+    parser.add_argument("--max_val_samples", type=int, default=None)
 
     return parser.parse_args()
-
 
 if __name__ == "__main__":
 
@@ -85,7 +86,8 @@ if __name__ == "__main__":
         max_token_length=args.max_token_length,
         max_sequence_length=args.max_sequence_length,
         skip_frames=args.skip_frames,
-        tokenizer=args.model_id
+        tokenizer=args.model_id,
+        max_instances=args.max_val_samples
     )
 
     # Import How2SignForSLT dataset
@@ -116,7 +118,7 @@ if __name__ == "__main__":
 
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
     
-        for i in range(10):
+        for i in range(50):
             print(f"Prediction: {decoded_preds[i]}")
             print(f"Reference: {decoded_labels[i]}")
             print('*'*50)
@@ -140,17 +142,31 @@ if __name__ == "__main__":
     os.environ["WANDB_NAME"] = args.model_name
     os.environ["WANDB_LOG_MODEL"] = "true"
     os.environ["WANDB_WATCH"] = "all"
-    # os.environ["WANDB_DISABLED"] = "true" if not args.dev else "false"
+    os.environ["WANDB_DISABLED"] = "true" if not args.dev else "false"
 
     # Add model and data to device
     model.to("cuda")
+
+    num_train_epochs = args.max_training_steps // (len(h2s_train) // args.per_device_train_batch_size // args.gradient_accumulation_steps)
+    num_train_epochs = max(math.ceil(num_train_epochs), 1)
+
+    print(f"""
+        Model: {args.model_name}
+        Training epochs: {num_train_epochs}
+        Number of training steps: {args.max_training_steps}
+        Number of training batches: {len(h2s_train) // args.per_device_train_batch_size}
+        Number of validation examples: {len(h2s_val)}
+    """)
+
+    # Check if total batch size 128
+    assert args.per_device_train_batch_size * args.gradient_accumulation_steps == 128
 
     training_args = Seq2SeqTrainingArguments(
         output_dir=args.output_dir,
         evaluation_strategy="steps",
         eval_steps=args.eval_steps,
         logging_steps=args.logging_steps,
-        num_train_epochs=args.num_train_epochs,
+        num_train_epochs=num_train_epochs,
         auto_find_batch_size=True,
         eval_accumulation_steps=1,
         per_device_eval_batch_size=args.per_device_eval_batch_size,

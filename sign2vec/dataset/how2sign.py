@@ -10,9 +10,9 @@ from transformers import AutoTokenizer
 
 from sign2vec.utils.normalization import normalize_local, normalize_global
 
-POSE_landmarks = [11, 12, 13, 14, 23, 24]
+POSE_LANDMARKS = [11, 12, 13, 14, 23, 24]
 
-FACE_landmarks = [
+FACE_LANDMARKS = [
     0, 4, 13, 14, 17, 33, 37, 39, 46,
     52, 55, 61, 64, 81, 82, 93,
     133, 151, 152, 159, 172, 178, 181, 
@@ -28,12 +28,14 @@ class How2SignDataset(Dataset):
         self,
         h5_fpath,
         transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
+        max_instances=None,
     ):
         self.transform = transform
         self.h5file = h5py.File(h5_fpath, "r")
+        self.max_instances = max_instances
 
     def __len__(self):
-        return len(list(self.h5file.keys()))
+        return len(list(self.h5file.keys())) if self.max_instances is None else self.max_instances
 
     def __getitem__(self, idx):
 
@@ -87,8 +89,8 @@ class How2SignDataset(Dataset):
                     raise ValueError("Unknown keypoint type")
 
         # Select only the keypoints that are needed
-        pose_landmarks = pose_landmarks[:, POSE_landmarks, :]
-        face_landmarks = face_landmarks[:, FACE_landmarks, :]
+        pose_landmarks = pose_landmarks[:, POSE_LANDMARKS, :]
+        face_landmarks = face_landmarks[:, FACE_LANDMARKS, :]
 
         # Remove last 1 channel (visibility)
         pose_landmarks = pose_landmarks[:, :, :-1]
@@ -125,6 +127,7 @@ class How2SignForSLT(How2SignDataset):
         max_token_length=128,
         max_sequence_length=250,
         tokenizer="google-t5/t5-small",
+        max_instances=None,
     ):
 
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
@@ -132,7 +135,7 @@ class How2SignForSLT(How2SignDataset):
         self.max_sequence_length = max_sequence_length
         self.skip_frames = skip_frames
 
-        super(How2SignForSLT, self).__init__(h5_fpath, transform)
+        super(How2SignForSLT, self).__init__(h5_fpath, transform, max_instances)
 
     def __getitem__(self, idx):
         # Get the keypoints and the sentence

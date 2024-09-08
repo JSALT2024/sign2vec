@@ -142,7 +142,7 @@ if __name__ == "__main__":
     os.environ["WANDB_NAME"] = args.model_name
     os.environ["WANDB_LOG_MODEL"] = "true"
     os.environ["WANDB_WATCH"] = "all"
-    os.environ["WANDB_DISABLED"] = "true" if not args.dev else "false"
+    # os.environ["WANDB_DISABLED"] = "true" if not args.dev else "false"
 
     # Add model and data to device
     model.to("cuda")

@@ -395,13 +395,15 @@ def main():
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_sign2vec_pretraining", args)
 
+    kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
+
     def _accelerate(output_dir, **kwargs):
 
         api, repo_id = None, None
         # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
         accelerator = Accelerator(kwargs_handlers=[
             # NOTE: This is for DDP Error
-            DistributedDataParallelKwargs(find_unused_parameters=True), 
+            kwargs
         ])
         logger.info(accelerator.state, main_process_only=False)
         if accelerator.is_local_main_process:
@@ -549,7 +551,7 @@ def main():
         model, optimizer, train_dataloader, eval_dataloader
     )
     # Enable gradient checkpointing - NOTE: This is for DDP Error
-    model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
+    model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={ "use_reentrant":True })
     
     # Scheduler and math around the number of training steps.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)

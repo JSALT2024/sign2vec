@@ -494,6 +494,8 @@ def main():
         )
     elif args.dataset_name == 'YoutubeASL':
         from sign2vec.dataset.yasl import YoutubeASLForSign2VecPretraining
+        print('Dataset path:', args.dataset_path)
+        print('Dataset names:', args.datasets)
         train_dataset = YoutubeASLForSign2VecPretraining(
             h5_fpath=args.dataset_path,
             max_sequence_length=max_length,

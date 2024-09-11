@@ -235,6 +235,8 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
     ):
         
         self.mode = mode
+        print(f"Loading {mode} data")
+        print(f"Loading data from {h5_fpath}")
         self.csv_file = pd.read_csv(os.path.join(h5_fpath, f'yasl_{mode}.csv'))
         self.csv_file['h5_file'] = self.csv_file['h5_file'].apply(lambda x: os.path.join(h5_fpath, x))
 

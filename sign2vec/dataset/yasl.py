@@ -260,7 +260,7 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
         
         self.h5_file_name = h5_file
 
-        keypoints, _ = YoutubeASLForSign2VecPretraining.__getitem__(self, file_idx)
+        keypoints, _ = YoutubeASLForPose.__getitem__(self, file_idx)
 
         if self.skip_frames: keypoints = keypoints[::2]
         if self.max_sequence_length: keypoints = keypoints[: self.max_sequence_length]

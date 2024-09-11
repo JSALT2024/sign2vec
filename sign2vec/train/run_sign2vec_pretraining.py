@@ -500,7 +500,7 @@ def main():
             h5_fpath=args.dataset_path,
             max_sequence_length=max_length,
             transform=None,
-            mode=args.datasets[0],
+            mode='train',
         )
 
         eval_dataset = YoutubeASLForSign2VecPretraining(
@@ -508,7 +508,7 @@ def main():
             csv_file_path=args.dataset_path,
             max_sequence_length=max_length,
             transform=None,
-            mode=args.datasets[1]
+            mode='test'
         )
     else:
         raise ValueError(f"Invalid dataset name: {args.dataset_name}")

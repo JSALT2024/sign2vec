@@ -235,9 +235,9 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
     ):
         
         self.mode = mode
-        print(f"Loading {mode} data")
+        print(f"Loading {self.mode} data")
         print(f"Loading data from {h5_fpath}")
-        self.csv_file = pd.read_csv(os.path.join(h5_fpath, f'yasl_{mode}.csv'))
+        self.csv_file = pd.read_csv(os.path.join(h5_fpath, f'yasl_{self.mode}.csv'))
         self.csv_file['h5_file'] = self.csv_file['h5_file'].apply(lambda x: os.path.join(h5_fpath, x))
 
         self.h5_file_name = self.csv_file.iloc[0].h5_file
@@ -245,7 +245,7 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
         self.max_sequence_length = max_sequence_length
         self.skip_frames = skip_frames
 
-        YoutubeASLForSign2VecPretraining.__init__(self, self.h5_file_name, transform)
+        YoutubeASLForPose.__init__(self, self.h5_file_name, transform)
 
     def __len__(self):
         return len(self.csv_file)
@@ -256,7 +256,7 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
 
         # Reinitialize the dataset if the h5 file is different
         if self.h5_file_name != h5_file:
-            YoutubeASLForSign2VecPretraining.__init__(self, h5_file, self.transform)
+            YoutubeASLForPose.__init__(self, h5_file, self.transform)
         
         self.h5_file_name = h5_file
 

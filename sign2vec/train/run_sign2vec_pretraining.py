@@ -27,6 +27,7 @@ from huggingface_hub import HfApi
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from torch.utils.data.dataloader import DataLoader
+from accelerate.utils import DistributedDataParallelKwargs
 
 import wandb
 import transformers
@@ -398,7 +399,10 @@ def main():
 
         api, repo_id = None, None
         # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
-        accelerator = Accelerator()
+        accelerator = Accelerator(kwargs_handlers=[
+            # NOTE: This is for DDP Error
+            DistributedDataParallelKwargs, 
+        ])
         logger.info(accelerator.state, main_process_only=False)
         if accelerator.is_local_main_process:
             transformers.utils.logging.set_verbosity_info()
@@ -544,9 +548,9 @@ def main():
     model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
         model, optimizer, train_dataloader, eval_dataloader
     )
-
-    model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
-
+    # Enable gradient checkpointing - NOTE: This is for DDP Error
+    model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
+    
     # Scheduler and math around the number of training steps.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
 

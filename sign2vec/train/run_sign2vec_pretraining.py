@@ -401,7 +401,7 @@ def main():
         # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
         accelerator = Accelerator(kwargs_handlers=[
             # NOTE: This is for DDP Error
-            DistributedDataParallelKwargs, 
+            DistributedDataParallelKwargs(find_unused_parameters=True), 
         ])
         logger.info(accelerator.state, main_process_only=False)
         if accelerator.is_local_main_process:

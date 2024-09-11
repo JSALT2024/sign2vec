@@ -22,7 +22,7 @@ FACE_LANDMARKS = [
 ]
 
 
-class How2SignDataset(Dataset):
+class How2SignForPose(Dataset):
 
     def __init__(
         self,
@@ -106,7 +106,7 @@ class How2SignDataset(Dataset):
 
         # Concatenate all keypoints
         keypoints = torch.cat(
-            (pose_landmarks, face_landmarks, left_hand_landmarks, right_hand_landmarks),
+            (pose_landmarks, left_hand_landmarks, right_hand_landmarks, face_landmarks),
             dim=1,
         )
         # Reduce the keypoints (T, N, C) -> (T, N*C)
@@ -117,29 +117,60 @@ class How2SignDataset(Dataset):
         return keypoints, sentence
 
 
-class How2SignForSLT(How2SignDataset):
+class How2SignForSign2Vec(Dataset):
 
     def __init__(
         self,
         h5_fpath,
-        transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
+        max_instances=None,
+    ):
+        self.h5file = h5py.File(h5_fpath, "r")
+        self.max_instances = max_instances
+
+    def __len__(self):
+        return len(list(self.h5file.keys())) if self.max_instances is None else self.max_instances
+
+    def __getitem__(self, idx):
+        
+        data = self.h5file[list(self.h5file.keys())[idx]]
+
+        sign2vec = data["features"][()]
+        sentence = data["sentence"][()].decode("utf-8")
+
+        return sign2vec, sentence
+
+class How2SignForSLT(How2SignForPose, How2SignForSign2Vec):
+
+    def __init__(
+        self,
+        h5_fpath,
+        input_type="pose",
         skip_frames=True,
+        transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
         max_token_length=128,
         max_sequence_length=250,
         tokenizer="google-t5/t5-small",
         max_instances=None,
     ):
 
+        self.input_type = input_type
+
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
         self.max_token_length = max_token_length
         self.max_sequence_length = max_sequence_length
         self.skip_frames = skip_frames
 
-        super(How2SignForSLT, self).__init__(h5_fpath, transform, max_instances)
+        if self.input_type == "sign2vec" and skip_frames: raise ValueError("skip_frames should be False for `sign2vec` input")
+
+        How2SignForPose.__init__(self, h5_fpath, transform, max_instances)
+        How2SignForSign2Vec.__init__(self, h5_fpath, max_instances)
 
     def __getitem__(self, idx):
         # Get the keypoints and the sentence
-        keypoints, sentence = super(How2SignForSLT, self).__getitem__(idx)
+        if self.input_type == "pose":
+            keypoints, sentence = How2SignForPose.__getitem__(self, idx)
+        elif self.input_type == "sign2vec":
+            keypoints, sentence = How2SignForSign2Vec.__getitem__(self, idx)
 
         # Tokenize the sentence
         decoder_input_ids = self.tokenizer(
@@ -154,8 +185,7 @@ class How2SignForSLT(How2SignDataset):
         # decoder_input_ids = self.tokenizer._shift_right(decoder_input_ids)
 
         # Skip frames for the keypoints
-        if self.skip_frames:
-            keypoints = keypoints[::2]
+        if self.skip_frames: keypoints = keypoints[::2]
         # Trim the keypoints to the max sequence length
         keypoints = keypoints[: self.max_sequence_length]
         attention_mask = torch.ones(len(keypoints))
@@ -168,28 +198,25 @@ class How2SignForSLT(How2SignDataset):
         }
 
 
-class How2SignForPretraining(How2SignDataset):
+class How2SignForSign2VecPretraining(How2SignForPose):
 
     def __init__(
         self,
         h5_fpath,
         transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
-        skip_frames=True,
-        max_sequence_length=128,
+        skip_frames=False,
+        max_sequence_length=None,
     ):
 
         self.max_sequence_length = max_sequence_length
         self.skip_frames = skip_frames
 
-        super(How2SignForPretraining, self).__init__(h5_fpath, transform)
+        super(How2SignForSign2VecPretraining, self).__init__(h5_fpath, transform)
 
     def __getitem__(self, idx):
-        keypoints, _ = super(How2SignForPretraining, self).__getitem__(idx)
-
-        # Skip frames for the keypoints
-        if self.skip_frames:
-            keypoints = keypoints[::2]
-        # Trim the keypoints to the max sequence length
-        keypoints = keypoints[: self.max_sequence_length]
-
-        return keypoints
+        keypoints, _ = super(How2SignForSign2VecPretraining, self).__getitem__(idx)
+        if self.skip_frames: keypoints = keypoints[::2]
+        if self.max_sequence_length: keypoints = keypoints[: self.max_sequence_length]
+        return {
+            "input_values": keypoints,
+        }

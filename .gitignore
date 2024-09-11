@@ -37,6 +37,8 @@ wandb/
 finetune/how2sign
 pretraining/how2sign
 results/
+models/*
+
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

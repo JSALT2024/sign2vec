@@ -545,6 +545,8 @@ def main():
         model, optimizer, train_dataloader, eval_dataloader
     )
 
+    model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
+
     # Scheduler and math around the number of training steps.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
 

@@ -46,7 +46,7 @@ class YoutubeASLForPose(Dataset):
         face_landmarks = data["joints"]["face_landmarks"][()]
         left_hand_landmarks = data["joints"]["left_hand_landmarks"][()]
         right_hand_landmarks = data["joints"]["right_hand_landmarks"][()]
-        sentence = data["sentence"][()].decode("utf-8")
+        # sentence = data["sentence"][()].decode("utf-8")
 
         if self.transform:
             for norm in self.transform:
@@ -115,7 +115,7 @@ class YoutubeASLForPose(Dataset):
         # Check if keypoints are in the correct shape
         assert keypoints.shape[-1] == 255, "Key points are not in the correct shape"
 
-        return keypoints, sentence
+        return keypoints #, sentence
 
 
 class YoutubeASLForSign2Vec(Dataset):

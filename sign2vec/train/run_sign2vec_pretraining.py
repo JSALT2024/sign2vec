@@ -395,7 +395,7 @@ def main():
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_sign2vec_pretraining", args)
 
-    kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
+    handler = DistributedDataParallelKwargs(find_unused_parameters=True)
 
     def _accelerate(output_dir, **kwargs):
 
@@ -403,7 +403,7 @@ def main():
         # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
         accelerator = Accelerator(kwargs_handlers=[
             # NOTE: This is for DDP Error
-            kwargs
+            handler
         ])
         logger.info(accelerator.state, main_process_only=False)
         if accelerator.is_local_main_process:

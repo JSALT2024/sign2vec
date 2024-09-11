@@ -496,7 +496,6 @@ def main():
         from sign2vec.dataset.yasl import YoutubeASLForSign2VecPretraining
         train_dataset = YoutubeASLForSign2VecPretraining(
             h5_fpath=args.dataset_path,
-            index_file='data/yasl_train.csv',
             max_sequence_length=max_length,
             transform=None,
             mode=args.datasets[0],
@@ -504,7 +503,7 @@ def main():
 
         eval_dataset = YoutubeASLForSign2VecPretraining(
             h5_fpath=args.dataset_path,
-            index_file='data/yasl_test.csv',
+            csv_file_path=args.dataset_path,
             max_sequence_length=max_length,
             transform=None,
             mode=args.datasets[1]

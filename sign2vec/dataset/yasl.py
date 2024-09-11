@@ -145,7 +145,6 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
     def __init__(
         self,
         h5_fpath,
-        csv_file,
         mode="train",
         input_type="pose",
         skip_frames=True,
@@ -158,7 +157,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
 
         self.mode = mode
         self.h5_fpath = h5_fpath
-        self.csv_file = pd.read_csv(csv_file)
+        self.csv_file = pd.read_csv(os.path.join(h5_fpath, f"yasl_{mode}.csv"))
         self.csv_file['h5_file'] = self.csv_file['h5_file'].apply(lambda x: os.path.join(h5_fpath, x))
         
         self.h5_file_name = self.csv_file.iloc[0].h5_file
@@ -229,7 +228,6 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
     def __init__(
         self,
         h5_fpath,
-        index_file,
         mode="train",
         transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
         skip_frames=False,
@@ -237,7 +235,7 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
     ):
         
         self.mode = mode
-        self.csv_file = pd.read_csv(index_file)
+        self.csv_file = pd.read_csv(os.path.join(h5_fpath, f'yasl_{mode}.csv'))
         self.csv_file['h5_file'] = self.csv_file['h5_file'].apply(lambda x: os.path.join(h5_fpath, x))
 
         self.h5_file_name = self.csv_file.iloc[0].h5_file

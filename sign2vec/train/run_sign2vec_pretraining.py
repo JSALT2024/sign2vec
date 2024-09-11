@@ -51,6 +51,9 @@ from sign2vec.utils.feature_extractor import Sign2VecFeatureExtractor
 
 logger = get_logger(__name__)
 
+import torch._dynamo
+torch._dynamo.config.suppress_errors = True
+
 
 def parse_args():
     import argparse

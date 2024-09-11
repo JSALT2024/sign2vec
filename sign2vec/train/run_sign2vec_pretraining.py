@@ -56,6 +56,25 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description="Finetune a transformers model on a text classification task")
     parser.add_argument(
+        "--datasets",
+        type=str,
+        nargs='+',
+        default=['train', 'val'],
+        help="The name of the datasets to use.",
+    )
+    parser.add_argument(
+        "--dataset_path",
+        type=str,
+        default=None,
+        help="The path to the dataset.",
+    )
+    parser.add_argument(
+        "--model_config_file",
+        type=str,
+        default="config.yaml",
+        help="The path to the model config file",
+    )
+    parser.add_argument(
         '--run_name',
         type=str,
         default='sign2vec-pretraining',
@@ -424,7 +443,7 @@ def main():
     accelerator, repo_id, api = _accelerate(args.output_dir)
 
     # 3. Load model
-    config = Sign2VecConfig()
+    config = Sign2VecConfig().load_from_yaml(args.model_config_file)
 
     # 2. Now we preprocess the datasets including loading the audio, resampling and normalization
     # Thankfully, `datasets` takes care of automatically loading and resampling the audio,
@@ -435,17 +454,6 @@ def main():
     # set max & min audio length in number of samples
     max_length = int(args.max_duration_in_seconds * config.fps)
     min_length = int(args.min_duration_in_seconds * config.fps)
-
-    def prepare_dataset(batch):
-        sample = batch[args.audio_column_name]
-
-        inputs = feature_extractor(
-            sample["array"], sampling_rate=sample["sampling_rate"], max_length=max_length, truncation=True
-        )
-        batch["input_values"] = inputs.input_values[0]
-        batch["input_length"] = len(inputs.input_values[0])
-
-        return batch
 
     # initialize random model
     model = Sign2VecForPreTraining(config)
@@ -472,28 +480,34 @@ def main():
     if args.dataset_name == 'How2Sign':
         from sign2vec.dataset.how2sign import How2SignForSign2VecPretraining
         train_dataset = How2SignForSign2VecPretraining(
-            h5_fpath=args.dataset_config_names[0],
+            h5_fpath=args.dataset_path,
             max_sequence_length=max_length,
-            transform=None
+            transform=None,
+            mode=args.datasets[0]
         )
 
         eval_dataset = How2SignForSign2VecPretraining(
-            h5_fpath=args.dataset_config_names[1],
+            h5_fpath=args.dataset_path,
             max_sequence_length=max_length,
-            transform=None
+            transform=None,
+            mode=args.datasets[1]
         )
     elif args.dataset_name == 'YoutubeASL':
         from sign2vec.dataset.yasl import YoutubeASLForSign2VecPretraining
         train_dataset = YoutubeASLForSign2VecPretraining(
-            h5_fpath=args.dataset_config_names[0],
+            h5_fpath=args.dataset_path,
+            index_file='data/yasl_train.csv',
             max_sequence_length=max_length,
-            transform=None
+            transform=None,
+            mode=args.datasets[0],
         )
 
         eval_dataset = YoutubeASLForSign2VecPretraining(
-            h5_fpath=args.dataset_config_names[1],
+            h5_fpath=args.dataset_path,
+            index_file='data/yasl_test.csv',
             max_sequence_length=max_length,
-            transform=None
+            transform=None,
+            mode=args.datasets[1]
         )
     else:
         raise ValueError(f"Invalid dataset name: {args.dataset_name}")

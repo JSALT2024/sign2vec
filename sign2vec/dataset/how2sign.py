@@ -144,6 +144,7 @@ class How2SignForSLT(How2SignForPose, How2SignForSign2Vec):
     def __init__(
         self,
         h5_fpath,
+        mode="train",
         input_type="pose",
         skip_frames=True,
         transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
@@ -153,6 +154,9 @@ class How2SignForSLT(How2SignForPose, How2SignForSign2Vec):
         max_instances=None,
     ):
 
+        self.mode = mode
+        h5_fpath = os.path.join(h5_fpath, f"H2S_{mode}.h5")
+        
         self.input_type = input_type
 
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
@@ -203,10 +207,14 @@ class How2SignForSign2VecPretraining(How2SignForPose):
     def __init__(
         self,
         h5_fpath,
+        mode="train",
         transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
         skip_frames=False,
         max_sequence_length=None,
     ):
+        
+        self.mode = mode
+        h5_fpath = os.path.join(h5_fpath, f"H2S_{mode}.h5")
 
         self.max_sequence_length = max_sequence_length
         self.skip_frames = skip_frames

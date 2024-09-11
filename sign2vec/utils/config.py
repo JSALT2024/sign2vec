@@ -15,17 +15,17 @@ class Sign2VecConfig(Wav2Vec2Config):
     def __init__(self, 
                  input_dim: int = 255,
                  is_multicue: bool = False,
-                 conv_dim=(512, 512, 512, 512),
-                 conv_stride=(2, 1, 1, 1),
-                 conv_kernel=(10, 3, 3, 3),
+                 conv_dim=[512, 512, 512, 512],
+                 conv_stride=[2, 1, 1, 1],
+                 conv_kernel=[10, 3, 3, 3],
                  num_feat_extract_layers=4,
                  fps=25,
                  do_normalize=False,
                  **kwargs):
         super().__init__(**kwargs)
+
         self.model_type = "sign2vec"
         self.input_dim = input_dim
-        self.is_multicue = is_multicue
 
         self.fps = fps
         self.conv_dim = conv_dim
@@ -36,6 +36,12 @@ class Sign2VecConfig(Wav2Vec2Config):
         # Feature extractor config
         self.do_normalize = do_normalize
 
+        # Multi-cue config
+        self.is_multicue = is_multicue
+        self.pose_dims = (0, 20)
+        self.face_dims = (20, 30)
+        self.left_hand_dims = (30, 50)
+        self.right_hand_dims = (50, 70)
 
     def load_from_yaml(self, yaml_file: str):
         """

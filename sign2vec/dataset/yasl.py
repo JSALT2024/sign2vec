@@ -159,7 +159,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         self.mode = mode
         self.h5_fpath = h5_fpath
         self.csv_file = pd.read_csv(csv_file)
-        self.csv_file['h5_file'] = self.csv_file['video_id'].apply(lambda x: os.path.join(h5_fpath, x))
+        self.csv_file['h5_file'] = self.csv_file['h5_file'].apply(lambda x: os.path.join(h5_fpath, x))
         
         self.h5file = self.csv_file.iloc[0].h5_file
 
@@ -181,10 +181,8 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
     def __getitem__(self, idx):
         # Get the keypoints and the sentence
 
-        data = self.csv_file.iloc[idx]
-        self.h5_file = os.path.join(self.h5_fpath, data["video_id"] + ".h5")
-
-        file_idx = data["file_idx"]
+        self.h5_file = self.csv_file.iloc[idx].h5_file
+        file_idx = self.csv_file.iloc[idx].file_idx
 
         if self.input_type == "pose":
             # Reinitialize the dataset if the h5 file is different
@@ -239,7 +237,7 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
         
         self.mode = mode
         self.csv_file = pd.read_csv(index_file)
-        self.csv_file['h5_file'] = self.csv_file['video_id'].apply(lambda x: os.path.join(h5_fpath, x))
+        self.csv_file['h5_file'] = self.csv_file['h5_file'].apply(lambda x: os.path.join(h5_fpath, x))
 
         self.h5file = self.csv_file.iloc[0].h5_file
 

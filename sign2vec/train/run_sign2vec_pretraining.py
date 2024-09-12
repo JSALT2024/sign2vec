@@ -547,7 +547,6 @@ def main():
     print('Mask time indices:', sample['mask_time_indices'].shape)
     print('Sampled negative indices:', sample['sampled_negative_indices'].shape)
 
-
     # Prepare everything with our `accelerator`.
     model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
         model, optimizer, train_dataloader, eval_dataloader
@@ -555,7 +554,7 @@ def main():
     # Enable gradient checkpointing - NOTE: This is for DDP Error
     model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={ "use_reentrant": False }, )
     # Set static graph
-    model.set_static_graph()
+    model._set_static_graph()
 
     # Scheduler and math around the number of training steps.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)

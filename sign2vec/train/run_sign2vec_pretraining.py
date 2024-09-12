@@ -555,7 +555,7 @@ def main():
     # Enable gradient checkpointing - NOTE: This is for DDP Error
     model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={ "use_reentrant": False }, )
     # Set static graph
-    torch._C._set_graph_executor_optimize(False)
+    model.set_static_graph()
 
     # Scheduler and math around the number of training steps.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)

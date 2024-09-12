@@ -397,12 +397,11 @@ def main():
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_sign2vec_pretraining", args)
 
-
     def _accelerate(output_dir, **kwargs):
 
         api, repo_id = None, None
         # NOTE: This is for DDP Error
-        handler = DistributedDataParallelKwargs(find_unused_parameters=True)
+        handler = DistributedDataParallelKwargs(find_unused_parameters=True, static_graph=True)
         # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
         accelerator = Accelerator(kwargs_handlers=[
             handler
@@ -502,8 +501,6 @@ def main():
         )
     elif args.dataset_name == 'YoutubeASL':
         from sign2vec.dataset.yasl import YoutubeASLForSign2VecPretraining
-        print('Dataset path:', args.dataset_path)
-        print('Dataset names:', args.datasets)
         train_dataset = YoutubeASLForSign2VecPretraining(
             h5_fpath=args.dataset_path,
             max_sequence_length=max_length,

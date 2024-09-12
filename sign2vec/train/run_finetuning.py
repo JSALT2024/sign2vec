@@ -12,6 +12,7 @@ from transformers import (
 )
 from sign2vec.model.t5 import T5ModelForSLT
 from sign2vec.dataset.how2sign import How2SignForSLT
+from sign2vec.dataset.yasl import YoutubeASLForSLT
 from sign2vec.utils.translation import collate_fn, postprocess_text
 
 def parse_args():
@@ -22,7 +23,7 @@ def parse_args():
 
     # Required parameters
     parser.add_argument("--model_name", type=str, default="h2s-test")
-    parser.add_argument("--h2s_dir", type=str, default='/home/kara-nlp/Documents/Repositories/Thesis/SLT/Datasets/How2Sign/Mediapipe')
+    parser.add_argument("--dataset_dir", type=str, default='/home/kara-nlp/Documents/Repositories/Thesis/SLT/Datasets/How2Sign/Mediapipe')
     parser.add_argument("--output_dir", default='./results',type=str)
     parser.add_argument("--seed", type=int, default=42)
 
@@ -64,41 +65,78 @@ if __name__ == "__main__":
     # Initialize tokenizer and config
     tokenizer = T5Tokenizer.from_pretrained(args.model_id)
 
-    # Import How2SignForSLT dataset
-    h2s_train = How2SignForSLT(
-        h5_fpath=os.path.join(
-            args.h2s_dir, 
-            'H2S_train.h5' if not args.dev else 'H2S_test.h5'
-        ),   
-        transform=None,
-        max_token_length=args.max_token_length,
-        max_sequence_length=args.max_sequence_length,
-        skip_frames=args.skip_frames,
-        tokenizer=args.model_id
-    )
+    if args.dataset_type == 'how2sign':
+        # Import How2SignForSLT dataset
+        h2s_train = How2SignForSLT(
+            h5_fpath=os.path.join(
+                args.dataset_dir, 
+                'H2S_train.h5' if not args.dev else 'H2S_test.h5'
+            ),   
+            transform=None,
+            max_token_length=args.max_token_length,
+            max_sequence_length=args.max_sequence_length,
+            skip_frames=args.skip_frames,
+            tokenizer=args.model_id
+        )
 
-    h2s_val = How2SignForSLT(
-        h5_fpath=os.path.join(
-            args.h2s_dir, 
-            'H2S_val.h5' if not args.dev else 'H2S_test.h5'
-        ),   
-        transform=None,
-        max_token_length=args.max_token_length,
-        max_sequence_length=args.max_sequence_length,
-        skip_frames=args.skip_frames,
-        tokenizer=args.model_id,
-        max_instances=args.max_val_samples
-    )
+        h2s_val = How2SignForSLT(
+            h5_fpath=os.path.join(
+                args.dataset_dir, 
+                'H2S_val.h5' if not args.dev else 'H2S_test.h5'
+            ),   
+            transform=None,
+            max_token_length=args.max_token_length,
+            max_sequence_length=args.max_sequence_length,
+            skip_frames=args.skip_frames,
+            tokenizer=args.model_id,
+            max_instances=args.max_val_samples
+        )
 
-    # Import How2SignForSLT dataset
-    h2s_test = How2SignForSLT(
-        h5_fpath=os.path.join(args.h2s_dir, 'H2S_test.h5'),   
-        transform=None,
-        max_token_length=args.max_token_length,
-        max_sequence_length=args.max_sequence_length,
-        skip_frames=args.skip_frames,
-        tokenizer=args.model_id
-    )
+        # Import How2SignForSLT dataset
+        h2s_test = How2SignForSLT(
+            h5_fpath=os.path.join(args.dataset_dir, 'H2S_test.h5'),   
+            transform=None,
+            max_token_length=args.max_token_length,
+            max_sequence_length=args.max_sequence_length,
+            skip_frames=args.skip_frames,
+            tokenizer=args.model_id
+        )
+
+    elif args.dataset_type == 'yasl':
+        # Import YoutubeASLForSLT dataset
+        h2s_train = YoutubeASLForSLT(
+            h5_fpath=args.dataset_dir, 
+            mode='train',
+            input_type='pose',
+            skip_frames=args.skip_frames,
+            transform=None,
+            max_token_length=args.max_token_length,
+            max_sequence_length=args.max_sequence_length,
+            tokenizer=args.model_id
+        )
+
+        h2s_val = YoutubeASLForSLT(
+            h5_fpath=args.dataset_dir, 
+            mode='val',
+            input_type='pose',
+            skip_frames=args.skip_frames,
+            transform=None,
+            max_token_length=args.max_token_length,
+            max_sequence_length=args.max_sequence_length,
+            tokenizer=args.model_id,
+            max_instances=args.max_val_samples
+        )
+
+        h2s_test = YoutubeASLForSLT(
+            h5_fpath=args.dataset_dir, 
+            mode='test',
+            input_type='pose',
+            skip_frames=args.skip_frames,
+            transform=None,
+            max_token_length=args.max_token_length,
+            max_sequence_length=args.max_sequence_length,
+            tokenizer=args.model_id
+        )
 
     sacrebleu = evaluate.load('sacrebleu')
 
@@ -129,6 +167,7 @@ if __name__ == "__main__":
             'bleu-1': result['precisions'][0],
             'bleu-2': result['precisions'][1],
             'bleu-3': result['precisions'][2],
+            'bleu-4': result['precisions'][3],
         }
 
         prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]

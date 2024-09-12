@@ -138,6 +138,28 @@ class How2SignForSign2Vec(Dataset):
         sentence = data["sentence"][()].decode("utf-8")
 
         return sign2vec, sentence
+    
+class How2SignForMAE(Dataset):
+
+    def __init__(
+        self,
+        h5_fpath,
+        max_instances=None,
+    ):
+        self.h5file = h5py.File(h5_fpath, "r")
+        self.max_instances = max_instances
+
+    def __len__(self):
+        return len(list(self.h5file.keys())) if self.max_instances is None else self.max_instances
+
+    def __getitem__(self, idx):
+        
+        data = self.h5file[list(self.h5file.keys())[idx]]
+
+        sign2vec = data["features"][()]
+        sentence = data["sentence"][()].decode("utf-8")
+
+        return sign2vec, sentence
 
 class How2SignForSLT(How2SignForPose, How2SignForSign2Vec):
 

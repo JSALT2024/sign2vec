@@ -403,7 +403,7 @@ def main():
         # NOTE: This is for DDP Error
         handler = DistributedDataParallelKwargs(find_unused_parameters=True)
         # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
-        accelerator = Accelerator(kwargs_handlers=handler)
+        accelerator = Accelerator(kwargs_handlers=[handler])
         logger.info(accelerator.state, main_process_only=False)
         if accelerator.is_local_main_process:
             transformers.utils.logging.set_verbosity_info()

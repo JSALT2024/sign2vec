@@ -89,7 +89,7 @@ class Sign2VecFeatureEncoder(nn.Module):
     """Construct the features from the multi-dimensional input signal using the feature extraction module."""
 
     def __init__(self, config):
-        super().__init__(config)
+        super().__init__()
 
         if config.feat_extract_norm == "group":
             conv_layers = [Sign2VecGroupNormConvLayer(config, layer_id=0)] + [

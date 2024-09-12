@@ -401,11 +401,9 @@ def main():
 
         api, repo_id = None, None
         # NOTE: This is for DDP Error
-        handler = DistributedDataParallelKwargs(find_unused_parameters=True, static_graph=True)
+        handler = DistributedDataParallelKwargs(find_unused_parameters=True)
         # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
-        accelerator = Accelerator(kwargs_handlers=[
-            handler
-        ])
+        accelerator = Accelerator(kwargs_handlers=handler)
         logger.info(accelerator.state, main_process_only=False)
         if accelerator.is_local_main_process:
             transformers.utils.logging.set_verbosity_info()
@@ -549,7 +547,7 @@ def main():
         model, optimizer, train_dataloader, eval_dataloader
     )
     # Enable gradient checkpointing - NOTE: This is for DDP Error
-    model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={ "use_reentrant": False })
+    model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
     # Set static graph
     # model._set_static_graph()
 

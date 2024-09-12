@@ -104,7 +104,7 @@ class Sign2VecFeatureEncoder(Wav2Vec2FeatureEncoder):
                 f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
             )
         self.conv_layers = nn.ModuleList(conv_layers)
-        self.gradient_checkpointing = False
+        self.gradient_checkpointing = True
         self._requires_grad = True
 
     def forward(self, input_values):

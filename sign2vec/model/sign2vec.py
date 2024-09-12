@@ -153,13 +153,13 @@ class Sign2VecForPreTraining(Wav2Vec2ForPreTraining):
         self.dropout_features = nn.Dropout(config.feat_quantizer_dropout)
 
         self.quantizer = Wav2Vec2GumbelVectorQuantizer(config)
-        if config.is_multicue:
-            self.pose_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
-            self.left_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
-            self.right_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
-            self.face_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
-            # if multicue, add additional quantizer
-            raise NotImplementedError("Multicue not implemented yet")
+        # if config.is_multicue:
+        #     self.pose_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        #     self.left_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        #     self.right_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        #     self.face_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        #     # if multicue, add additional quantizer
+        #     raise NotImplementedError("Multicue not implemented yet")
 
         self.project_hid = nn.Linear(config.hidden_size, config.proj_codevector_dim)
         self.project_q = nn.Linear(config.codevector_dim, config.proj_codevector_dim)
@@ -172,10 +172,10 @@ class Sign2VecForPreTraining(Wav2Vec2ForPreTraining):
         Set the Gumbel softmax temperature to a given value. Only necessary for training
         """
         self.quantizer.temperature = temperature
-        if self.config.is_multicue:
-            self.pose_quantizer.temperature = temperature
-            self.left_hand_quantizer.temperature = temperature
-            self.right_hand_quantizer.temperature = temperature
-            self.face_quantizer.temperature = temperature
+        # if self.config.is_multicue:
+        #     self.pose_quantizer.temperature = temperature
+        #     self.left_hand_quantizer.temperature = temperature
+        #     self.right_hand_quantizer.temperature = temperature
+        #     self.face_quantizer.temperature = temperature
             # if multicue, set temperature for all quantizers
-            raise NotImplementedError("Multicue not implemented yet")
+            # raise NotImplementedError("Multicue not implemented yet")

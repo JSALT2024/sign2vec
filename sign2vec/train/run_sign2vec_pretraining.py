@@ -402,7 +402,7 @@ def main():
 
         api, repo_id = None, None
         # NOTE: This is for DDP Error
-        handler = DistributedDataParallelKwargs(find_unused_parameters=True)
+        handler = DistributedDataParallelKwargs(find_unused_parameters=False)
         # Initialize the accelerator. We will let the accelerator handle device placement for us in this example.
         accelerator = Accelerator(kwargs_handlers=[
             handler

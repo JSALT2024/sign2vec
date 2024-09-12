@@ -466,8 +466,8 @@ def main():
     print('Model initialized....')
 
     # Activate gradient checkpointing if needed
-    if args.gradient_checkpointing:
-        model.gradient_checkpointing_enable()
+    # if args.gradient_checkpointing:
+    #     model.gradient_checkpointing_enable()
 
     # 4. Define data collator, optimizer and scheduler
     mask_time_prob = config.mask_time_prob if args.mask_time_prob is None else args.mask_time_prob
@@ -517,7 +517,7 @@ def main():
 
     train_dataloader = DataLoader(
         train_dataset,
-        shuffle=True,
+        shuffle=False,
         collate_fn=data_collator,
         batch_size=args.per_device_train_batch_size,
     )

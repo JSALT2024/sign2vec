@@ -85,7 +85,7 @@ class Sign2VecGroupNormConvLayer(nn.Module):
         hidden_states = self.activation(hidden_states)
         return hidden_states
 
-class Sign2VecFeatureEncoder(Wav2Vec2FeatureEncoder):
+class Sign2VecFeatureEncoder(nn.Module):
     """Construct the features from the multi-dimensional input signal using the feature extraction module."""
 
     def __init__(self, config):
@@ -104,8 +104,13 @@ class Sign2VecFeatureEncoder(Wav2Vec2FeatureEncoder):
                 f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
             )
         self.conv_layers = nn.ModuleList(conv_layers)
-        self.gradient_checkpointing = True
+        self.gradient_checkpointing = False
         self._requires_grad = True
+
+    def _freeze_parameters(self):
+        for param in self.parameters():
+            param.requires_grad = False
+        self._requires_grad = False
 
     def forward(self, input_values):
         hidden_states = input_values

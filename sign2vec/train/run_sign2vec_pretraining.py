@@ -542,12 +542,13 @@ def main():
     print('Mask time indices:', sample['mask_time_indices'].shape)
     print('Sampled negative indices:', sample['sampled_negative_indices'].shape)
 
+    # Enable gradient checkpointing - NOTE: This is for DDP Error
+    model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
+    
     # Prepare everything with our `accelerator`.
     model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
         model, optimizer, train_dataloader, eval_dataloader
     )
-    # Enable gradient checkpointing - NOTE: This is for DDP Error
-    model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
     # Set static graph
     # model._set_static_graph()
 

@@ -4,7 +4,7 @@ from transformers.activations import ACT2FN
 from sign2vec.utils.config import Sign2VecConfig
 from sign2vec.utils.feature_extractor import Sign2VecFeatureEncoder
 from transformers.models.wav2vec2.modeling_wav2vec2 import (
-    Wav2Vec2Model,
+    Wav2Vec2BaseModelOutput,
     Wav2Vec2Encoder,
     Wav2Vec2Adapter,
     Wav2Vec2PreTrainedModel,
@@ -17,6 +17,7 @@ from transformers.models.wav2vec2.modeling_wav2vec2 import (
     _CHECKPOINT_FOR_DOC,
     _CONFIG_FOR_DOC,
     _EXPECTED_OUTPUT_SHAPE,
+    _compute_mask_indices
 )
 from transformers.utils import (
     add_start_docstrings,
@@ -66,7 +67,7 @@ class Sign2VecBaseModelOutput(ModelOutput):
     "The bare Wav2Vec2 Model transformer outputting raw hidden-states without any specific head on top.",
     WAV_2_VEC_2_START_DOCSTRING,
 )
-class Sign2VecModel(Wav2Vec2Model):
+class Sign2VecModel(Wav2Vec2PreTrainedModel):
     def __init__(self, config: Sign2VecConfig):
         super().__init__(config)
         self.config = config
@@ -87,13 +88,77 @@ class Sign2VecModel(Wav2Vec2Model):
         # Initialize weights and apply final processing
         self.post_init()
 
+    def freeze_feature_extractor(self):
+        """
+        Calling this function will disable the gradient computation for the feature encoder so that its parameters will
+        not be updated during training.
+        """
+        warnings.warn(
+            "The method `freeze_feature_extractor` is deprecated and will be removed in Transformers v5."
+            "Please use the equivalent `freeze_feature_encoder` method instead.",
+            FutureWarning,
+        )
+        self.freeze_feature_encoder()
+
+    def freeze_feature_encoder(self):
+        """
+        Calling this function will disable the gradient computation for the feature encoder so that its parameter will
+        not be updated during training.
+        """
+        self.feature_extractor._freeze_parameters()
+
+    def _mask_hidden_states(
+        self,
+        hidden_states: torch.FloatTensor,
+        mask_time_indices: Optional[torch.FloatTensor] = None,
+        attention_mask: Optional[torch.LongTensor] = None,
+    ):
+        """
+        Masks extracted features along time axis and/or along feature axis according to
+        [SpecAugment](https://arxiv.org/abs/1904.08779).
+        """
+
+        # `config.apply_spec_augment` can set masking to False
+        if not getattr(self.config, "apply_spec_augment", True):
+            return hidden_states
+
+        # generate indices & apply SpecAugment along time axis
+        batch_size, sequence_length, hidden_size = hidden_states.size()
+
+        if mask_time_indices is not None:
+            # apply SpecAugment along time axis with given mask_time_indices
+            hidden_states[mask_time_indices] = self.masked_spec_embed.to(hidden_states.dtype)
+        elif self.config.mask_time_prob > 0 and self.training:
+            mask_time_indices = _compute_mask_indices(
+                (batch_size, sequence_length),
+                mask_prob=self.config.mask_time_prob,
+                mask_length=self.config.mask_time_length,
+                attention_mask=attention_mask,
+                min_masks=self.config.mask_time_min_masks,
+            )
+            mask_time_indices = torch.tensor(mask_time_indices, device=hidden_states.device, dtype=torch.bool)
+            hidden_states[mask_time_indices] = self.masked_spec_embed.to(hidden_states.dtype)
+
+        if self.config.mask_feature_prob > 0 and self.training:
+            # generate indices & apply SpecAugment along feature axis
+            mask_feature_indices = _compute_mask_indices(
+                (batch_size, hidden_size),
+                mask_prob=self.config.mask_feature_prob,
+                mask_length=self.config.mask_feature_length,
+                min_masks=self.config.mask_feature_min_masks,
+            )
+            mask_feature_indices = torch.tensor(mask_feature_indices, device=hidden_states.device, dtype=torch.bool)
+            mask_feature_indices = mask_feature_indices[:, None].expand(-1, sequence_length, -1)
+            hidden_states[mask_feature_indices] = 0
+
+        return hidden_states
 
     @add_start_docstrings_to_model_forward(WAV_2_VEC_2_INPUTS_DOCSTRING)
     @add_code_sample_docstrings(
         checkpoint=_CHECKPOINT_FOR_DOC,
-        output_type=Sign2VecBaseModelOutput,
+        output_type=Wav2Vec2BaseModelOutput,
         config_class=_CONFIG_FOR_DOC,
-        modality="pose",
+        modality="audio",
         expected_output=_EXPECTED_OUTPUT_SHAPE,
     )
     def forward(
@@ -104,7 +169,7 @@ class Sign2VecModel(Wav2Vec2Model):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, Sign2VecBaseModelOutput]:
+    ) -> Union[Tuple, Wav2Vec2BaseModelOutput]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -141,7 +206,7 @@ class Sign2VecModel(Wav2Vec2Model):
         if not return_dict:
             return (hidden_states, extract_features) + encoder_outputs[1:]
 
-        return Sign2VecBaseModelOutput(
+        return Wav2Vec2BaseModelOutput(
             last_hidden_state=hidden_states,
             extract_features=extract_features,
             hidden_states=encoder_outputs.hidden_states,

@@ -5,6 +5,7 @@ input_dim: 255
 codevector_dim: 256
 num_codevector_groups: 2
 num_codevectors_per_group: 320
+is_multicue: false
 min_length: 0
 max_length: 20
 temperature: 1.0
@@ -12,7 +13,7 @@ num_negatives: 100
 num_hidden_layers: 12
 diversity_loss_weight: 0.1
 num_feat_extract_layers: 4
-do_normalize: true
+do_normalize: false
 conv_dim:
 - 512
 - 512
@@ -74,7 +75,6 @@ initializer_range: 0.02
 intermediate_size: 3072
 is_decoder: false
 is_encoder_decoder: false
-is_multicue: false
 label2id:
   LABEL_0: 0
   LABEL_1: 1

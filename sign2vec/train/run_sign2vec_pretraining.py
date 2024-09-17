@@ -543,7 +543,7 @@ def main():
     print('Sampled negative indices:', sample['sampled_negative_indices'].shape)
 
     # Enable gradient checkpointing - NOTE: This is for DDP Error
-    model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
+    # model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
     
     # Prepare everything with our `accelerator`.
     model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(

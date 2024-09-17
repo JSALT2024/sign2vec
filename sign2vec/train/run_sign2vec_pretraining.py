@@ -51,9 +51,6 @@ from sign2vec.utils.feature_extractor import Sign2VecFeatureExtractor
 
 logger = get_logger(__name__)
 
-import torch._dynamo
-torch._dynamo.config.suppress_errors = True
-
 def parse_args():
     import argparse
 
@@ -550,7 +547,7 @@ def main():
         model, optimizer, train_dataloader, eval_dataloader
     )
 
-    model.model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
+    model.module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
     # Set static graph
     # model._set_static_graph()
 

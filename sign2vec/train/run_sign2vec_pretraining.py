@@ -549,6 +549,8 @@ def main():
     model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
         model, optimizer, train_dataloader, eval_dataloader
     )
+
+    model.model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
     # Set static graph
     # model._set_static_graph()
 

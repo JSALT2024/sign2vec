@@ -8,7 +8,11 @@ from torch.utils.data import Dataset
 
 from transformers import AutoTokenizer
 
-from sign2vec.utils.normalization import normalize_local, normalize_global
+from sign2vec.utils.normalization import (
+    normalize_local, 
+    normalize_global, 
+    normalize_yasl
+)
 
 POSE_LANDMARKS = [11, 12, 13, 14, 23, 24]
 
@@ -21,13 +25,12 @@ FACE_LANDMARKS = [
     468, 473 
 ]
 
-
 class How2SignForPose(Dataset):
 
     def __init__(
         self,
         h5_fpath,
-        transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
+        transform='yasl',
         max_instances=None,
     ):
         self.transform = transform
@@ -48,45 +51,13 @@ class How2SignForPose(Dataset):
         sentence = data["sentence"][()].decode("utf-8")
 
         if self.transform:
-            for norm in self.transform:
-                if norm[0] == "pose_landmarks":
-                    if norm[1] == "local":
-                        pose_landmarks = self.normalize_local(pose_landmarks, "pose")
-                    elif norm[1] == "global":
-                        pose_landmarks = self.normalize_global(pose_landmarks, "pose")
-                    else:
-                        raise ValueError("Unknown normalization method")
-                elif norm[0] == "face_landmarks":
-                    if norm[1] == "local":
-                        face_landmarks = self.normalize_local(face_landmarks, "face")
-                    elif norm[1] == "global":
-                        face_landmarks = self.normalize_global(face_landmarks, "face")
-                    else:
-                        raise ValueError("Unknown normalization method")
-                elif norm[0] == "left_hand_landmarks":
-                    if norm[1] == "local":
-                        left_hand_landmarks = self.normalize_local(
-                            left_hand_landmarks, "hand"
-                        )
-                    elif norm[1] == "global":
-                        left_hand_landmarks = self.normalize_global(
-                            left_hand_landmarks, "hand"
-                        )
-                    else:
-                        raise ValueError("Unknown normalization method")
-                elif norm[0] == "right_hand_landmarks":
-                    if norm[1] == "local":
-                        right_hand_landmarks = self.normalize_local(
-                            right_hand_landmarks, "hand"
-                        )
-                    elif norm[1] == "global":
-                        right_hand_landmarks = self.normalize_global(
-                            right_hand_landmarks, "hand"
-                        )
-                    else:
-                        raise ValueError("Unknown normalization method")
-                else:
-                    raise ValueError("Unknown keypoint type")
+            if self.transform == 'yasl':
+                pose_landmarks = normalize_yasl(pose_landmarks)
+                face_landmarks = normalize_yasl(face_landmarks)
+                left_hand_landmarks = normalize_yasl(left_hand_landmarks)
+                right_hand_landmarks = normalize_yasl(right_hand_landmarks)
+            else:
+                raise NotImplementedError(f'{self.transform} normalization is not implemented yet')
 
         # Select only the keypoints that are needed
         pose_landmarks = pose_landmarks[:, POSE_LANDMARKS, :]

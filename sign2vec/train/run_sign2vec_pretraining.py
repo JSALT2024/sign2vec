@@ -49,6 +49,9 @@ from sign2vec.utils.config import Sign2VecConfig
 from sign2vec.model.sign2vec import Sign2VecForPreTraining
 from sign2vec.utils.feature_extractor import Sign2VecFeatureExtractor
 
+from dotenv import load_dotenv
+load_dotenv()
+
 logger = get_logger(__name__)
 
 def parse_args():
@@ -429,7 +432,11 @@ def main():
                     repo_name = Path(args.output_dir).absolute().name
                 # Create repo and retrieve repo_id
                 api = HfApi()
-                repo_id = api.create_repo(repo_name, exist_ok=True, token=args.hub_token).repo_id
+                repo_id = api.create_repo(
+                    repo_name, 
+                    exist_ok=True, 
+                    token=os.environ.get("HF_TOKEN"),
+                ).repo_id
 
                 with open(os.path.join(args.output_dir, ".gitignore"), "w+") as gitignore:
                     if "step_*" not in gitignore:

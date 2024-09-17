@@ -1,5 +1,9 @@
+# get bash parameter run_name
+run_name=$1
+
 TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.py \
                     --dataset_name="YoutubeASL" \
+                    --run_name=$1 \
                     --tags sign2vec base no-norm single_cue \
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \

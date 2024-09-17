@@ -422,7 +422,7 @@ def main():
 
         # Handle the repository creation
         if accelerator.is_main_process:
-            if args.push_to_hub and not args.preprocessing_only:
+            if args.push_to_hub:
                 # Retrieve of infer repo_name
                 repo_name = args.hub_model_id
                 if repo_name is None:

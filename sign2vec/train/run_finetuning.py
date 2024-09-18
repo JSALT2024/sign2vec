@@ -13,6 +13,9 @@ from transformers import (
 from sign2vec.model.t5 import T5ModelForSLT
 from sign2vec.utils.translation import collate_fn, postprocess_text
 
+from dotenv import load_dotenv
+load_dotenv()
+
 def parse_args():
 
     import argparse
@@ -21,6 +24,7 @@ def parse_args():
 
     # Required parameters
     parser.add_argument("--model_name", type=str, default="h2s-test")
+    parser.add_argument("--dataset_type", type=str, default="how2sign", choices=["how2sign", "yasl"])
     parser.add_argument("--dataset_dir", type=str, default='/home/kara-nlp/Documents/Repositories/Thesis/SLT/Datasets/How2Sign/Mediapipe')
     parser.add_argument("--output_dir", default='./results',type=str)
     parser.add_argument("--seed", type=int, default=42)
@@ -147,11 +151,6 @@ if __name__ == "__main__":
 
         return result
 
-    # Configure the wandb logger
-    os.environ["WANDB_PROJECT"] = args.project_name
-    os.environ["WANDB_NAME"] = args.model_name
-    os.environ["WANDB_LOG_MODEL"] = "true"
-    os.environ["WANDB_WATCH"] = "all"
     # os.environ["WANDB_DISABLED"] = "true" if not args.dev else "false"
 
     # Add model and data to device
@@ -189,6 +188,21 @@ if __name__ == "__main__":
         hub_model_id=f"{args.model_name}",
         metric_for_best_model="bleu",
         optim="adafactor",
+        hub_token=os.getenv("HUB_TOKEN"),
+        
+    )
+
+    # Configure the wandb logger
+    os.environ["WANDB_PROJECT"] = args.project_name
+    os.environ["WANDB_NAME"] = args.model_name
+    os.environ["WANDB_LOG_MODEL"] = "true"
+    os.environ["WANDB_WATCH"] = "all"
+
+    import wandb
+    wandb.init(
+        project=args.project_name, 
+        name=args.model_name,
+        tags=[args.dataset_type, args.transform, args.modality] + (["dev"] if args.dev else []),
     )
 
     print('Model device:', training_args.device)
@@ -203,8 +217,14 @@ if __name__ == "__main__":
         compute_metrics=compute_metrics,
     )
 
-    trainer.train()
+    # Add safe guard for training
+    try:
+        trainer.train()
+    except KeyboardInterrupt:
+        print("Training interrupted by user, saving model...")
+        # trainer.save_model()
 
+    print("Running evaluation on test set...")
     # Run inference on the test set
     (logits, _ ), label_ids, eval_results = trainer.predict(test_dataset=test_dataset)
     # Decode the predictions

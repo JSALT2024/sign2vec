@@ -218,11 +218,6 @@ if __name__ == "__main__":
     )
 
     # Configure the wandb logger
-    os.environ["WANDB_PROJECT"] = args.project_name
-    os.environ["WANDB_NAME"] = args.model_name
-    os.environ["WANDB_LOG_MODEL"] = "true"
-    os.environ["WANDB_WATCH"] = "all"
-
     import wandb
     wandb.init(
         project=args.project_name, 

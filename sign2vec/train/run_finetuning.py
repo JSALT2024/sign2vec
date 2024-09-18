@@ -11,8 +11,6 @@ from transformers import (
     Adafactor
 )
 from sign2vec.model.t5 import T5ModelForSLT
-from sign2vec.dataset.how2sign import How2SignForSLT
-from sign2vec.dataset.yasl import YoutubeASLForSLT
 from sign2vec.utils.translation import collate_fn, postprocess_text
 
 def parse_args():
@@ -31,8 +29,11 @@ def parse_args():
     parser.add_argument("--skip_frames", action="store_true")
     parser.add_argument("--max_token_length", type=int, default=128)
     parser.add_argument("--max_sequence_length", type=int, default=250)
+    parser.add_argument("--transform", type=str, default="yasl", choices=["yasl", "custom"])
+    parser.add_argument("--modality", type=str, default="pose", choices=["pose", "sign2vec", "mae"])
 
     # Training arguments
+    parser.add_argument("--embedding_dim", type=int, default=255)
     parser.add_argument("--model_id", type=str, default="t5-small")
     parser.add_argument("--max_training_steps", type=int, default=20_000)
     parser.add_argument("--eval_steps", type=int, default=100)
@@ -49,6 +50,7 @@ def parse_args():
 
     # Running arguments
     parser.add_argument("--dev", action="store_true")
+    parser.add_argument("--project_name", type=str, default="h2s-t5")
     parser.add_argument("--max_val_samples", type=int, default=None)
 
     return parser.parse_args()
@@ -59,84 +61,53 @@ if __name__ == "__main__":
 
     # Initialize the custom model
     config = T5Config.from_pretrained(args.model_id)
-    config.pose_dim = 255  # Dimension of the pose embeddings
+    config.pose_dim = args.embedding_dim  # Dimension of the pose embeddings
     model = T5ModelForSLT(config)
 
     # Initialize tokenizer and config
     tokenizer = T5Tokenizer.from_pretrained(args.model_id)
 
     if args.dataset_type == 'how2sign':
-        # Import How2SignForSLT dataset
-        h2s_train = How2SignForSLT(
-            h5_fpath=os.path.join(
-                args.dataset_dir, 
-                'H2S_train.h5' if not args.dev else 'H2S_test.h5'
-            ),   
-            transform=None,
-            max_token_length=args.max_token_length,
-            max_sequence_length=args.max_sequence_length,
-            skip_frames=args.skip_frames,
-            tokenizer=args.model_id
-        )
-
-        h2s_val = How2SignForSLT(
-            h5_fpath=os.path.join(
-                args.dataset_dir, 
-                'H2S_val.h5' if not args.dev else 'H2S_test.h5'
-            ),   
-            transform=None,
-            max_token_length=args.max_token_length,
-            max_sequence_length=args.max_sequence_length,
-            skip_frames=args.skip_frames,
-            tokenizer=args.model_id,
-            max_instances=args.max_val_samples
-        )
-
-        # Import How2SignForSLT dataset
-        h2s_test = How2SignForSLT(
-            h5_fpath=os.path.join(args.dataset_dir, 'H2S_test.h5'),   
-            transform=None,
-            max_token_length=args.max_token_length,
-            max_sequence_length=args.max_sequence_length,
-            skip_frames=args.skip_frames,
-            tokenizer=args.model_id
-        )
-
+        from sign2vec.dataset.how2sign import How2SignForSLT as DatasetForSLT
     elif args.dataset_type == 'yasl':
-        # Import YoutubeASLForSLT dataset
-        h2s_train = YoutubeASLForSLT(
-            h5_fpath=args.dataset_dir, 
-            mode='train',
-            input_type='pose',
-            skip_frames=args.skip_frames,
-            transform=None,
-            max_token_length=args.max_token_length,
-            max_sequence_length=args.max_sequence_length,
-            tokenizer=args.model_id
-        )
+        from sign2vec.dataset.yasl import YoutubeASLForSLT as DatasetForSLT
+    else:
+        raise ValueError(f"Dataset type {args.dataset_type} not supported")
 
-        h2s_val = YoutubeASLForSLT(
-            h5_fpath=args.dataset_dir, 
-            mode='val',
-            input_type='pose',
-            skip_frames=args.skip_frames,
-            transform=None,
-            max_token_length=args.max_token_length,
-            max_sequence_length=args.max_sequence_length,
-            tokenizer=args.model_id,
-            max_instances=args.max_val_samples
-        )
+    train_dataset = DatasetForSLT(
+        h5_fpath=args.dataset_dir,
+        mode='train' if not args.dev else 'test',
+        transform=args.transform,
+        max_token_length=args.max_token_length,
+        max_sequence_length=args.max_sequence_length,
+        skip_frames=args.skip_frames,
+        tokenizer=args.model_id,
+        input_type=args.modality,
+    )
 
-        h2s_test = YoutubeASLForSLT(
-            h5_fpath=args.dataset_dir, 
-            mode='test',
-            input_type='pose',
-            skip_frames=args.skip_frames,
-            transform=None,
-            max_token_length=args.max_token_length,
-            max_sequence_length=args.max_sequence_length,
-            tokenizer=args.model_id
-        )
+    val_dataset = DatasetForSLT(
+        h5_fpath=args.dataset_dir,
+        mode='val' if not args.dev else 'test',
+        transform=args.transform,
+        max_token_length=args.max_token_length,
+        max_sequence_length=args.max_sequence_length,
+        skip_frames=args.skip_frames,
+        tokenizer=args.model_id,
+        max_instances=args.max_val_samples,
+        input_type=args.modality,
+    )
+
+    test_dataset = DatasetForSLT(
+        h5_fpath=args.dataset_dir,
+        mode='test',
+        transform=args.transform,
+        max_token_length=args.max_token_length,
+        max_sequence_length=args.max_sequence_length,
+        skip_frames=args.skip_frames,
+        tokenizer=args.model_id,
+        input_type=args.modality,
+    )
+
 
     sacrebleu = evaluate.load('sacrebleu')
 
@@ -177,7 +148,7 @@ if __name__ == "__main__":
         return result
 
     # Configure the wandb logger
-    os.environ["WANDB_PROJECT"] = "h2s-t5"
+    os.environ["WANDB_PROJECT"] = args.project_name
     os.environ["WANDB_NAME"] = args.model_name
     os.environ["WANDB_LOG_MODEL"] = "true"
     os.environ["WANDB_WATCH"] = "all"
@@ -186,15 +157,15 @@ if __name__ == "__main__":
     # Add model and data to device
     model.to("cuda")
 
-    num_train_epochs = args.max_training_steps // (len(h2s_train) // args.per_device_train_batch_size // args.gradient_accumulation_steps)
+    num_train_epochs = args.max_training_steps // (len(train_dataset) // args.per_device_train_batch_size // args.gradient_accumulation_steps)
     num_train_epochs = max(math.ceil(num_train_epochs), 1)
 
     print(f"""
         Model: {args.model_name}
         Training epochs: {num_train_epochs}
         Number of training steps: {args.max_training_steps}
-        Number of training batches: {len(h2s_train) // args.per_device_train_batch_size}
-        Number of validation examples: {len(h2s_val)}
+        Number of training batches: {len(train_dataset) // args.per_device_train_batch_size}
+        Number of validation examples: {len(val_dataset)}
     """)
 
     # Check if total batch size 128
@@ -225,8 +196,8 @@ if __name__ == "__main__":
     trainer = Seq2SeqTrainer(
         model=model,
         args=training_args,
-        train_dataset=h2s_train,
-        eval_dataset=h2s_val,
+        train_dataset=train_dataset,
+        eval_dataset=val_dataset,
         tokenizer=tokenizer,
         data_collator=collate_fn,
         compute_metrics=compute_metrics,
@@ -235,7 +206,7 @@ if __name__ == "__main__":
     trainer.train()
 
     # Run inference on the test set
-    (logits, _ ), label_ids, eval_results = trainer.predict(test_dataset=h2s_test)
+    (logits, _ ), label_ids, eval_results = trainer.predict(test_dataset=test_dataset)
     # Decode the predictions
     predicted_ids = np.argmax(logits, axis=2)
     decoded_preds = tokenizer.batch_decode(predicted_ids, skip_special_tokens=True)
@@ -245,7 +216,7 @@ if __name__ == "__main__":
         predictions = []
         for idx, pred in enumerate(decoded_preds):
             predictions.append({
-                'ground_truth': h2s_test[idx]['sentence'],
+                'ground_truth': test_dataset[idx]['sentence'],
                 'prediction': pred
             })
         json.dump(predictions, f, indent=4)

@@ -20,16 +20,20 @@ def normalize_yasl(landmarks):
         np.ndarray: The normalized keypoints.
     """
     # represent landmarks that are not present in a frame with a large negative value
-    # this is necessary for the normalization to work correctly
-
+ 
     # if one row is all zeros, the frame is empty -> set all values to -1
-    landmarks[landmarks[:,:,:2].sum(axis=2) == 0] = -1
-    
+    # landmarks[landmarks[:,:,:2].sum(axis=2) == 0] = -1
+    zero_rows = np.where(landmarks[:,:,:2].sum(axis=2) == 0)
+
     min_x_y = np.min(landmarks[:, :, :2], axis=1)
     max_x_y = np.max(landmarks[:, :, :2], axis=1)
 
+    # Normalize the keypoints
     landmarks[:,:,:2] = (landmarks[:,:,:2] - min_x_y[:, None, :]) / (
         max_x_y - min_x_y
     )[:, None, :]
-    # Normalize the keypoints
+
+    # Set the landmarks that were empty to -1
+    landmarks[zero_rows] = -1
+
     return landmarks

@@ -89,29 +89,54 @@ if __name__ == "__main__":
         input_type=args.modality,
     )
 
-    val_dataset = DatasetForSLT(
-        h5_fpath=args.dataset_dir,
-        mode='val' if not args.dev else 'test',
-        transform=args.transform,
-        max_token_length=args.max_token_length,
-        max_sequence_length=args.max_sequence_length,
-        skip_frames=args.skip_frames,
-        tokenizer=args.model_id,
-        max_instances=args.max_val_samples,
-        input_type=args.modality,
-    )
+    if args.dataset_type == 'how2sign':
+        val_dataset = DatasetForSLT(
+            h5_fpath=args.dataset_dir,
+            mode='val' if not args.dev else 'test',
+            transform=args.transform,
+            max_token_length=args.max_token_length,
+            max_sequence_length=args.max_sequence_length,
+            skip_frames=args.skip_frames,
+            tokenizer=args.model_id,
+            max_instances=args.max_val_samples,
+            input_type=args.modality,
+        )
 
-    test_dataset = DatasetForSLT(
-        h5_fpath=args.dataset_dir,
-        mode='test',
-        transform=args.transform,
-        max_token_length=args.max_token_length,
-        max_sequence_length=args.max_sequence_length,
-        skip_frames=args.skip_frames,
-        tokenizer=args.model_id,
-        input_type=args.modality,
-    )
+        test_dataset = DatasetForSLT(
+            h5_fpath=args.dataset_dir,
+            mode='test',
+            transform=args.transform,
+            max_token_length=args.max_token_length,
+            max_sequence_length=args.max_sequence_length,
+            skip_frames=args.skip_frames,
+            tokenizer=args.model_id,
+            input_type=args.modality,
+        )
 
+    elif args.dataset_type == 'yasl':
+
+        val_dataset = DatasetForSLT(
+            h5_fpath=args.dataset_dir,
+            mode='test',
+            transform=args.transform,
+            max_token_length=args.max_token_length,
+            max_sequence_length=args.max_sequence_length,
+            skip_frames=args.skip_frames,
+            tokenizer=args.model_id,
+            max_instances=args.max_val_samples,
+            input_type=args.modality,
+        )
+
+        test_dataset = DatasetForSLT(
+            h5_fpath=args.dataset_dir,
+            mode='test',
+            transform=args.transform,
+            max_token_length=args.max_token_length,
+            max_sequence_length=args.max_sequence_length,
+            skip_frames=args.skip_frames,
+            tokenizer=args.model_id,
+            input_type=args.modality,
+        )
 
     sacrebleu = evaluate.load('sacrebleu')
 

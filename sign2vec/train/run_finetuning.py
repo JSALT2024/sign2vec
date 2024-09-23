@@ -171,7 +171,7 @@ if __name__ == "__main__":
     assert args.per_device_train_batch_size * args.gradient_accumulation_steps == 128
 
     training_args = Seq2SeqTrainingArguments(
-        output_dir=args.model_name,
+        output_dir=os.path.join(args.output_dir, args.model_name),
         evaluation_strategy="steps",
         eval_steps=args.eval_steps,
         logging_steps=args.logging_steps,

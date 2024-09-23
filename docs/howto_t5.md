@@ -113,7 +113,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec, YoutubeASLForCu
 
 ## T5 Training
 
-We are using the default parameters coming from the YoutubeASL paper where the source is coming from TSX library from Google. Although, we provide option for changing, we suggest not to change it for replication purposes.
+We are using the default parameters coming from the YoutubeASL paper where the source is coming from <a href="https://github.com/google-research/t5x/blob/main/t5x/configs/runs/finetune.gin">TSX library from Google</a>. Although, we provide option for changing, we suggest not to change it for replication purposes.
 
 The bash command should look like as below.
 

@@ -28,7 +28,6 @@ class YoutubeASLForPose(Dataset):
     def __init__(
         self,
         h5_file,
-        mode="train",
         transform = 'yasl',
         max_instances=None,
     ):

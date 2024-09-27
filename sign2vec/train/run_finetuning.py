@@ -154,7 +154,6 @@ if __name__ == "__main__":
     # os.environ["WANDB_DISABLED"] = "true" if not args.dev else "false"
 
     # Add model and data to device
-    model.to("cuda")
 
     num_train_epochs = args.max_training_steps // (len(train_dataset) // args.per_device_train_batch_size // args.gradient_accumulation_steps)
     num_train_epochs = max(math.ceil(num_train_epochs), 1)

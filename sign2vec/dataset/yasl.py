@@ -28,6 +28,7 @@ class YoutubeASLForPose(Dataset):
     def __init__(
         self,
         h5_file,
+        mode="train",
         transform = 'yasl',
         max_instances=None,
     ):
@@ -39,8 +40,10 @@ class YoutubeASLForPose(Dataset):
         return len(list(self.h5_file.keys())) if self.max_instances is None else self.max_instances
 
     def __getitem__(self, idx):
+        
+        clip_id = list(self.h5_file.keys())[idx]
 
-        data = self.h5_file[list(self.h5_file.keys())[idx]]
+        data = self.h5_file[clip_id]
 
         pose_landmarks = data["joints"]["pose_landmarks"][()]
         face_landmarks = data["joints"]["face_landmarks"][()]
@@ -150,18 +153,19 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
 
         h5_file = self.csv_file.iloc[idx].h5_file
         file_idx = self.csv_file.iloc[idx].file_idx
+        sentence = self.csv_file.iloc[idx].sentence
 
         if self.input_type == "pose":
             # Reinitialize the dataset if the h5 file is different
             if self.h5_file_name != h5_file:
                 YoutubeASLForPose.__init__(self, h5_file, self.transform, self.max_instances)
-            keypoints, sentence = YoutubeASLForPose.__getitem__(self, file_idx)
+            keypoints = YoutubeASLForPose.__getitem__(self, file_idx)
 
         elif self.input_type == "sign2vec":
             # Reinitialize the dataset if the h5 file is different
             if self.h5_file_name != h5_file:
                 YoutubeASLForSign2Vec.__init__(self, h5_file, self.max_instances)
-            keypoints, sentence = YoutubeASLForSign2Vec.__getitem__(self, file_idx)
+            keypoints = YoutubeASLForSign2Vec.__getitem__(self, file_idx)
 
         self.h5_file_name = h5_file
 

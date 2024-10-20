@@ -10,7 +10,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
                     --model_config_file="experimental/configs/sign2vec_pretraining_config.yaml" \
-                    --output_dir="./sign2vec-base" \
+                    --output_dir="/ssd2/karahan/YASL/sign2vec-base" \
                     --max_train_steps="20000" \
                     --num_warmup_steps="2000" \
                     --gradient_accumulation_steps="4" \

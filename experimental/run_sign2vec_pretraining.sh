@@ -6,6 +6,7 @@ export CUDA_VISIBLE_DEVICES=$cuda_device
 TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.py \
                     --dataset_name="YoutubeASL" \
                     --run_name=$1 \
+                    --hub_model_id="sign2vec-base" \
                     --tags sign2vec base yasl-norm single_cue \
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
@@ -34,6 +35,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
 TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.py \
                     --dataset_name="YoutubeASL" \
                     --run_name=$1-1 \
+                    --hub_model_id="sign2vec-base-1" \
                     --tags sign2vec base yasl-norm single_cue \
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
@@ -62,6 +64,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
 TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.py \
                     --dataset_name="YoutubeASL" \
                     --run_name=$1-2 \
+                    --hub_model_id="sign2vec-base-2" \
                     --tags sign2vec base yasl-norm single_cue \
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \

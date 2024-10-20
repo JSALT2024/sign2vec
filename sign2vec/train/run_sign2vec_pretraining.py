@@ -219,6 +219,12 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        "--add_factor",
+        type=int,
+        default=10,
+        help="The factor to add after norm to the instances in the dataset.",
+    )
+    parser.add_argument(
         "--adam_beta1",
         type=float,
         default=0.9,
@@ -273,7 +279,6 @@ def parse_args():
         os.makedirs(args.output_dir, exist_ok=True)
 
     return args
-
 
 @dataclass
 class DataCollatorForSign2VecPretraining:
@@ -366,7 +371,6 @@ class DataCollatorForSign2VecPretraining:
 
         return batch
 
-
 def multiply_grads(params, c):
     """Multiplies grads by a constant *c*."""
     for p in params:
@@ -374,7 +378,6 @@ def multiply_grads(params, c):
             if torch.is_tensor(c):
                 c = c.to(p.grad.device)
             p.grad.data.mul_(c)
-
 
 def get_grad_norm(params, scale=1):
     """Compute grad norm given a gradient scale."""
@@ -385,7 +388,6 @@ def get_grad_norm(params, scale=1):
             total_norm += param_norm.item() ** 2
     total_norm = total_norm**0.5
     return total_norm
-
 
 def main():
     # See all possible arguments in src/transformers/args.py
@@ -506,15 +508,17 @@ def main():
         train_dataset = YoutubeASLForSign2VecPretraining(
             h5_fpath=args.dataset_path,
             max_sequence_length=max_length,
-            transform=None,
+            transform='yasl',
             mode=args.datasets[0],
+            add_factor=args.add_factor
         )
 
         eval_dataset = YoutubeASLForSign2VecPretraining(
             h5_fpath=args.dataset_path,
             max_sequence_length=max_length,
-            transform=None,
-            mode=args.datasets[1]
+            transform='yasl',
+            mode=args.datasets[1],
+            add_factor=args.add_factor
         )
     else:
         raise ValueError(f"Invalid dataset name: {args.dataset_name}")

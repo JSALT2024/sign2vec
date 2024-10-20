@@ -1,5 +1,7 @@
 # get bash parameter run_name
 run_name=$1
+cuda_device=$2
+export CUDA_VISIBLE_DEVICES=$cuda_device
 
 TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.py \
                     --dataset_name="YoutubeASL" \
@@ -8,12 +10,12 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
                     --model_config_file="experimental/configs/sign2vec_pretraining_config.yaml" \
-                    --output_dir="./sign2vec-base-v0.0" \
+                    --output_dir="./sign2vec-base" \
                     --max_train_steps="20000" \
-                    --num_warmup_steps="32000" \
+                    --num_warmup_steps="2000" \
                     --gradient_accumulation_steps="4" \
-                    --learning_rate="0.005" \
-                    --weight_decay="0.01" \
+                    --learning_rate="0.0005" \
+                    --weight_decay="0.001" \
                     --max_duration_in_seconds="20.0" \
                     --min_duration_in_seconds="2.0" \
                     --logging_steps="1" \

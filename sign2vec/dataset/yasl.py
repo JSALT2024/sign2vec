@@ -81,7 +81,7 @@ class YoutubeASLForPose(Dataset):
             dim=1,
         )
         # Reduce the keypoints (T, N, C) -> (T, N*C)
-        keypoints = keypoints.view(keypoints.size(0), -1)
+        keypoints = keypoints.view(keypoints.size(0), -1) 
         # Check if keypoints are in the correct shape
         assert keypoints.shape[-1] == 255, "Key points are not in the correct shape"
 
@@ -203,6 +203,7 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
         transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
         skip_frames=False,
         max_sequence_length=None,
+        add_factor=0.1,
     ):
         
         self.mode = mode
@@ -215,6 +216,7 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
 
         self.max_sequence_length = max_sequence_length
         self.skip_frames = skip_frames
+        self.add_factor = add_factor
 
         YoutubeASLForPose.__init__(self, self.h5_file_name, transform)
 
@@ -235,6 +237,8 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
 
         if self.skip_frames: keypoints = keypoints[::2]
         if self.max_sequence_length: keypoints = keypoints[: self.max_sequence_length]
+        keypoints = keypoints * self.add_factor
+
         return {
             "input_values": keypoints,
         }

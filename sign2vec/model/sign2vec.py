@@ -221,6 +221,11 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
         self.dropout_features = nn.Dropout(config.feat_quantizer_dropout)
 
         self.quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        if config.is_multicue:
+            self.pose_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+            self.left_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+            self.right_hand_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+            self.face_quantizer = Wav2Vec2GumbelVectorQuantizer(config)
 
         self.project_hid = nn.Linear(config.hidden_size, config.proj_codevector_dim)
         self.project_q = nn.Linear(config.codevector_dim, config.proj_codevector_dim)
@@ -369,10 +374,22 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
                 extract_features.shape[1], attention_mask, add_adapter=False
             )
 
-        quantized_features, codevector_perplexity = self.quantizer(
-            extract_features, mask_time_indices=mask_time_indices
-        )
-        quantized_features = self.project_q(quantized_features)
+        if self.config.is_multicue:
+            quantized_features, codevector_perplexities = [], []
+
+            for quantizer in [self.quantizer, self.pose_quantizer, self.left_hand_quantizer, self.right_hand_quantizer, self.face_quantizer]:
+                quantized, codevector_perplex = quantizer(extract_features, mask_time_indices=mask_time_indices)
+                quantized_features.append(quantized)
+                codevector_perplexities.append(codevector_perplex)
+            
+            quantized_features = [self.project_q(q) for q in quantized_features]
+            codevector_perplexity = sum(codevector_perplexities) / len(codevector_perplexities)
+        
+        else:
+            quantized_features, codevector_perplexity = self.quantizer(
+                extract_features, mask_time_indices=mask_time_indices
+            )
+            quantized_features = self.project_q(quantized_features)
 
         loss = contrastive_loss = diversity_loss = None
         if sampled_negative_indices is not None:

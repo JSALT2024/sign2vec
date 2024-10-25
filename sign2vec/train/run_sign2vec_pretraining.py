@@ -46,7 +46,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from sign2vec.utils.config import Sign2VecConfig
-from sign2vec.model.sign2vec import Sign2VecForPreTraining
+from sign2vec.model.modeling_sign2vec import Sign2VecForPreTraining
 from sign2vec.utils.feature_extractor import Sign2VecFeatureExtractor
 
 from dotenv import load_dotenv
@@ -468,6 +468,10 @@ def main():
 
     # initialize random model
     model = Sign2VecForPreTraining(config)
+
+    print('Model config:', config)
+
+    print('Model:', model)
 
     print('Model initialized....')
 

@@ -85,6 +85,9 @@ class YoutubeASLForPose(Dataset):
         # Check if keypoints are in the correct shape
         assert keypoints.shape[-1] == 255, "Key points are not in the correct shape"
 
+        # Replace NaN values with 0
+        torch.nan_to_num_(keypoints, nan=0.0)
+
         return keypoints #, sentence
 
 

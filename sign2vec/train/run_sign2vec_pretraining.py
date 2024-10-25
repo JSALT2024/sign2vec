@@ -221,8 +221,13 @@ def parse_args():
     parser.add_argument(
         "--add_factor",
         type=int,
-        default=10,
+        default=1,
         help="The factor to add after norm to the instances in the dataset.",
+    )
+    parser.add_argument(
+        '--zero_mean',
+        action='store_true',
+        help='Zero mean the instances in the dataset'
     )
     parser.add_argument(
         "--adam_beta1",
@@ -515,6 +520,7 @@ def main():
             transform='yasl',
             mode=args.datasets[0],
             add_factor=args.add_factor
+
         )
 
         eval_dataset = YoutubeASLForSign2VecPretraining(

@@ -1,0 +1,146 @@
+# Description: Configuration file for Sign2Vec Model for pretraining
+# Pretraining configuration for Sign2Vec model
+fps: 25
+input_dim: 255
+codevector_dim: 256
+num_codevector_groups: 1
+num_codevectors_per_group: 512
+is_multicue: false
+min_length: 0
+max_length: 20
+temperature: 1.0
+num_negatives: 100
+num_hidden_layers: 12
+diversity_loss_weight: 0.1
+num_feat_extract_layers: 4
+do_normalize: false
+conv_dim:
+- 512
+- 512
+- 512
+- 512
+conv_kernel:
+- 10
+- 3
+- 3
+- 3
+conv_stride:
+- 2
+- 1
+- 1
+- 1
+# Optional parameters
+activation_dropout: 0.1
+adapter_attn_dim: null
+adapter_kernel_size: 3
+adapter_stride: 2
+add_adapter: false
+add_cross_attention: false
+apply_spec_augment: true
+architectures: null
+attention_dropout: 0.1
+bad_words_ids: null
+begin_suppress_tokens: null
+bos_token_id: 1
+chunk_size_feed_forward: 0
+classifier_proj_size: 256
+contrastive_logits_temperature: 0.1
+conv_bias: false
+cross_attention_hidden_size: null
+ctc_loss_reduction: sum
+ctc_zero_infinity: false
+decoder_start_token_id: null
+diversity_penalty: 0.0
+do_sample: false
+do_stable_layer_norm: false
+early_stopping: false
+encoder_no_repeat_ngram_size: 0
+eos_token_id: 2
+exponential_decay_length_penalty: null
+feat_extract_activation: gelu
+feat_extract_norm: group
+feat_proj_dropout: 0.0
+feat_quantizer_dropout: 0.0
+final_dropout: 0.1
+finetuning_task: null
+forced_bos_token_id: null
+forced_eos_token_id: null
+hidden_act: gelu
+hidden_dropout: 0.1
+hidden_size: 768
+id2label:
+  0: LABEL_0
+  1: LABEL_1
+initializer_range: 0.02
+intermediate_size: 3072
+is_decoder: false
+is_encoder_decoder: false
+label2id:
+  LABEL_0: 0
+  LABEL_1: 1
+layer_norm_eps: 1.0e-05
+layerdrop: 0.1
+length_penalty: 1.0
+mask_feature_length: 10
+mask_feature_min_masks: 0
+mask_feature_prob: 0.0
+mask_time_length: 10
+mask_time_min_masks: 2
+mask_time_prob: 0.05
+model_type: sign2vec
+no_repeat_ngram_size: 0
+num_adapter_layers: 3
+num_attention_heads: 12
+num_beam_groups: 1
+num_beams: 1
+num_conv_pos_embedding_groups: 16
+num_conv_pos_embeddings: 128
+num_return_sequences: 1
+output_attentions: false
+output_hidden_size: 768
+output_hidden_states: false
+output_scores: false
+pad_token_id: 0
+prefix: null
+problem_type: null
+proj_codevector_dim: 256
+pruned_heads: {}
+remove_invalid_values: false
+repetition_penalty: 1.0
+return_dict: true
+return_dict_in_generate: false
+sep_token_id: null
+suppress_tokens: null
+task_specific_params: null
+tdnn_dilation:
+- 1
+- 2
+- 3
+- 1
+- 1
+tdnn_dim:
+- 512
+- 512
+- 512
+- 512
+- 1500
+tdnn_kernel:
+- 5
+- 3
+- 3
+- 1
+- 1
+tf_legacy_loss: false
+tie_encoder_decoder: false
+tie_word_embeddings: true
+tokenizer_class: null
+top_k: 50
+top_p: 1.0
+torch_dtype: null
+torchscript: false
+transformers_version: null
+typical_p: 1.0
+use_bfloat16: false
+use_weighted_layer_sum: false
+vocab_size: 32
+xvector_output_dim: 512

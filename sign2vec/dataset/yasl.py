@@ -30,10 +30,12 @@ class YoutubeASLForPose(Dataset):
         h5_file,
         transform = 'yasl',
         max_instances=None,
+        zero_mean=False,
     ):
         self.transform = transform
         self.h5_file = h5py.File(h5_file, "r")
         self.max_instances = max_instances
+        self.zero_mean = zero_mean
 
     def __len__(self):
         return len(list(self.h5_file.keys())) if self.max_instances is None else self.max_instances
@@ -87,6 +89,10 @@ class YoutubeASLForPose(Dataset):
 
         # Replace NaN values with 0
         torch.nan_to_num_(keypoints, nan=0.0)
+
+        # Apply zero mean normalization to each keypoint dim
+        if self.zero_mean:
+            keypoints = (keypoints - keypoints.mean(dim=0)) / keypoints.std(dim=0)
 
         return keypoints #, sentence
 
@@ -207,6 +213,7 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
         skip_frames=False,
         max_sequence_length=None,
         add_factor=0.1,
+        zero_mean=False,
     ):
         
         self.mode = mode
@@ -221,7 +228,7 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
         self.skip_frames = skip_frames
         self.add_factor = add_factor
 
-        YoutubeASLForPose.__init__(self, self.h5_file_name, transform)
+        YoutubeASLForPose.__init__(self, self.h5_file_name, transform, zero_mean)
 
     def __len__(self):
         return len(self.csv_file)

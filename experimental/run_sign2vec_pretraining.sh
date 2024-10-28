@@ -5,13 +5,13 @@ export CUDA_VISIBLE_DEVICES=$cuda_device
 
 TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.py \
                     --dataset_name="YoutubeASL" \
-                    --run_name=$1 \
-                    --hub_model_id="sign2vec-base" \
+                    --run_name="sign2vec-base-linear" \
+                    --hub_model_id="sign2vec-base-linear" \
                     --tags sign2vec base yasl-norm single_cue \
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
                     --model_config_file="experimental/configs/s2v_multi_code.yaml" \
-                    --output_dir="/ssd2/karahan/YASL/sign2vec-base" \
+                    --output_dir="/ssd2/karahan/YASL/sign2vec-base-linear" \
                     --max_train_steps="10000" \
                     --num_warmup_steps="1000" \
                     --gradient_accumulation_steps="4" \
@@ -35,13 +35,13 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
 
 TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.py \
                     --dataset_name="YoutubeASL" \
-                    --run_name=$1 \
-                    --hub_model_id="sign2vec-base-zero-mean" \
+                    --run_name="sign2vec-base-linear-zero-mean" \
+                    --hub_model_id="sign2vec-base-linear-zero-mean" \
                     --tags sign2vec base yasl-norm single_cue \
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
                     --model_config_file="experimental/configs/s2v_multi_code.yaml" \
-                    --output_dir="/ssd2/karahan/YASL/sign2vec-base-zero-mean" \
+                    --output_dir="/ssd2/karahan/YASL/sign2vec-base-linear-zero-mean" \
                     --max_train_steps="10000" \
                     --num_warmup_steps="1000" \
                     --gradient_accumulation_steps="4" \
@@ -65,13 +65,13 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
 
 TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.py \
                     --dataset_name="YoutubeASL" \
-                    --run_name=$1 \
-                    --hub_model_id="sign2vec-base-1-512" \
+                    --run_name="sign2vec-base-linear-1-512" \
+                    --hub_model_id="sign2vec-base-linear-1-512" \
                     --tags sign2vec base yasl-norm single_cue \
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
                     --model_config_file="experimental/configs/s2v_single_code.yaml" \
-                    --output_dir="/ssd2/karahan/YASL/sign2vec-base" \
+                    --output_dir="/ssd2/karahan/YASL/sign2vec-base-linear" \
                     --max_train_steps="10000" \
                     --num_warmup_steps="1000" \
                     --gradient_accumulation_steps="4" \
@@ -95,13 +95,13 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
 
 TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.py \
                     --dataset_name="YoutubeASL" \
-                    --run_name=$1 \
-                    --hub_model_id="sign2vec-base-zero-mean-1-512" \
+                    --run_name="sign2vec-base-linear-zero-mean-1-512" \
+                    --hub_model_id="sign2vec-base-linear-zero-mean-1-512" \
                     --tags sign2vec base yasl-norm single_cue \
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
                     --model_config_file="experimental/configs/s2v_single_code.yaml" \
-                    --output_dir="/ssd2/karahan/YASL/sign2vec-base-zero-mean-1-512" \
+                    --output_dir="/ssd2/karahan/YASL/sign2vec-base-linear-zero-mean-1-512" \
                     --max_train_steps="10000" \
                     --num_warmup_steps="1000" \
                     --gradient_accumulation_steps="4" \

@@ -21,6 +21,7 @@ class Sign2VecConfig(Wav2Vec2Config):
                  num_feat_extract_layers=4,
                  fps=25,
                  do_normalize=False,
+                 encoder_type="conv_layers",
                  **kwargs):
         super().__init__(**kwargs)
 
@@ -32,6 +33,7 @@ class Sign2VecConfig(Wav2Vec2Config):
         self.conv_stride = conv_stride
         self.conv_kernel = conv_kernel
         self.num_feat_extract_layers = num_feat_extract_layers
+        self.encoder_type = encoder_type
 
         # Feature extractor config
         self.do_normalize = do_normalize

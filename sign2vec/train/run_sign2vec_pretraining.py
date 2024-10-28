@@ -346,8 +346,8 @@ class DataCollatorForSign2VecPretraining:
 
         mask_indices_seq_length = self.model._get_feat_extract_output_lengths(batch["input_values"].shape[-1])
         # make sure masked sequence length is a Python scalar
-        mask_indices_seq_length = int(mask_indices_seq_length)
-
+        mask_indices_seq_length = int(mask_indices_seq_length) if self.model.config.encoder_type == 'conv_layer' else batch["input_values"].shape[-1]
+        
         # make sure that no loss is computed on padded inputs
         if batch.get("attention_mask") is not None:
             # compute real output lengths according to convolution formula
@@ -556,6 +556,7 @@ def main():
     print('Training dataset size:', len(train_dataset))
     sample = next(iter(train_dataloader))
     print('Sample:', sample.keys())
+    print('Input values:', sample['input_values'])
     print('Input values:', sample['input_values'].shape)
     print('Mask time indices:', sample['mask_time_indices'].shape)
     print('Sampled negative indices:', sample['sampled_negative_indices'].shape)

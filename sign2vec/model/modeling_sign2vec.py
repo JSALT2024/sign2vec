@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Wav2Vec2 model."""
+"""PyTorch Sign2Vec model."""
 
 import math
 import warnings
@@ -51,11 +51,10 @@ from transformers.utils import (
     logging,
     replace_return_docstrings,
 )
-from transformers.models.wav2vec2.configuration_wav2vec2 import Wav2Vec2Config
+from sign2vec.utils.config import Sign2VecConfig
 
-
-WAV2VEC2_ADAPTER_PT_FILE = "adapter.{}.bin"
-WAV2VEC2_ADAPTER_SAFE_FILE = "adapter.{}.safetensors"
+SIGN2VEC_ADAPTER_PT_FILE = "adapter.{}.bin"
+SIGN2VEC_ADAPTER_SAFE_FILE = "adapter.{}.safetensors"
 
 if is_safetensors_available():
     from safetensors.torch import load_file as safe_load_file
@@ -70,7 +69,7 @@ logger = logging.get_logger(__name__)
 _HIDDEN_STATES_START_POSITION = 2
 
 # General docstring
-_CONFIG_FOR_DOC = "Wav2Vec2Config"
+_CONFIG_FOR_DOC = "Sign2VecConfig"
 
 # Base docstring
 _CHECKPOINT_FOR_DOC = "facebook/wav2vec2-base-960h"
@@ -95,9 +94,9 @@ _XVECTOR_EXPECTED_OUTPUT = 0.98
 
 
 @dataclass
-class Wav2Vec2ForPreTrainingOutput(ModelOutput):
+class Sign2VecForPreTrainingOutput(ModelOutput):
     """
-    Output type of [`Wav2Vec2ForPreTraining`], with potential hidden states and attentions.
+    Output type of [`Sign2VecForPreTraining`], with potential hidden states and attentions.
 
     Args:
         loss (*optional*, returned when `sample_negative_indices` are passed, `torch.FloatTensor` of shape `(1,)`):
@@ -363,7 +362,7 @@ class Sign2VecGroupNormConvLayer(nn.Module):
         return hidden_states
 
 
-class Wav2Vec2PositionalConvEmbedding(nn.Module):
+class Sign2VecPositionalConvEmbedding(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.conv = nn.Conv1d(
@@ -394,7 +393,7 @@ class Wav2Vec2PositionalConvEmbedding(nn.Module):
         else:
             self.conv = weight_norm(self.conv, name="weight", dim=2)
 
-        self.padding = Wav2Vec2SamePadLayer(config.num_conv_pos_embeddings)
+        self.padding = Sign2VecSamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
 
     def forward(self, hidden_states):
@@ -408,7 +407,7 @@ class Wav2Vec2PositionalConvEmbedding(nn.Module):
         return hidden_states
 
 
-class Wav2Vec2SamePadLayer(nn.Module):
+class Sign2VecSamePadLayer(nn.Module):
     def __init__(self, num_conv_pos_embeddings):
         super().__init__()
         self.num_pad_remove = 1 if num_conv_pos_embeddings % 2 == 0 else 0
@@ -419,27 +418,51 @@ class Wav2Vec2SamePadLayer(nn.Module):
         return hidden_states
 
 
-class Wav2Vec2FeatureEncoder(nn.Module):
+class Sign2VecMLP(nn.Module):
+    def __init__(self, config, layer_id=0):
+        super().__init__()
+
+        self.input_dim = config.conv_dim[layer_id-1] if layer_id > 0 else config.input_dim
+        self.hidden_dim = config.conv_dim[layer_id]
+
+        self.mlp = nn.Sequential(
+            nn.Linear(self.input_dim, self.hidden_dim),
+            nn.GELU(),
+        )
+
+    def forward(self, hidden_states):
+        return self.mlp(hidden_states)
+
+
+class Sign2VecFeatureEncoder(nn.Module):
     """Construct the features from raw audio waveform"""
 
     def __init__(self, config):
         super().__init__()
 
-        if config.feat_extract_norm == "group":
-            conv_layers = [Sign2VecGroupNormConvLayer(config, layer_id=0)] + [
-                Sign2VecGroupNormConvLayer(config, layer_id=i + 1) for i in range(config.num_feat_extract_layers - 1)
-            ]
-        elif config.feat_extract_norm == "layer":
-            conv_layers = [
-                Sign2VecLayerNormConvLayer(config, layer_id=i) for i in range(config.num_feat_extract_layers)
-            ]
-        else:
-            raise ValueError(
-                f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
-            )
-        self.conv_layers = nn.ModuleList(conv_layers)
+        if config.encoder_type == "conv_layers":
+            if config.feat_extract_norm == "group":
+                conv_layers = [Sign2VecGroupNormConvLayer(config, layer_id=0)] + [
+                    Sign2VecGroupNormConvLayer(config, layer_id=i + 1) for i in range(config.num_feat_extract_layers - 1)
+                ]
+            elif config.feat_extract_norm == "layer":
+                conv_layers = [
+                    Sign2VecLayerNormConvLayer(config, layer_id=i) for i in range(config.num_feat_extract_layers)
+                ]
+            else:
+                raise ValueError(
+                    f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
+                )
+            self.conv_layers = nn.ModuleList(conv_layers)
+        elif config.encoder_type == "linear":
+            print("Linear encoder using MLP")
+            self.conv_layers = nn.ModuleList([
+                Sign2VecMLP(config, layer_id=i) for i in range(config.num_feat_extract_layers)
+            ])
+
         self.gradient_checkpointing = False
         self._requires_grad = True
+        self.config = config
 
     def _freeze_parameters(self):
         for param in self.parameters():
@@ -451,6 +474,8 @@ class Wav2Vec2FeatureEncoder(nn.Module):
         # Copy input_values to hidden_states to keep the same variable name 
         # hidden_states = input_values[:,None]
         hidden_states = input_values
+        if self.config.encoder_type == "linear":
+            hidden_states = hidden_states.transpose(1, 2)
 
         # make sure hidden_states require grad for gradient_checkpointing
         if self._requires_grad and self.training:
@@ -465,10 +490,13 @@ class Wav2Vec2FeatureEncoder(nn.Module):
             else:
                 hidden_states = conv_layer(hidden_states)
 
+        if self.config.encoder_type == "linear":
+            hidden_states = hidden_states.transpose(1, 2)
+
         return hidden_states
 
 
-class Wav2Vec2FeatureExtractor(Wav2Vec2FeatureEncoder):
+class Sign2VecFeatureExtractor(Sign2VecFeatureEncoder):
     def __init__(self, config):
         super().__init__(config)
         warnings.warn(
@@ -479,7 +507,7 @@ class Wav2Vec2FeatureExtractor(Wav2Vec2FeatureEncoder):
         )
 
 
-class Wav2Vec2FeatureProjection(nn.Module):
+class Sign2VecFeatureProjection(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.layer_norm = nn.LayerNorm(config.conv_dim[-1], eps=config.layer_norm_eps)
@@ -494,8 +522,8 @@ class Wav2Vec2FeatureProjection(nn.Module):
         return hidden_states, norm_hidden_states
 
 
-# Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->Wav2Vec2
-class Wav2Vec2Attention(nn.Module):
+# Copied from transformers.models.bart.modeling_bart.BartAttention with Bart->Sign2Vec
+class Sign2VecAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(
@@ -506,7 +534,7 @@ class Wav2Vec2Attention(nn.Module):
         is_decoder: bool = False,
         bias: bool = True,
         is_causal: bool = False,
-        config: Optional[Wav2Vec2Config] = None,
+        config: Optional[Sign2VecConfig] = None,
     ):
         super().__init__()
         self.embed_dim = embed_dim
@@ -653,10 +681,10 @@ class Wav2Vec2Attention(nn.Module):
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-# Copied from transformers.models.bart.modeling_bart.BartFlashAttention2 with Bart->Wav2Vec2
-class Wav2Vec2FlashAttention2(Wav2Vec2Attention):
+# Copied from transformers.models.bart.modeling_bart.BartFlashAttention2 with Bart->Sign2Vec
+class Sign2VecFlashAttention2(Sign2VecAttention):
     """
-    Wav2Vec2 flash attention module. This module inherits from `Wav2Vec2Attention` as the weights of the module stays
+    Sign2Vec flash attention module. This module inherits from `Sign2VecAttention` as the weights of the module stays
     untouched. The only required change would be on the forward pass where it needs to correctly call the public API of
     flash attention and deal with padding tokens in case the input contains any of them.
     """
@@ -682,9 +710,9 @@ class Wav2Vec2FlashAttention2(Wav2Vec2Attention):
         layer_head_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
-        # Wav2Vec2FlashAttention2 attention does not support output_attentions
+        # Sign2VecFlashAttention2 attention does not support output_attentions
         if output_attentions:
-            raise ValueError("Wav2Vec2FlashAttention2 attention does not support output_attentions")
+            raise ValueError("Sign2VecFlashAttention2 attention does not support output_attentions")
 
         # if key_value_states are provided this layer is used as a cross-attention layer
         # for the decoder
@@ -781,8 +809,8 @@ class Wav2Vec2FlashAttention2(Wav2Vec2Attention):
         return attn_output, attn_weights, past_key_value
 
 
-class Wav2Vec2SdpaAttention(Wav2Vec2Attention):
-    # Copied from transformers.models.bart.modeling_bart.BartSdpaAttention.forward with Bart->Wav2Vec2
+class Sign2VecSdpaAttention(Sign2VecAttention):
+    # Copied from transformers.models.bart.modeling_bart.BartSdpaAttention.forward with Bart->Sign2Vec
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -796,7 +824,7 @@ class Wav2Vec2SdpaAttention(Wav2Vec2Attention):
         if output_attentions or layer_head_mask is not None:
             # TODO: Improve this warning with e.g. `model.config._attn_implementation = "manual"` once this is implemented.
             logger.warning_once(
-                "Wav2Vec2Model is using Wav2Vec2SdpaAttention, but `torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True` or `layer_head_mask` not None. Falling back to the manual attention"
+                "Sign2VecModel is using Sign2VecSdpaAttention, but `torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True` or `layer_head_mask` not None. Falling back to the manual attention"
                 ' implementation, but specifying the manual implementation will be required from Transformers version v5.0.0 onwards. This warning can be removed using the argument `attn_implementation="eager"` when loading the model.'
             )
             return super().forward(
@@ -888,14 +916,14 @@ class Wav2Vec2SdpaAttention(Wav2Vec2Attention):
         return attn_output, None, past_key_value
 
 
-WAV2VEC2_ATTENTION_CLASSES = {
-    "eager": Wav2Vec2Attention,
-    "sdpa": Wav2Vec2SdpaAttention,
-    "flash_attention_2": Wav2Vec2FlashAttention2,
+SIGN2VEC_ATTENTION_CLASSES = {
+    "eager": Sign2VecAttention,
+    "sdpa": Sign2VecSdpaAttention,
+    "flash_attention_2": Sign2VecFlashAttention2,
 }
 
 
-class Wav2Vec2FeedForward(nn.Module):
+class Sign2VecFeedForward(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.intermediate_dropout = nn.Dropout(config.activation_dropout)
@@ -919,10 +947,10 @@ class Wav2Vec2FeedForward(nn.Module):
         return hidden_states
 
 
-class Wav2Vec2EncoderLayer(nn.Module):
+class Sign2VecEncoderLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.attention = WAV2VEC2_ATTENTION_CLASSES[config._attn_implementation](
+        self.attention = SIGN2VEC_ATTENTION_CLASSES[config._attn_implementation](
             embed_dim=config.hidden_size,
             num_heads=config.num_attention_heads,
             dropout=config.attention_dropout,
@@ -931,7 +959,7 @@ class Wav2Vec2EncoderLayer(nn.Module):
 
         self.dropout = nn.Dropout(config.hidden_dropout)
         self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.feed_forward = Wav2Vec2FeedForward(config)
+        self.feed_forward = Sign2VecFeedForward(config)
         self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
     def forward(self, hidden_states, attention_mask=None, output_attentions=False):
@@ -954,10 +982,10 @@ class Wav2Vec2EncoderLayer(nn.Module):
         return outputs
 
 
-class Wav2Vec2EncoderLayerStableLayerNorm(nn.Module):
+class Sign2VecEncoderLayerStableLayerNorm(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.attention = WAV2VEC2_ATTENTION_CLASSES[config._attn_implementation](
+        self.attention = SIGN2VEC_ATTENTION_CLASSES[config._attn_implementation](
             embed_dim=config.hidden_size,
             num_heads=config.num_attention_heads,
             dropout=config.attention_dropout,
@@ -965,11 +993,11 @@ class Wav2Vec2EncoderLayerStableLayerNorm(nn.Module):
         )
         self.dropout = nn.Dropout(config.hidden_dropout)
         self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.feed_forward = Wav2Vec2FeedForward(config)
+        self.feed_forward = Sign2VecFeedForward(config)
         self.final_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
         if getattr(config, "adapter_attn_dim", None) is not None:
-            self.adapter_layer = Wav2Vec2AttnAdapterLayer(config)
+            self.adapter_layer = Sign2VecAttnAdapterLayer(config)
         else:
             self.adapter_layer = None
 
@@ -999,14 +1027,14 @@ class Wav2Vec2EncoderLayerStableLayerNorm(nn.Module):
         return outputs
 
 
-class Wav2Vec2Encoder(nn.Module):
+class Sign2VecEncoder(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.pos_conv_embed = Wav2Vec2PositionalConvEmbedding(config)
+        self.pos_conv_embed = Sign2VecPositionalConvEmbedding(config)
         self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout)
-        self.layers = nn.ModuleList([Wav2Vec2EncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([Sign2VecEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
         self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
 
@@ -1084,15 +1112,15 @@ class Wav2Vec2Encoder(nn.Module):
         )
 
 
-class Wav2Vec2EncoderStableLayerNorm(nn.Module):
+class Sign2VecEncoderStableLayerNorm(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.pos_conv_embed = Wav2Vec2PositionalConvEmbedding(config)
+        self.pos_conv_embed = Sign2VecPositionalConvEmbedding(config)
         self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout)
         self.layers = nn.ModuleList(
-            [Wav2Vec2EncoderLayerStableLayerNorm(config) for _ in range(config.num_hidden_layers)]
+            [Sign2VecEncoderLayerStableLayerNorm(config) for _ in range(config.num_hidden_layers)]
         )
         self.gradient_checkpointing = False
         self._use_flash_attention_2 = config._attn_implementation == "flash_attention_2"
@@ -1173,7 +1201,7 @@ class Wav2Vec2EncoderStableLayerNorm(nn.Module):
         )
 
 
-class Wav2Vec2GumbelVectorQuantizer(nn.Module):
+class Sign2VecGumbelVectorQuantizer(nn.Module):
     """
     Vector quantization using gumbel softmax. See `[CATEGORICAL REPARAMETERIZATION WITH
     GUMBEL-SOFTMAX](https://arxiv.org/pdf/1611.01144.pdf) for more information.
@@ -1249,7 +1277,7 @@ class Wav2Vec2GumbelVectorQuantizer(nn.Module):
         return codevectors, perplexity
 
 
-class Wav2Vec2Adapter(nn.Module):
+class Sign2VecAdapter(nn.Module):
     def __init__(self, config):
         super().__init__()
 
@@ -1260,7 +1288,7 @@ class Wav2Vec2Adapter(nn.Module):
         else:
             self.proj = self.proj_layer_norm = None
 
-        self.layers = nn.ModuleList(Wav2Vec2AdapterLayer(config) for _ in range(config.num_adapter_layers))
+        self.layers = nn.ModuleList(Sign2VecAdapterLayer(config) for _ in range(config.num_adapter_layers))
         self.layerdrop = config.layerdrop
 
     def forward(self, hidden_states):
@@ -1280,7 +1308,7 @@ class Wav2Vec2Adapter(nn.Module):
         return hidden_states
 
 
-class Wav2Vec2AdapterLayer(nn.Module):
+class Sign2VecAdapterLayer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.conv = nn.Conv1d(
@@ -1298,7 +1326,7 @@ class Wav2Vec2AdapterLayer(nn.Module):
         return hidden_states
 
 
-class Wav2Vec2AttnAdapterLayer(nn.Module):
+class Sign2VecAttnAdapterLayer(nn.Module):
     def __init__(self, config):
         """
         Implements adapter modules directly with 3D tensor weight as parameters and without using ModuleList to speed
@@ -1323,14 +1351,14 @@ class Wav2Vec2AttnAdapterLayer(nn.Module):
         return hidden_states
 
 
-class Wav2Vec2PreTrainedModel(PreTrainedModel):
+class Sign2VecPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
 
-    config_class = Wav2Vec2Config
-    base_model_prefix = "wav2vec2"
+    config_class = Sign2VecConfig
+    base_model_prefix = "Sign2Vec"
     main_input_name = "input_values"
     supports_gradient_checkpointing = True
     _supports_flash_attn_2 = True
@@ -1338,25 +1366,25 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, module):
         """Initialize the weights"""
-        # Wav2Vec2ForPreTraining last 2 linear layers need standard Linear init.
+        # Sign2VecForPreTraining last 2 linear layers need standard Linear init.
         if isinstance(module, Sign2VecForPreTraining):
             module.project_hid.reset_parameters()
             module.project_q.reset_parameters()
             module.project_hid._is_hf_initialized = True
             module.project_q._is_hf_initialized = True
         # gumbel softmax requires special init
-        elif isinstance(module, Wav2Vec2GumbelVectorQuantizer):
+        elif isinstance(module, Sign2VecGumbelVectorQuantizer):
             module.weight_proj.weight.data.normal_(mean=0.0, std=1)
             module.weight_proj.bias.data.zero_()
             nn.init.uniform_(module.codevectors)
-        elif isinstance(module, Wav2Vec2PositionalConvEmbedding):
+        elif isinstance(module, Sign2VecPositionalConvEmbedding):
             nn.init.normal_(
                 module.conv.weight,
                 mean=0,
                 std=2 * math.sqrt(1 / (module.conv.kernel_size[0] * module.conv.in_channels)),
             )
             nn.init.constant_(module.conv.bias, 0)
-        elif isinstance(module, Wav2Vec2FeatureProjection):
+        elif isinstance(module, Sign2VecFeatureProjection):
             k = math.sqrt(1 / module.projection.in_features)
             nn.init.uniform_(module.projection.weight, a=-k, b=k)
             nn.init.uniform_(module.projection.bias, a=-k, b=k)
@@ -1424,11 +1452,11 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
 
         adapter_weights = {}
         for name, module in self.named_modules():
-            if isinstance(module, Wav2Vec2AttnAdapterLayer):
+            if isinstance(module, Sign2VecAttnAdapterLayer):
                 for param_name, param in module.named_parameters():
                     adapter_weights[".".join([name, param_name])] = param
 
-        if isinstance(self, Wav2Vec2ForCTC):
+        if isinstance(self, Sign2VecForCTC):
             for name, param in self.lm_head.named_parameters():
                 adapter_weights[".".join(["lm_head", name])] = param
 
@@ -1440,11 +1468,11 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
         """
         # init attention adapters
         for module in self.modules():
-            if isinstance(module, Wav2Vec2AttnAdapterLayer):
+            if isinstance(module, Sign2VecAttnAdapterLayer):
                 self._init_weights(module)
 
         # init lm head
-        if isinstance(self, Wav2Vec2ForCTC):
+        if isinstance(self, Sign2VecForCTC):
             self._init_weights(self.lm_head)
 
     def load_adapter(self, target_lang: str, force_load=True, **kwargs):
@@ -1500,11 +1528,11 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
         Examples:
 
         ```python
-        >>> from transformers import Wav2Vec2ForCTC, AutoProcessor
+        >>> from transformers import Sign2VecForCTC, AutoProcessor
 
         >>> ckpt = "facebook/mms-1b-all"
         >>> processor = AutoProcessor.from_pretrained(ckpt)
-        >>> model = Wav2Vec2ForCTC.from_pretrained(ckpt, target_lang="eng")
+        >>> model = Sign2VecForCTC.from_pretrained(ckpt, target_lang="eng")
         >>> # set specific language
         >>> processor.tokenizer.set_target_lang("spa")
         >>> model.load_adapter("spa")
@@ -1543,7 +1571,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
 
         # 1. Let's first try loading a safetensors adapter weight
         if use_safetensors is not False:
-            filepath = WAV2VEC2_ADAPTER_SAFE_FILE.format(target_lang)
+            filepath = SIGN2VEC_ADAPTER_SAFE_FILE.format(target_lang)
 
             try:
                 weight_path = cached_file(
@@ -1578,7 +1606,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
 
         # 2. If this didn't work let's try loading a PyTorch adapter weight
         if state_dict is None:
-            filepath = WAV2VEC2_ADAPTER_PT_FILE.format(target_lang)
+            filepath = SIGN2VEC_ADAPTER_PT_FILE.format(target_lang)
 
             try:
                 weight_path = cached_file(
@@ -1640,7 +1668,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
 
 
 WAV_2_VEC_2_START_DOCSTRING = r"""
-    Wav2Vec2 was proposed in [wav2vec 2.0: A Framework for Self-Supervised Learning of Speech
+    Sign2Vec was proposed in [wav2vec 2.0: A Framework for Self-Supervised Learning of Speech
     Representations](https://arxiv.org/abs/2006.11477) by Alexei Baevski, Henry Zhou, Abdelrahman Mohamed, Michael
     Auli.
 
@@ -1652,7 +1680,7 @@ WAV_2_VEC_2_START_DOCSTRING = r"""
     behavior.
 
     Parameters:
-        config ([`Wav2Vec2Config`]): Model configuration class with all the parameters of the model.
+        config ([`Sign2VecConfig`]): Model configuration class with all the parameters of the model.
             Initializing with a config file does not load the weights associated with the model, only the
             configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
 """
@@ -1664,7 +1692,7 @@ WAV_2_VEC_2_INPUTS_DOCSTRING = r"""
             Float values of input raw speech waveform. Values can be obtained by loading a `.flac` or `.wav` audio file
             into an array of type `List[float]` or a `numpy.ndarray`, *e.g.* via the soundfile library (`pip install
             soundfile`). To prepare the array into `input_values`, the [`AutoProcessor`] should be used for padding and
-            conversion into a tensor of type `torch.FloatTensor`. See [`Wav2Vec2Processor.__call__`] for details.
+            conversion into a tensor of type `torch.FloatTensor`. See [`Sign2VecProcessor.__call__`] for details.
         attention_mask (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
             Mask to avoid performing convolution and attention on padding token indices. Mask values selected in `[0,
             1]`:
@@ -1678,7 +1706,7 @@ WAV_2_VEC_2_INPUTS_DOCSTRING = r"""
 
             `attention_mask` should only be passed if the corresponding processor has `config.return_attention_mask ==
             True`. For all models whose processor has `config.return_attention_mask == False`, such as
-            [wav2vec2-base](https://huggingface.co/facebook/wav2vec2-base-960h), `attention_mask` should **not** be
+            [Sign2Vec-base](https://huggingface.co/facebook/Sign2Vec-base-960h), `attention_mask` should **not** be
             passed to avoid degraded performance when doing batched inference. For such models `input_values` should
             simply be padded with 0 and passed without `attention_mask`. Be aware that these models also yield slightly
             different results depending on whether `input_values` is padded or not.
@@ -1697,26 +1725,26 @@ WAV_2_VEC_2_INPUTS_DOCSTRING = r"""
 
 
 @add_start_docstrings(
-    "The bare Wav2Vec2 Model transformer outputting raw hidden-states without any specific head on top.",
+    "The bare Sign2Vec Model transformer outputting raw hidden-states without any specific head on top.",
     WAV_2_VEC_2_START_DOCSTRING,
 )
-class Wav2Vec2Model(Wav2Vec2PreTrainedModel):
-    def __init__(self, config: Wav2Vec2Config):
+class Sign2VecModel(Sign2VecPreTrainedModel):
+    def __init__(self, config: Sign2VecConfig):
         super().__init__(config)
         self.config = config
-        self.feature_extractor = Wav2Vec2FeatureEncoder(config)
-        self.feature_projection = Wav2Vec2FeatureProjection(config)
+        self.feature_extractor = Sign2VecFeatureEncoder(config)
+        self.feature_projection = Sign2VecFeatureProjection(config)
 
         # model only needs masking vector if mask prob is > 0.0
         if config.mask_time_prob > 0.0 or config.mask_feature_prob > 0.0:
             self.masked_spec_embed = nn.Parameter(torch.Tensor(config.hidden_size).uniform_())
 
         if config.do_stable_layer_norm:
-            self.encoder = Wav2Vec2EncoderStableLayerNorm(config)
+            self.encoder = Sign2VecEncoderStableLayerNorm(config)
         else:
-            self.encoder = Wav2Vec2Encoder(config)
+            self.encoder = Sign2VecEncoder(config)
 
-        self.adapter = Wav2Vec2Adapter(config) if config.add_adapter else None
+        self.adapter = Sign2VecAdapter(config) if config.add_adapter else None
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1847,14 +1875,14 @@ class Wav2Vec2Model(Wav2Vec2PreTrainedModel):
         )
 
 
-@add_start_docstrings("""Wav2Vec2 Model with a quantizer and `VQ` head on top.""", WAV_2_VEC_2_START_DOCSTRING)
-class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
-    def __init__(self, config: Wav2Vec2Config):
+@add_start_docstrings("""Sign2Vec Model with a quantizer and `VQ` head on top.""", WAV_2_VEC_2_START_DOCSTRING)
+class Sign2VecForPreTraining(Sign2VecPreTrainedModel):
+    def __init__(self, config: Sign2VecConfig):
         super().__init__(config)
-        self.wav2vec2 = Wav2Vec2Model(config)
+        self.Sign2Vec = Sign2VecModel(config)
         self.dropout_features = nn.Dropout(config.feat_quantizer_dropout)
 
-        self.quantizer = Wav2Vec2GumbelVectorQuantizer(config)
+        self.quantizer = Sign2VecGumbelVectorQuantizer(config)
 
         self.project_hid = nn.Linear(config.hidden_size, config.proj_codevector_dim)
         self.project_q = nn.Linear(config.codevector_dim, config.proj_codevector_dim)
@@ -1885,7 +1913,7 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
         Calling this function will disable the gradient computation for the feature encoder so that its parameter will
         not be updated during training.
         """
-        self.wav2vec2.feature_extractor._freeze_parameters()
+        self.Sign2Vec.feature_extractor._freeze_parameters()
 
     @staticmethod
     def compute_contrastive_logits(
@@ -1909,7 +1937,7 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
         return logits
 
     @add_start_docstrings_to_model_forward(WAV_2_VEC_2_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=Wav2Vec2ForPreTrainingOutput, config_class=_CONFIG_FOR_DOC)
+    @replace_return_docstrings(output_type=Sign2VecForPreTrainingOutput, config_class=_CONFIG_FOR_DOC)
     def forward(
         self,
         input_values: Optional[torch.Tensor],
@@ -1919,7 +1947,7 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, Wav2Vec2ForPreTrainingOutput]:
+    ) -> Union[Tuple, Sign2VecForPreTrainingOutput]:
         r"""
         mask_time_indices (`torch.BoolTensor` of shape `(batch_size, sequence_length)`, *optional*):
             Indices to mask extracted features for contrastive loss. When in training mode, model learns to predict
@@ -1934,12 +1962,12 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
 
         ```python
         >>> import torch
-        >>> from transformers import AutoFeatureExtractor, Wav2Vec2ForPreTraining
-        >>> from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
+        >>> from transformers import AutoFeatureExtractor, Sign2VecForPreTraining
+        >>> from transformers.models.Sign2Vec.modeling_Sign2Vec import _compute_mask_indices, _sample_negative_indices
         >>> from datasets import load_dataset
 
-        >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base")
-        >>> model = Wav2Vec2ForPreTraining.from_pretrained("facebook/wav2vec2-base")
+        >>> feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/Sign2Vec-base")
+        >>> model = Sign2VecForPreTraining.from_pretrained("facebook/Sign2Vec-base")
 
         >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
         >>> input_values = feature_extractor(ds[0]["audio"]["array"], return_tensors="pt").input_values  # Batch size 1
@@ -1982,7 +2010,7 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
         if mask_time_indices is not None:
             mask_time_indices = mask_time_indices.to(torch.bool)
 
-        outputs = self.wav2vec2(
+        outputs = self.Sign2Vec(
             input_values,
             attention_mask=attention_mask,
             output_attentions=output_attentions,
@@ -2059,7 +2087,7 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
                 return (loss, transformer_features, quantized_features, codevector_perplexity) + outputs[2:]
             return (transformer_features, quantized_features, codevector_perplexity) + outputs[2:]
 
-        return Wav2Vec2ForPreTrainingOutput(
+        return Sign2VecForPreTrainingOutput(
             loss=loss,
             projected_states=transformer_features,
             projected_quantized_states=quantized_features,
@@ -2071,16 +2099,16 @@ class Sign2VecForPreTraining(Wav2Vec2PreTrainedModel):
         )
 
 
-@add_start_docstrings("""Wav2Vec2 Model with a `language modeling` head on top.""", WAV_2_VEC_2_START_DOCSTRING)
-class Wav2Vec2ForMaskedLM(Wav2Vec2PreTrainedModel):
+@add_start_docstrings("""Sign2Vec Model with a `language modeling` head on top.""", WAV_2_VEC_2_START_DOCSTRING)
+class Sign2VecForMaskedLM(Sign2VecPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
         warnings.warn(
-            "The class `Wav2Vec2ForMaskedLM` is deprecated. Please use `Wav2Vec2ForCTC` instead.", FutureWarning
+            "The class `Sign2VecForMaskedLM` is deprecated. Please use `Sign2VecForCTC` instead.", FutureWarning
         )
 
-        self.wav2vec2 = Wav2Vec2Model(config)
+        self.Sign2Vec = Sign2VecModel(config)
         self.dropout = nn.Dropout(config.final_dropout)
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size)
 
@@ -2099,7 +2127,7 @@ class Wav2Vec2ForMaskedLM(Wav2Vec2PreTrainedModel):
     ) -> Union[Tuple, MaskedLMOutput]:
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        outputs = self.wav2vec2(
+        outputs = self.Sign2Vec(
             input_values,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
@@ -2118,20 +2146,20 @@ class Wav2Vec2ForMaskedLM(Wav2Vec2PreTrainedModel):
 
 
 @add_start_docstrings(
-    """Wav2Vec2 Model with a `language modeling` head on top for Connectionist Temporal Classification (CTC).""",
+    """Sign2Vec Model with a `language modeling` head on top for Connectionist Temporal Classification (CTC).""",
     WAV_2_VEC_2_START_DOCSTRING,
     """
         target_lang (`str`, *optional*):
             Language id of adapter weights. Adapter weights are stored in the format adapter.<lang>.safetensors or
-            adapter.<lang>.bin. Only relevant when using an instance of [`Wav2Vec2ForCTC`] with adapters. Uses 'eng' by
+            adapter.<lang>.bin. Only relevant when using an instance of [`Sign2VecForCTC`] with adapters. Uses 'eng' by
             default.
     """,
 )
-class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
+class Sign2VecForCTC(Sign2VecPreTrainedModel):
     def __init__(self, config, target_lang: Optional[str] = None):
         super().__init__(config)
 
-        self.wav2vec2 = Wav2Vec2Model(config)
+        self.Sign2Vec = Sign2VecModel(config)
         self.dropout = nn.Dropout(config.final_dropout)
 
         self.target_lang = target_lang
@@ -2140,7 +2168,7 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
             raise ValueError(
                 f"You are trying to instantiate {self.__class__} with a configuration that "
                 "does not define the vocabulary size of the language model head. Please "
-                "instantiate the model as follows: `Wav2Vec2ForCTC.from_pretrained(..., vocab_size=vocab_size)`. "
+                "instantiate the model as follows: `Sign2VecForCTC.from_pretrained(..., vocab_size=vocab_size)`. "
                 "or define `vocab_size` of your model's configuration."
             )
         output_hidden_size = (
@@ -2160,8 +2188,8 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
         """
 
         # Note that `tie_weights` is usually used to tie input and output embedding weights. The method is re-purposed to
-        # correctly load adapter layers for Wav2Vec2 so that we do not have to introduce a new API to
-        # [`PreTrainedModel`]. While slightly hacky, Wav2Vec2 never has to tie input and output embeddings, so that it is
+        # correctly load adapter layers for Sign2Vec so that we do not have to introduce a new API to
+        # [`PreTrainedModel`]. While slightly hacky, Sign2Vec never has to tie input and output embeddings, so that it is
         # ok to repurpose this function here.
         target_lang = self.target_lang
 
@@ -2189,14 +2217,14 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
         Calling this function will disable the gradient computation for the feature encoder so that its parameter will
         not be updated during training.
         """
-        self.wav2vec2.feature_extractor._freeze_parameters()
+        self.Sign2Vec.feature_extractor._freeze_parameters()
 
     def freeze_base_model(self):
         """
         Calling this function will disable the gradient computation for the base model so that its parameters will not
         be updated during training. Only the classification head will be updated.
         """
-        for param in self.wav2vec2.parameters():
+        for param in self.Sign2Vec.parameters():
             param.requires_grad = False
 
     @add_start_docstrings_to_model_forward(WAV_2_VEC_2_INPUTS_DOCSTRING)
@@ -2228,7 +2256,7 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
         if labels is not None and labels.max() >= self.config.vocab_size:
             raise ValueError(f"Label values must be <= vocab_size: {self.config.vocab_size}")
 
-        outputs = self.wav2vec2(
+        outputs = self.Sign2Vec(
             input_values,
             attention_mask=attention_mask,
             output_attentions=output_attentions,
@@ -2280,20 +2308,20 @@ class Wav2Vec2ForCTC(Wav2Vec2PreTrainedModel):
 
 @add_start_docstrings(
     """
-    Wav2Vec2 Model with a sequence classification head on top (a linear layer over the pooled output) for tasks like
+    Sign2Vec Model with a sequence classification head on top (a linear layer over the pooled output) for tasks like
     SUPERB Keyword Spotting.
     """,
     WAV_2_VEC_2_START_DOCSTRING,
 )
-class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
+class Sign2VecForSequenceClassification(Sign2VecPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
         if hasattr(config, "add_adapter") and config.add_adapter:
             raise ValueError(
-                "Sequence classification does not support the use of Wav2Vec2 adapters (config.add_adapter=True)"
+                "Sequence classification does not support the use of Sign2Vec adapters (config.add_adapter=True)"
             )
-        self.wav2vec2 = Wav2Vec2Model(config)
+        self.Sign2Vec = Sign2VecModel(config)
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = nn.Parameter(torch.ones(num_layers) / num_layers)
@@ -2320,14 +2348,14 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
         Calling this function will disable the gradient computation for the feature encoder so that its parameter will
         not be updated during training.
         """
-        self.wav2vec2.feature_extractor._freeze_parameters()
+        self.Sign2Vec.feature_extractor._freeze_parameters()
 
     def freeze_base_model(self):
         """
         Calling this function will disable the gradient computation for the base model so that its parameters will not
         be updated during training. Only the classification head will be updated.
         """
-        for param in self.wav2vec2.parameters():
+        for param in self.Sign2Vec.parameters():
             param.requires_grad = False
 
     @add_start_docstrings_to_model_forward(WAV_2_VEC_2_INPUTS_DOCSTRING)
@@ -2358,7 +2386,7 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = True if self.config.use_weighted_layer_sum else output_hidden_states
 
-        outputs = self.wav2vec2(
+        outputs = self.Sign2Vec(
             input_values,
             attention_mask=attention_mask,
             output_attentions=output_attentions,
@@ -2403,19 +2431,19 @@ class Wav2Vec2ForSequenceClassification(Wav2Vec2PreTrainedModel):
 
 @add_start_docstrings(
     """
-    Wav2Vec2 Model with a frame classification head on top for tasks like Speaker Diarization.
+    Sign2Vec Model with a frame classification head on top for tasks like Speaker Diarization.
     """,
     WAV_2_VEC_2_START_DOCSTRING,
 )
-class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
+class Sign2VecForAudioFrameClassification(Sign2VecPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
         if hasattr(config, "add_adapter") and config.add_adapter:
             raise ValueError(
-                "Audio frame classification does not support the use of Wav2Vec2 adapters (config.add_adapter=True)"
+                "Audio frame classification does not support the use of Sign2Vec adapters (config.add_adapter=True)"
             )
-        self.wav2vec2 = Wav2Vec2Model(config)
+        self.Sign2Vec = Sign2VecModel(config)
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = nn.Parameter(torch.ones(num_layers) / num_layers)
@@ -2441,14 +2469,14 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
         Calling this function will disable the gradient computation for the feature encoder so that its parameter will
         not be updated during training.
         """
-        self.wav2vec2.feature_extractor._freeze_parameters()
+        self.Sign2Vec.feature_extractor._freeze_parameters()
 
     def freeze_base_model(self):
         """
         Calling this function will disable the gradient computation for the base model so that its parameters will not
         be updated during training. Only the classification head will be updated.
         """
-        for param in self.wav2vec2.parameters():
+        for param in self.Sign2Vec.parameters():
             param.requires_grad = False
 
     @add_start_docstrings_to_model_forward(WAV_2_VEC_2_INPUTS_DOCSTRING)
@@ -2478,7 +2506,7 @@ class Wav2Vec2ForAudioFrameClassification(Wav2Vec2PreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = True if self.config.use_weighted_layer_sum else output_hidden_states
 
-        outputs = self.wav2vec2(
+        outputs = self.Sign2Vec(
             input_values,
             attention_mask=attention_mask,
             output_attentions=output_attentions,
@@ -2569,15 +2597,15 @@ class TDNNLayer(nn.Module):
 
 @add_start_docstrings(
     """
-    Wav2Vec2 Model with an XVector feature extraction head on top for tasks like Speaker Verification.
+    Sign2Vec Model with an XVector feature extraction head on top for tasks like Speaker Verification.
     """,
     WAV_2_VEC_2_START_DOCSTRING,
 )
-class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
+class Sign2VecForXVector(Sign2VecPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
-        self.wav2vec2 = Wav2Vec2Model(config)
+        self.Sign2Vec = Sign2VecModel(config)
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
             self.layer_weights = nn.Parameter(torch.ones(num_layers) / num_layers)
@@ -2610,14 +2638,14 @@ class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
         Calling this function will disable the gradient computation for the feature encoder so that its parameter will
         not be updated during training.
         """
-        self.wav2vec2.feature_extractor._freeze_parameters()
+        self.Sign2Vec.feature_extractor._freeze_parameters()
 
     def freeze_base_model(self):
         """
         Calling this function will disable the gradient computation for the base model so that its parameters will not
         be updated during training. Only the classification head will be updated.
         """
-        for param in self.wav2vec2.parameters():
+        for param in self.Sign2Vec.parameters():
             param.requires_grad = False
 
     def _get_tdnn_output_lengths(self, input_lengths: Union[torch.LongTensor, int]):
@@ -2662,7 +2690,7 @@ class Wav2Vec2ForXVector(Wav2Vec2PreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_hidden_states = True if self.config.use_weighted_layer_sum else output_hidden_states
 
-        outputs = self.wav2vec2(
+        outputs = self.Sign2Vec(
             input_values,
             attention_mask=attention_mask,
             output_attentions=output_attentions,

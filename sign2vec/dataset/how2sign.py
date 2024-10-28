@@ -32,17 +32,20 @@ class How2SignForPose(Dataset):
         h5_fpath,
         transform='yasl',
         max_instances=None,
+        zero_mean=False,
     ):
         self.transform = transform
         self.h5file = h5py.File(h5_fpath, "r")
         self.max_instances = max_instances
+        self.zero_mean = zero_mean
 
     def __len__(self):
         return len(list(self.h5file.keys())) if self.max_instances is None else self.max_instances
 
     def __getitem__(self, idx):
 
-        data = self.h5file[list(self.h5file.keys())[idx]]
+        clip_id = list(self.h5file.keys())[idx]
+        data = self.h5file[clip_id]
 
         pose_landmarks = data["joints"]["pose_landmarks"][()]
         face_landmarks = data["joints"]["face_landmarks"][()]
@@ -85,7 +88,13 @@ class How2SignForPose(Dataset):
         # Check if keypoints are in the correct shape
         assert keypoints.shape[-1] == 255, "Key points are not in the correct shape"
 
-        return keypoints, sentence
+        # Apply zero mean normalization to each keypoint dim
+        if self.zero_mean: keypoints = (keypoints - keypoints.mean(dim=0)) / keypoints.std(dim=0)
+
+        # Replace NaN values with 0
+        torch.nan_to_num_(keypoints, nan=0.0)
+
+        return clip_id, keypoints, sentence
 
 
 class How2SignForSign2Vec(Dataset):
@@ -103,7 +112,8 @@ class How2SignForSign2Vec(Dataset):
 
     def __getitem__(self, idx):
         
-        data = self.h5file[list(self.h5file.keys())[idx]]
+        clip_id = list(self.h5file.keys())[idx]
+        data = self.h5file[clip_id]
 
         sign2vec = data["features"][()]
         sentence = data["sentence"][()].decode("utf-8")
@@ -125,7 +135,8 @@ class How2SignForMAE(Dataset):
 
     def __getitem__(self, idx):
         
-        data = self.h5file[list(self.h5file.keys())[idx]]
+        clip_id = list(self.h5file.keys())[idx]
+        data = self.h5file[clip_id]
 
         sign2vec = data["features"][()]
         sentence = data["sentence"][()].decode("utf-8")
@@ -140,7 +151,7 @@ class How2SignForSLT(How2SignForPose, How2SignForSign2Vec):
         mode="train",
         input_type="pose",
         skip_frames=True,
-        transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
+        transform='yasl',
         max_token_length=128,
         max_sequence_length=250,
         tokenizer="google-t5/t5-small",
@@ -165,9 +176,9 @@ class How2SignForSLT(How2SignForPose, How2SignForSign2Vec):
     def __getitem__(self, idx):
         # Get the keypoints and the sentence
         if self.input_type == "pose":
-            keypoints, sentence = How2SignForPose.__getitem__(self, idx)
+            file_id, keypoints, sentence = How2SignForPose.__getitem__(self, idx)
         elif self.input_type == "sign2vec":
-            keypoints, sentence = How2SignForSign2Vec.__getitem__(self, idx)
+            file_id, keypoints, sentence = How2SignForSign2Vec.__getitem__(self, idx)
 
         # Tokenize the sentence
         decoder_input_ids = self.tokenizer(
@@ -201,7 +212,7 @@ class How2SignForSign2VecPretraining(How2SignForPose):
         self,
         h5_fpath,
         mode="train",
-        transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
+        transform='yasl',
         skip_frames=False,
         max_sequence_length=None,
     ):
@@ -215,7 +226,7 @@ class How2SignForSign2VecPretraining(How2SignForPose):
         super(How2SignForSign2VecPretraining, self).__init__(h5_fpath, transform)
 
     def __getitem__(self, idx):
-        keypoints, _ = super(How2SignForSign2VecPretraining, self).__getitem__(idx)
+        _, keypoints, _ = super(How2SignForSign2VecPretraining, self).__getitem__(idx)
         if self.skip_frames: keypoints = keypoints[::2]
         if self.max_sequence_length: keypoints = keypoints[: self.max_sequence_length]
         return {

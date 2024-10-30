@@ -504,9 +504,9 @@ class Sign2VecFeatureEncoder(nn.Module):
                         hidden_states,
                     )
                 else:
-                    print(f"Mixed conv layer: {layer_id}")
-                    print(f"Layer: {conv_layer}")
-                    print(f"Hidden states shape: {hidden_states.shape}")
+                    # print(f"Mixed conv layer: {layer_id}")
+                    # print(f"Layer: {conv_layer}")
+                    # print(f"Hidden states shape: {hidden_states.shape}")
                     hidden_states = self._gradient_checkpointing_func(
                         conv_layer.__call__,
                         hidden_states,
@@ -519,9 +519,9 @@ class Sign2VecFeatureEncoder(nn.Module):
                     hidden_states = conv_layer(hidden_states)
                 
                 else:
-                    print(f"Mixed conv layer: {layer_id}")
-                    print(f"Layer: {conv_layer}")
-                    print(f"Hidden states shape: {hidden_states.shape}")
+                    # print(f"Mixed conv layer: {layer_id}")
+                    # print(f"Layer: {conv_layer}")
+                    # print(f"Hidden states shape: {hidden_states.shape}")
                     hidden_states = conv_layer(hidden_states)
                     # If mixed, we need to transpose the hidden states for the linear layers
                     if layer_id + 1 == self.config.num_linear_feat_extract_layers:

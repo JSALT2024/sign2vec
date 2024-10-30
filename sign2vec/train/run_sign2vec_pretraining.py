@@ -346,8 +346,15 @@ class DataCollatorForSign2VecPretraining:
 
         mask_indices_seq_length = self.model._get_feat_extract_output_lengths(batch["input_values"].shape[-1])
         # make sure masked sequence length is a Python scalar
-        mask_indices_seq_length = int(mask_indices_seq_length) if self.model.config.encoder_type == 'conv_layer' else batch["input_values"].shape[-1]
-        
+        mask_indices_seq_length = (
+            int(mask_indices_seq_length)
+            if (
+                self.model.config.encoder_type == "conv_layers"
+                or self.model.config.encoder_type == "mixed"
+            )
+            else batch["input_values"].shape[-1]
+        )
+
         # make sure that no loss is computed on padded inputs
         if batch.get("attention_mask") is not None:
             # compute real output lengths according to convolution formula
@@ -371,6 +378,7 @@ class DataCollatorForSign2VecPretraining:
             self.model.config.num_negatives,
             mask_time_indices=mask_time_indices,
         )
+
         batch["mask_time_indices"] = torch.tensor(mask_time_indices, dtype=torch.long, device=device)
         batch["sampled_negative_indices"] = torch.tensor(sampled_negative_indices, dtype=torch.long, device=device)
 
@@ -416,12 +424,13 @@ def main():
             transformers.utils.logging.set_verbosity_info()
 
             # set up weights and biases if available
-            if is_wandb_available():
+            if is_wandb_available() and not args.debug:
                 wandb.init(
                     project='sign2vec-v1',
                     entity="boun-pilab",
                     name=args.run_name,
                     tags=args.tags,
+                    config={**vars(args), **kwargs},
                 )
         else:
             transformers.utils.logging.set_verbosity_error()
@@ -455,16 +464,12 @@ def main():
         accelerator.wait_for_everyone()
 
         return accelerator, repo_id, api
-    
-    accelerator, repo_id, api = _accelerate(args.output_dir)
 
     # 3. Load model
     config = Sign2VecConfig().load_from_yaml(args.model_config_file)
+    
+    accelerator, repo_id, api = _accelerate(args.output_dir, )
 
-    # 2. Now we preprocess the datasets including loading the audio, resampling and normalization
-    # Thankfully, `datasets` takes care of automatically loading and resampling the audio,
-    # so that we just need to set the correct target sampling rate and normalize the input
-    # via the `feature_extractor`
     feature_extractor = Sign2VecFeatureExtractor(config=config)
 
     # set max & min audio length in number of samples
@@ -503,14 +508,16 @@ def main():
             h5_fpath=args.dataset_path,
             max_sequence_length=max_length,
             transform=None,
-            mode=args.datasets[0]
+            mode=args.datasets[0],
+            max_instances=100 if args.debug else None
         )
 
         eval_dataset = How2SignForSign2VecPretraining(
             h5_fpath=args.dataset_path,
             max_sequence_length=max_length,
             transform=None,
-            mode=args.datasets[1]
+            mode=args.datasets[1],
+            max_instances=100 if args.debug else None
         )
     elif args.dataset_name == 'YoutubeASL':
         from sign2vec.dataset.yasl import YoutubeASLForSign2VecPretraining

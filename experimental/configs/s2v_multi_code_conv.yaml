@@ -5,7 +5,7 @@ input_dim: 255
 codevector_dim: 256
 num_codevector_groups: 2
 num_codevectors_per_group: 512
-encoder_type: mixed
+encoder_type: conv_layers
 is_multicue: false
 min_length: 0
 max_length: 20

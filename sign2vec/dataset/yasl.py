@@ -94,6 +94,9 @@ class YoutubeASLForPose(Dataset):
         if self.zero_mean:
             keypoints = (keypoints - keypoints.mean(dim=0)) / keypoints.std(dim=0)
 
+        # Replace NaN, Inf values with 0
+        torch.nan_to_num_(keypoints, nan=0.0, posinf=0.0, neginf=0.0)
+
         return keypoints #, sentence
 
 

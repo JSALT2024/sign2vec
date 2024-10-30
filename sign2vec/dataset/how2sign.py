@@ -215,6 +215,7 @@ class How2SignForSign2VecPretraining(How2SignForPose):
         transform='yasl',
         skip_frames=False,
         max_sequence_length=None,
+        max_instances=None,
     ):
         
         self.mode = mode
@@ -223,7 +224,7 @@ class How2SignForSign2VecPretraining(How2SignForPose):
         self.max_sequence_length = max_sequence_length
         self.skip_frames = skip_frames
 
-        super(How2SignForSign2VecPretraining, self).__init__(h5_fpath, transform)
+        super(How2SignForSign2VecPretraining, self).__init__(h5_fpath, transform, max_instances)
 
     def __getitem__(self, idx):
         _, keypoints, _ = super(How2SignForSign2VecPretraining, self).__getitem__(idx)

@@ -13,7 +13,8 @@ temperature: 1.0
 num_negatives: 100
 num_hidden_layers: 12
 diversity_loss_weight: 0.1
-num_feat_extract_layers: 2
+num_linear_feat_extract_layers: 2
+num_conv_feat_extract_layers: 4
 do_normalize: false
 conv_dim:
 - 512

@@ -294,6 +294,7 @@ class Sign2VecNoLayerNormConvLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.input_dim
+        self.in_conv_dim = self.in_conv_dim if config.encoder_type == "conv_layers" else config.conv_dim[0]
         self.out_conv_dim = config.conv_dim[layer_id]
 
         self.conv = nn.Conv1d(
@@ -342,6 +343,7 @@ class Sign2VecGroupNormConvLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.input_dim
+        self.in_conv_dim = self.in_conv_dim if config.encoder_type == "conv_layers" else config.conv_dim[0]
         self.out_conv_dim = config.conv_dim[layer_id]
 
         self.conv = nn.Conv1d(
@@ -423,6 +425,7 @@ class Sign2VecMLP(nn.Module):
         super().__init__()
 
         self.input_dim = config.conv_dim[layer_id-1] if layer_id > 0 else config.input_dim
+        self.in_conv_dim = self.in_conv_dim if config.encoder_type == "conv_layers" else config.conv_dim[0]
         self.hidden_dim = config.conv_dim[layer_id]
 
         self.mlp = nn.Sequential(
@@ -443,22 +446,34 @@ class Sign2VecFeatureEncoder(nn.Module):
         if config.encoder_type == "conv_layers":
             if config.feat_extract_norm == "group":
                 conv_layers = [Sign2VecGroupNormConvLayer(config, layer_id=0)] + [
-                    Sign2VecGroupNormConvLayer(config, layer_id=i + 1) for i in range(config.num_feat_extract_layers - 1)
+                    Sign2VecGroupNormConvLayer(config, layer_id=i + 1) for i in range(config.num_conv_feat_extract_layers - 1)
                 ]
             elif config.feat_extract_norm == "layer":
                 conv_layers = [
-                    Sign2VecLayerNormConvLayer(config, layer_id=i) for i in range(config.num_feat_extract_layers)
+                    Sign2VecLayerNormConvLayer(config, layer_id=i) for i in range(config.num_conv_feat_extract_layers)
                 ]
             else:
                 raise ValueError(
                     f"`config.feat_extract_norm` is {config.feat_extract_norm}, but has to be one of ['group', 'layer']"
                 )
             self.conv_layers = nn.ModuleList(conv_layers)
+
         elif config.encoder_type == "linear":
             print("Linear encoder using MLP")
             self.conv_layers = nn.ModuleList([
-                Sign2VecMLP(config, layer_id=i) for i in range(config.num_feat_extract_layers)
+                Sign2VecMLP(config, layer_id=i) for i in range(config.num_linear_feat_extract_layers)
             ])
+
+        elif config.encoder_type == 'mixed':
+            # First linear then conv layers
+            self.conv_layers = nn.ModuleList(
+                [
+                    Sign2VecMLP(config, layer_id=i) for i in range(config.num_linear_feat_extract_layers)
+                ] + [
+                    Sign2VecGroupNormConvLayer(config, layer_id=i) for i in range(config.num_conv_feat_extract_layers)
+                ]
+            )
+
 
         self.gradient_checkpointing = False
         self._requires_grad = True
@@ -474,21 +489,43 @@ class Sign2VecFeatureEncoder(nn.Module):
         # Copy input_values to hidden_states to keep the same variable name 
         # hidden_states = input_values[:,None]
         hidden_states = input_values
-        if self.config.encoder_type == "linear":
+        if self.config.encoder_type == "linear" or self.config.encoder_type == "mixed":
             hidden_states = hidden_states.transpose(1, 2)
 
         # make sure hidden_states require grad for gradient_checkpointing
         if self._requires_grad and self.training:
             hidden_states.requires_grad = True
 
-        for conv_layer in self.conv_layers:
+        for layer_id, conv_layer in enumerate(self.conv_layers):
             if self._requires_grad and self.gradient_checkpointing and self.training:
-                hidden_states = self._gradient_checkpointing_func(
-                    conv_layer.__call__,
-                    hidden_states,
-                )
+                if self.config.encoder_type == "linear" or self.config.encoder_type == "conv_layers":
+                    hidden_states = self._gradient_checkpointing_func(
+                        conv_layer.__call__,
+                        hidden_states,
+                    )
+                else:
+                    print(f"Mixed conv layer: {layer_id}")
+                    print(f"Layer: {conv_layer}")
+                    print(f"Hidden states shape: {hidden_states.shape}")
+                    hidden_states = self._gradient_checkpointing_func(
+                        conv_layer.__call__,
+                        hidden_states,
+                    )
+                    # If mixed, we need to transpose the hidden states for the linear layers
+                    if layer_id + 1 == self.config.num_linear_feat_extract_layers:
+                        hidden_states = hidden_states.transpose(1, 2)
             else:
-                hidden_states = conv_layer(hidden_states)
+                if self.config.encoder_type == "linear" or self.config.encoder_type == "conv_layers":
+                    hidden_states = conv_layer(hidden_states)
+                
+                else:
+                    print(f"Mixed conv layer: {layer_id}")
+                    print(f"Layer: {conv_layer}")
+                    print(f"Hidden states shape: {hidden_states.shape}")
+                    hidden_states = conv_layer(hidden_states)
+                    # If mixed, we need to transpose the hidden states for the linear layers
+                    if layer_id + 1 == self.config.num_linear_feat_extract_layers:
+                        hidden_states = hidden_states.transpose(1, 2)
 
         if self.config.encoder_type == "linear":
             hidden_states = hidden_states.transpose(1, 2)

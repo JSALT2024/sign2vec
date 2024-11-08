@@ -145,11 +145,11 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         self.mode = mode
 
         annotations = json.load(open(
-            os.join(annotation_fpath, f'{file_prefix}.annotations.{mode}.json')
+            os.path.join(annotation_fpath, f'{file_prefix}.annotations.{mode}.json')
         )) # YT.annotations.{mode}.json
 
         metadata = json.load(open(
-            os.join(metadata_fpath, f'{file_prefix}.keypoints.{mode}.json')
+            os.path.join(metadata_fpath, f'{file_prefix}.keypoints.{mode}.json')
         ))  # YT.keypoints.{mode}.json
 
         self.annotations = []
@@ -248,11 +248,11 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
         self.mode = mode
 
         annotations = json.load(open(
-            os.join(annotation_fpath, f'YT.annotations.{mode}.json')
+            os.path.join(annotation_fpath, f'YT.annotations.{mode}.json')
         ))
 
         metadata = json.load(open(
-            os.join(metadata_fpath, f'YT.keypoints.{mode}.json')
+            os.path.join(metadata_fpath, f'YT.keypoints.{mode}.json')
         ))
 
         self.csv_file = pd.DataFrame()

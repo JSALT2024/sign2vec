@@ -149,10 +149,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         )) # YT.annotations.{mode}.json
 
         metadata = json.load(open(
-            os.join(metadata_fpath, f'{file_prefix}.{(
-                "keypoints" if input_type == "pose" else None
-                if input_type == "sign2vec" else "sign2vec"
-            )}.{mode}.json')
+            os.join(metadata_fpath, f'{file_prefix}.keypoints.{mode}.json')
         ))  # YT.keypoints.{mode}.json
 
         self.annotations = []

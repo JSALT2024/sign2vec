@@ -68,8 +68,6 @@ if __name__ == "__main__":
     args = parse_args()
 
     # Initialize the custom model
-    from signpiece.llm.t5 import SignT5
-    from signpiece.config import T5ConfigForSLT
     config = T5Config.from_pretrained(args.model_id)
     model = T5ModelForSLT.from_pretrained(args.model_id, config=config)
 

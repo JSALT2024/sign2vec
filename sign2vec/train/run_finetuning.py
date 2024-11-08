@@ -92,9 +92,8 @@ if __name__ == "__main__":
         skip_frames=args.skip_frames,
         tokenizer=args.model_id,
         input_type=args.modality,
-
-        annotation_file=args.annotation_file.replace('train', 'test' if args.dev else 'train'),
-        metadata_file=args.metadata_file.replace('train', 'test' if args.dev else 'train'),
+        annotation_fpath=args.annotation_file,
+        metadata_fpath=args.metadata_file,
     )
 
     val_dataset = DatasetForSLT(
@@ -108,9 +107,8 @@ if __name__ == "__main__":
         tokenizer=args.model_id,
         max_instances=args.max_val_samples,
         input_type=args.modality,
-
-        annotation_file=args.annotation_file.replace('train', 'test' if args.dev else 'train'),
-        metadata_file=args.metadata_file.replace('train', 'test' if args.dev else 'train'),
+        annotation_fpath=args.annotation_file,
+        metadata_fpath=args.metadata_file,
     )
 
     test_dataset = DatasetForSLT(
@@ -123,9 +121,8 @@ if __name__ == "__main__":
         skip_frames=args.skip_frames,
         tokenizer=args.model_id,
         input_type=args.modality,
-
-        annotation_file=args.annotation_file.replace('train', 'test'),
-        metadata_file=args.metadata_file.replace('train', 'test'),
+        annotation_fpath=args.annotation_file,
+        metadata_fpath=args.metadata_file,
     )
 
 

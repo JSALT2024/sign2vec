@@ -1,6 +1,8 @@
 import os
 import h5py
+import json
 import pandas as pd
+from tqdm.auto import tqdm
 
 import torch
 import torch.nn as nn
@@ -97,8 +99,7 @@ class YoutubeASLForPose(Dataset):
         # Replace NaN, Inf values with 0
         torch.nan_to_num_(keypoints, nan=0.0, posinf=0.0, neginf=0.0)
 
-        return keypoints #, sentence
-
+        return keypoints
 
 class YoutubeASLForSign2Vec(Dataset):
 
@@ -126,6 +127,8 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
 
     def __init__(
         self,
+        annotation_fpath,
+        metadata_fpath,
         h5_fpath,
         mode="train",
         input_type="pose",
@@ -134,15 +137,39 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         max_token_length=128,
         max_sequence_length=250,
         tokenizer="google-t5/t5-small",
+        file_prefix="YT",
+        h5_prefix="YouTubeASL",
         max_instances=None,
     ):
 
         self.mode = mode
-        self.h5_fpath = h5_fpath
-        self.csv_file = pd.read_csv(os.path.join(h5_fpath, f"yasl_{mode}.csv"))
-        self.csv_file['h5_file'] = self.csv_file['h5_file'].apply(lambda x: os.path.join(h5_fpath, x))
-        
-        self.h5_file_name = self.csv_file.iloc[0].h5_file
+
+        annotations = json.load(open(
+            os.join(annotation_fpath, f'{file_prefix}.annotations.{mode}.json')
+        )) # YT.annotations.{mode}.json
+
+        metadata = json.load(open(
+            os.join(metadata_fpath, f'{file_prefix}.{(
+                "keypoints" if input_type == "pose" else None
+                if input_type == "sign2vec" else "sign2vec"
+            )}.{mode}.json')
+        ))  # YT.keypoints.{mode}.json
+
+        self.annotations = []
+        for video_id in tqdm(annotations.keys()):
+            clip_ids = annotations[video_id]['clip_order']
+            for clip_id in clip_ids:
+                self.annotations.append({
+                    "clip_id": clip_id,
+                    "translation": annotations[video_id][clip_id]["translation"],
+                    "h5_file": os.path.join(h5_fpath, '.'.join([
+                        h5_prefix, mode, str(metadata["video_id"]), 'h5'
+                    ])),
+                })
+
+        self.h5_file_name = os.path.join(h5_fpath, '.'.join([
+            h5_prefix, mode, str(self.shard_id), 'h5'
+        ]))
 
         self.input_type = input_type
 
@@ -157,15 +184,15 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         YoutubeASLForSign2Vec.__init__(self, self.h5_file_name, max_instances)
 
     def __len__(self):
-        return len(self.csv_file)
+        return len(self.annotations)
 
     def __getitem__(self, idx):
         # Get the keypoints and the sentence
 
-        h5_file = self.csv_file.iloc[idx].h5_file
-        file_idx = self.csv_file.iloc[idx].file_idx
-        sentence = self.csv_file.iloc[idx].sentence
-
+        h5_file = self.annotations[idx]["h5_file"]
+        file_idx = self.annotations[idx]["clip_id"]
+        sentence = self.annotations[idx]["translation"]
+        
         if self.input_type == "pose":
             # Reinitialize the dataset if the h5 file is different
             if self.h5_file_name != h5_file:
@@ -211,21 +238,36 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
     def __init__(
         self,
         h5_fpath,
+        annotation_fpath,
+        metadata_fpath,
         mode="train",
-        transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
+        transform="yasl",
         skip_frames=False,
         max_sequence_length=None,
-        add_factor=0.1,
+        add_factor=1.0,
         zero_mean=False,
     ):
         
         self.mode = mode
-        print(f"Loading {self.mode} data")
-        print(f"Loading data from {h5_fpath}")
-        self.csv_file = pd.read_csv(os.path.join(h5_fpath, f'yasl_{self.mode}.csv'))
-        self.csv_file['h5_file'] = self.csv_file['h5_file'].apply(lambda x: os.path.join(h5_fpath, x))
 
-        self.h5_file_name = self.csv_file.iloc[0].h5_file
+        annotations = json.load(open(
+            os.join(annotation_fpath, f'YT.annotations.{mode}.json')
+        ))
+
+        metadata = json.load(open(
+            os.join(metadata_fpath, f'YT.keypoints.{mode}.json')
+        ))
+
+        self.csv_file = pd.DataFrame()
+        for video_id in tqdm(annotations.keys()):
+            clip_ids = annotations[video_id]['clip_order']
+            for clip_id in clip_ids:
+                self.csv_file = self.csv_file.append({
+                    "clip_id": clip_id,
+                    "h5_file": os.path.join(h5_fpath, '.'.join([
+                        "YouTubeASL", mode, str(metadata["video_id"]), 'h5'
+                    ])),
+                }, ignore_index=True)
 
         self.max_sequence_length = max_sequence_length
         self.skip_frames = skip_frames

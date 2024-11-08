@@ -28,6 +28,10 @@ def parse_args():
     parser.add_argument("--dataset_dir", type=str, default='/home/kara-nlp/Documents/Repositories/Thesis/SLT/Datasets/How2Sign/Mediapipe')
     parser.add_argument("--output_dir", default='./results',type=str)
     parser.add_argument("--seed", type=int, default=42)
+    
+    # New data scheme
+    parser.add_argument('--annotation_file', type=str, required=True)
+    parser.add_argument('--metadata_file', type=str, required=True)
 
     # Data processing
     parser.add_argument("--skip_frames", action="store_true")
@@ -64,9 +68,10 @@ if __name__ == "__main__":
     args = parse_args()
 
     # Initialize the custom model
+    from signpiece.llm.t5 import SignT5
+    from signpiece.config import T5ConfigForSLT
     config = T5Config.from_pretrained(args.model_id)
-    config.pose_dim = args.embedding_dim  # Dimension of the pose embeddings
-    model = T5ModelForSLT(config)
+    model = T5ModelForSLT.from_pretrained(args.model_id, config=config)
 
     # Initialize tokenizer and config
     tokenizer = T5Tokenizer.from_pretrained(args.model_id)
@@ -79,6 +84,7 @@ if __name__ == "__main__":
         raise ValueError(f"Dataset type {args.dataset_type} not supported")
 
     train_dataset = DatasetForSLT(
+
         h5_fpath=args.dataset_dir,
         mode='train' if not args.dev else 'test',
         transform=args.transform,
@@ -87,9 +93,13 @@ if __name__ == "__main__":
         skip_frames=args.skip_frames,
         tokenizer=args.model_id,
         input_type=args.modality,
+
+        annotation_file=args.annotation_file.replace('train', 'test' if args.dev else 'train'),
+        metadata_file=args.metadata_file.replace('train', 'test' if args.dev else 'train'),
     )
 
     val_dataset = DatasetForSLT(
+
         h5_fpath=args.dataset_dir,
         mode='val' if not args.dev else 'test',
         transform=args.transform,
@@ -99,9 +109,13 @@ if __name__ == "__main__":
         tokenizer=args.model_id,
         max_instances=args.max_val_samples,
         input_type=args.modality,
+
+        annotation_file=args.annotation_file.replace('train', 'test' if args.dev else 'train'),
+        metadata_file=args.metadata_file.replace('train', 'test' if args.dev else 'train'),
     )
 
     test_dataset = DatasetForSLT(
+
         h5_fpath=args.dataset_dir,
         mode='test',
         transform=args.transform,
@@ -110,6 +124,9 @@ if __name__ == "__main__":
         skip_frames=args.skip_frames,
         tokenizer=args.model_id,
         input_type=args.modality,
+
+        annotation_file=args.annotation_file.replace('train', 'test'),
+        metadata_file=args.metadata_file.replace('train', 'test'),
     )
 
 
@@ -187,19 +204,20 @@ if __name__ == "__main__":
         hub_model_id=f"{args.model_name}",
         metric_for_best_model="bleu",
         optim="adafactor",
-        hub_token=os.getenv("HUB_TOKEN"),
-        
+        save_total_limit=3,
+        # hub_token=os.getenv("HUB_TOKEN"),
     )
 
     # Configure the wandb logger
     import wandb
+    wandb.login(
+        key=os.getenv("WANDB_API_KEY")
+    )
     wandb.init(
         project=args.project_name, 
         name=args.model_name,
         tags=[args.dataset_type, args.transform, args.modality] + (["dev"] if args.dev else []),
     )
-
-    print('Model device:', training_args.device)
 
     trainer = Seq2SeqTrainer(
         model=model,

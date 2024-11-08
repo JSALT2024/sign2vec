@@ -13,6 +13,7 @@ from sign2vec.model.modeling_sign2vec import (
     _compute_mask_indices,
     _sample_negative_indices
 )
+from torch.nn.utils.rnn import pad_sequence
 
 @dataclass
 class DataCollatorForSign2VecPretraining:
@@ -60,21 +61,14 @@ class DataCollatorForSign2VecPretraining:
 
     def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         # reformat list to dict and set to pytorch format
-
+        batch = {}
         # Features are [(clip_id, pose, sentence), ...] where pose is a list of features
-        
-        print('Procssing', features)
+        batch.update({
+            'sentences': [item[2] for item in features],
+            'clip_ids': [item[0] for item in features],
+        })
 
-        keypoints = {
-            0: features[0][1]
-        }
-
-        batch = self.feature_extractor.pad(
-            keypoints,
-            padding=self.padding,
-            pad_to_multiple_of=self.pad_to_multiple_of,
-            return_tensors="pt",
-        )
+        batch['input_values'] = pad_sequence([torch.tensor(item[1]) for item in features], batch_first=True)
 
         # NOTE: transpose input_values to have <POSE> dimension first
         batch["input_values"] = batch["input_values"].transpose(1, 2)
@@ -90,9 +84,6 @@ class DataCollatorForSign2VecPretraining:
                 mask_indices_seq_length, batch["attention_mask"]
             )
 
-        batch['clip_ids'] = [example['clip_id'] for example in features]
-        batch['sentences'] = [example['sentence'] for example in features]
-
         return batch
 
 
@@ -102,7 +93,19 @@ def parse_args():
     parser = argparse.ArgumentParser('Run Sign2Vec Inference on a given dataset')
 
     parser.add_argument(
+        "--dataset_id",
+        type=str,
+        required=True,
+        help="id of dataset"
+    )    
+    parser.add_argument(
         "--dataset_dir",
+        type=str,
+        required=True,
+        help="Path to the dataset directory",
+    )
+    parser.add_argument(
+        "--save_dir",
         type=str,
         required=True,
         help="Path to the dataset directory",
@@ -163,8 +166,7 @@ if __name__ == "__main__":
 
     # Initialize the custom model
     if args.model_id is not None:
-        model = Sign2VecModel.from_pretrained(args.model_id)
-    else:
+        # model = Sign2VecModel.from_pretrained(args.model_id)
         config = Sign2VecConfig().load_from_yaml(yaml_file=args.config_file)
         model = Sign2VecModel(config)
 
@@ -196,7 +198,10 @@ if __name__ == "__main__":
         raise ValueError(f"Dataset type {args.dataset_type} not supported")
     
     feature_extractor = Sign2VecFeatureExtractor(config=model.config)
-
+    collator = DataCollatorForSign2VecPretraining(
+        model=model,
+        feature_extractor=feature_extractor,
+    )
     # Run inference on the datasets 
     model.eval()
     for mode, dataset in [
@@ -208,33 +213,52 @@ if __name__ == "__main__":
         dataloader = torch.utils.data.DataLoader(
             dataset,
             batch_size=1,
-            collate_fn=DataCollatorForSign2VecPretraining(
-                model, 
-                feature_extractor
-            ),
+            collate_fn=collator
         )
         
-        with h5py.File(args.dataset_dir + f"/{args.dataset_type}_s2v_{mode}.h5", "w") as h5file:
+        fname = '.'.join([
+            ('H2S' if args.dataset_id == 'h2s' else 'YouTubeASL'),
+            'sign2vec',
+            mode,
+            ('0' if args.dataset_id == 'yasl' else ''),
+            'h5'
+        ])
+
+        with h5py.File(args.save_dir + fname, "a") as h5file:
 
             for idx in range(len(dataloader)):
                 
                 batch = next(iter(dataloader))
 
-                sentence = batch['sentences'][0]
-                clip_id = batch['clip_ids'][0]
+                sentences = batch.get('sentences')
+                clip_ids = batch.get('clip_ids')
 
-                batch = {k: v.to(model.device) for k, v in batch.items() if k != 'clip_ids' or k != 'sentences'}
+                batch.pop('sentences')
+                batch.pop('clip_ids')
+                
+                with torch.no_grad(): features = model.forward(**batch, return_dict=True)
+                
+                print('Model out shape:', features.last_hidden_state.shape)
+                for idx, (sentence, clip_id) in enumerate(zip(
+                    sentences, clip_ids
+                )):
+                    
+                    print(
+                        'Clip_ids:',
+                        clip_id,
+                        'Input_shape:',
+                        batch['input_values'][idx].shape,
+                        '**Output Features:',
+                        features.last_hidden_state[idx].shape,
+                        'Has nans',
+                        features.last_hidden_state[idx].nansum(),
+                        '**Extract Features:',
+                        features.last_hidden_state[idx],
+                        '*************************',
+                        sep='\n'
+                    )
 
-                print(f"Processing {clip_id} ...")
-
-                with torch.no_grad():
-                    features = model.forward(**batch, return_dict=True)
-
-                print(
-                    features
-                )
-
-                print(f"Saving {clip_id} ...")
-                h5file.create_group(clip_id)
-                h5file[clip_id].create_dataset("features", data=features)
-                h5file[clip_id].create_dataset("sentence", data=sentence)
+                    # print(f"Saving {clip_id} ...")
+                    # h5file.create_group(clip_id)
+                    # h5file[clip_id].create_dataset("features", data=features.last_hidden_state)
+                    # h5file[clip_id].create_dataset("sentence", data=sentence)

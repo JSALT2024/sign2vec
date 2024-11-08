@@ -474,7 +474,6 @@ class Sign2VecFeatureEncoder(nn.Module):
                 ]
             )
 
-
         self.gradient_checkpointing = False
         self._requires_grad = True
         self.config = config

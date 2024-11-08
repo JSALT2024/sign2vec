@@ -69,6 +69,7 @@ if __name__ == "__main__":
 
     # Initialize the custom model
     config = T5Config.from_pretrained(args.model_id)
+    config.pose_dim = 255  # Dimension of the pose embeddings
     model = T5ModelForSLT.from_pretrained(args.model_id, config=config)
 
     # Initialize tokenizer and config

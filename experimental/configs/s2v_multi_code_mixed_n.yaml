@@ -1,11 +1,11 @@
-sign2vec/experimental/configs/s2v_multi_code_linear.yaml sign2vec/experimental/configs/s2v_multi_code_mixed.yaml# Description: Configuration file for Sign2Vec Model for pretraining
+# Description: Configuration file for Sign2Vec Model for pretraining
 # Pretraining configuration for Sign2Vec model
 fps: 25
 input_dim: 255
 codevector_dim: 256
 num_codevector_groups: 2
-num_codevectors_per_group: 320
-encoder_type: conv_layers
+num_codevectors_per_group: 128
+encoder_type: mixed
 is_multicue: false
 min_length: 0
 max_length: 20

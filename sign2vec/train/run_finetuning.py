@@ -1,5 +1,7 @@
 import os
 import math
+import json
+import wandb
 import torch
 import evaluate
 import numpy as np
@@ -8,13 +10,32 @@ from transformers import (
     Seq2SeqTrainer,
     T5Tokenizer, 
     T5Config,
-    Adafactor
+    GenerationConfig,
 )
 from sign2vec.model.t5 import T5ModelForSLT
 from sign2vec.utils.translation import collate_fn, postprocess_text
 
 from dotenv import load_dotenv
 load_dotenv()
+
+
+def init_wandb(args):
+
+    if args.dev:
+        os.environ["WANDB_DISABLED"] = "true"
+        print("Running in dev mode, disabling wandb")
+        return
+
+    wandb.login(
+        key=os.getenv("WANDB_API_KEY")
+    )
+    wandb.init(
+        project=args.project_name, 
+        name=args.model_name,
+        tags=[args.dataset_type, args.transform, args.modality] + (["dev"] if args.dev else []),
+    )
+
+    return wandb
 
 def parse_args():
 
@@ -55,6 +76,11 @@ def parse_args():
     parser.add_argument("--report_to", type=str, default=None)
     parser.add_argument("--logging_steps", type=int, default=10)
 
+    # Evaluation arguments
+    parser.add_argument("--num_beams", type=int, default=5)
+    parser.add_argument("--length_penalty", type=float, default=0.6)
+    parser.add_argument("--early_stopping", action="store_true")
+    parser.add_argument('--no_repeat_ngram_size', type=int, default=0)
 
     # Running arguments
     parser.add_argument("--dev", action="store_true")
@@ -66,6 +92,8 @@ def parse_args():
 if __name__ == "__main__":
 
     args = parse_args()
+
+    init_wandb(args)
 
     # Initialize the custom model
     config = T5Config.from_pretrained(args.model_id)
@@ -85,13 +113,14 @@ if __name__ == "__main__":
     train_dataset = DatasetForSLT(
 
         h5_fpath=args.dataset_dir,
-        mode='train' if not args.dev else 'test',
+        mode='train' if not args.dev else 'dev',
         transform=args.transform,
         max_token_length=args.max_token_length,
         max_sequence_length=args.max_sequence_length,
         skip_frames=args.skip_frames,
         tokenizer=args.model_id,
         input_type=args.modality,
+
         annotation_fpath=args.annotation_file,
         metadata_fpath=args.metadata_file,
     )
@@ -99,7 +128,7 @@ if __name__ == "__main__":
     val_dataset = DatasetForSLT(
 
         h5_fpath=args.dataset_dir,
-        mode='val' if not args.dev else 'test',
+        mode='dev' if not args.dev else 'dev',
         transform=args.transform,
         max_token_length=args.max_token_length,
         max_sequence_length=args.max_sequence_length,
@@ -107,6 +136,7 @@ if __name__ == "__main__":
         tokenizer=args.model_id,
         max_instances=args.max_val_samples,
         input_type=args.modality,
+
         annotation_fpath=args.annotation_file,
         metadata_fpath=args.metadata_file,
     )
@@ -114,17 +144,17 @@ if __name__ == "__main__":
     test_dataset = DatasetForSLT(
 
         h5_fpath=args.dataset_dir,
-        mode='test',
+        mode='test' if not args.dev else 'dev',
         transform=args.transform,
         max_token_length=args.max_token_length,
         max_sequence_length=args.max_sequence_length,
         skip_frames=args.skip_frames,
         tokenizer=args.model_id,
         input_type=args.modality,
+
         annotation_fpath=args.annotation_file,
         metadata_fpath=args.metadata_file,
     )
-
 
     sacrebleu = evaluate.load('sacrebleu')
 
@@ -133,9 +163,7 @@ if __name__ == "__main__":
 
         if isinstance(preds, tuple):
             preds = preds[0]
-            print('Preds:', preds.shape)
             preds = np.argmax(preds, axis=2)
-            print('Preds after:', preds.shape)
 
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
 
@@ -164,10 +192,6 @@ if __name__ == "__main__":
 
         return result
 
-    # os.environ["WANDB_DISABLED"] = "true" if not args.dev else "false"
-
-    # Add model and data to device
-
     num_train_epochs = args.max_training_steps // (len(train_dataset) // args.per_device_train_batch_size // args.gradient_accumulation_steps)
     num_train_epochs = max(math.ceil(num_train_epochs), 1)
 
@@ -180,7 +204,7 @@ if __name__ == "__main__":
     """)
 
     # Check if total batch size 128
-    assert args.per_device_train_batch_size * args.gradient_accumulation_steps == 128
+    # assert args.per_device_train_batch_size * args.gradient_accumulation_steps == 128
 
     training_args = Seq2SeqTrainingArguments(
         output_dir=os.path.join(args.output_dir, args.model_name),
@@ -201,18 +225,14 @@ if __name__ == "__main__":
         metric_for_best_model="bleu",
         optim="adafactor",
         save_total_limit=3,
-        # hub_token=os.getenv("HUB_TOKEN"),
-    )
-
-    # Configure the wandb logger
-    import wandb
-    wandb.login(
-        key=os.getenv("WANDB_API_KEY")
-    )
-    wandb.init(
-        project=args.project_name, 
-        name=args.model_name,
-        tags=[args.dataset_type, args.transform, args.modality] + (["dev"] if args.dev else []),
+        predict_with_generate=True,
+        generation_config=GenerationConfig.from_dict({
+            "max_length": args.max_sequence_length,
+            "num_beams": args.num_beams,
+            "length_penalty": args.length_penalty,
+            "early_stopping": args.early_stopping,
+            "bos_token_id": tokenizer.pad_token_id,
+        })
     )
 
     trainer = Seq2SeqTrainer(
@@ -225,30 +245,80 @@ if __name__ == "__main__":
         compute_metrics=compute_metrics,
     )
 
-    # Add safe guard for training
-    try:
-        trainer.train()
-    except KeyboardInterrupt:
-        print("Training interrupted by user, saving model...")
-        # trainer.save_model()
+    trainer.train()
 
-    print("Running evaluation on test set...")
-    # Run inference on the test set
-    (logits, _ ), label_ids, eval_results = trainer.predict(test_dataset=test_dataset)
-    # Decode the predictions
-    predicted_ids = np.argmax(logits, axis=2)
-    decoded_preds = tokenizer.batch_decode(predicted_ids, skip_special_tokens=True)
-    # Save the predictions and original sentences to a file
-    import json
-    with open(os.path.join(args.output_dir, f"{args.model_name}_test_predictions.json"), "w") as f:
-        predictions = []
-        for idx, pred in enumerate(decoded_preds):
-            predictions.append({
-                'ground_truth': test_dataset[idx]['sentence'],
-                'prediction': pred
-            })
-        json.dump(predictions, f, indent=4)
-        
-    # Save evaluation results to json
-    with open(os.path.join(args.output_dir, f"{args.model_name}_eval_results.json"), "w") as f:
-        json.dump(eval_results, f, indent=4)
+    val_dataloader = torch.utils.data.DataLoader(
+        val_dataset,
+        batch_size=args.per_device_eval_batch_size,
+        collate_fn=collate_fn,
+    )
+
+    test_dataloader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=args.per_device_eval_batch_size,
+        collate_fn=collate_fn,
+    )
+
+    def evaluate(model, dataloader, tokenizer):
+
+        predictions, labels = [], []
+        for step, batch in enumerate(dataloader):
+            batch = {k: v.to(model.device) for k, v in batch.items()}
+            outputs = model.generate(
+                **batch,
+                early_stopping=args.early_stopping,
+                no_repeat_ngram_size=args.no_repeat_ngram_size,
+                max_length=args.max_sequence_length,
+                num_beams=args.num_beams,
+                bos_token_id=tokenizer.pad_token_id,
+            )
+
+            decoded_preds = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            decoded_labels = tokenizer.batch_decode(batch["labels"], skip_special_tokens=True)
+
+            predictions.extend(decoded_preds)
+            labels.extend([[translation] for translation in decoded_labels])
+
+        return predictions, labels
+    
+    val_predictions, val_labels = evaluate(model, val_dataloader, tokenizer)
+    test_predictions, test_labels = evaluate(model, test_dataloader, tokenizer)
+
+    # Save predictions to file
+    with open(os.path.join(args.output_dir, args.model_name, "val_predictions.txt"), "w") as f:
+        all_predictions = [
+            {
+                "prediction": prediction,
+                "reference": label[0]
+            }
+            for prediction, label in zip(val_predictions, val_labels) 
+        ]
+
+        json.dump(all_predictions, f)
+
+    with open(os.path.join(args.output_dir, args.model_name, "test_predictions.txt"), "w") as f:
+        all_predictions = [
+            {
+                "prediction": prediction,
+                "reference": label[0]
+            }
+            for prediction, label in zip(test_predictions, test_labels) 
+        ]
+
+        json.dump(all_predictions, f)
+
+    val_bleu = sacrebleu.compute(predictions=val_predictions, references=val_labels)
+    test_bleu = sacrebleu.compute(predictions=test_predictions, references=test_labels)
+
+    # Save scores json
+    scores = {
+        "val": val_bleu,
+        "test": test_bleu
+    }
+
+    with open(os.path.join(args.output_dir, args.model_name, "scores.json"), "w") as f:
+        json.dump(scores, f)
+
+
+
+

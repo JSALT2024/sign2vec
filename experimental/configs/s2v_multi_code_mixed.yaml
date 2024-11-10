@@ -4,7 +4,7 @@ fps: 25
 input_dim: 255
 codevector_dim: 256
 num_codevector_groups: 2
-num_codevectors_per_group: 512
+num_codevectors_per_group: 320
 encoder_type: mixed
 is_multicue: false
 min_length: 0
@@ -12,7 +12,7 @@ max_length: 20
 temperature: 1.0
 num_negatives: 100
 num_hidden_layers: 12
-diversity_loss_weight: 0.1
+diversity_loss_weight: 1.0
 num_linear_feat_extract_layers: 2
 num_conv_feat_extract_layers: 4
 do_normalize: false

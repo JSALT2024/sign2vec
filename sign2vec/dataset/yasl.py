@@ -39,20 +39,26 @@ class YoutubeASLForPose(Dataset):
         self.max_instances = max_instances
         self.zero_mean = zero_mean
 
+        self.clip_idx2id = {}
+        for idx, clip_id in enumerate(list(self.h5_file.keys())):
+            self.clip_idx2id[idx] = clip_id
+
+        self.idx2clip_id = {v: k for k, v in self.clip_idx2id.items()}
+
     def __len__(self):
         return len(list(self.h5_file.keys())) if self.max_instances is None else self.max_instances
+    
+    def get_item_by_clip_id(self, clip_id):
+        keypoints = self.process_keypoints(clip_id)
+        return keypoints
 
-    def __getitem__(self, idx):
-        
-        clip_id = list(self.h5_file.keys())[idx]
-
+    def process_keypoints(self, clip_id):
         data = self.h5_file[clip_id]
 
         pose_landmarks = data["joints"]["pose_landmarks"][()]
         face_landmarks = data["joints"]["face_landmarks"][()]
         left_hand_landmarks = data["joints"]["left_hand_landmarks"][()]
         right_hand_landmarks = data["joints"]["right_hand_landmarks"][()]
-        # sentence = data["sentence"][()].decode("utf-8")
 
         if self.transform:
             if self.transform == 'yasl':
@@ -98,6 +104,13 @@ class YoutubeASLForPose(Dataset):
 
         # Replace NaN, Inf values with 0
         torch.nan_to_num_(keypoints, nan=0.0, posinf=0.0, neginf=0.0)
+
+        return keypoints
+
+    def __getitem__(self, idx):
+        
+        clip_id = list(self.h5_file.keys())[idx]
+        keypoints = self.process_keypoints(clip_id)
 
         return keypoints
 
@@ -156,17 +169,29 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         for video_id in tqdm(annotations.keys()):
             clip_ids = annotations[video_id]['clip_order']
             for clip_id in clip_ids:
+
+                if clip_id not in metadata:
+                    continue
+
+                h5_path = os.path.join(metadata_fpath, '.'.join([
+                    h5_prefix, 'keypoints', mode, str(metadata[clip_id]), 'h5'
+                ]))
+
+                if not os.path.exists(h5_path):
+                    continue
+
                 self.annotations.append({
                     "clip_id": clip_id,
                     "translation": annotations[video_id][clip_id]["translation"],
-                    "h5_file": os.path.join(h5_fpath, '.'.join([
-                        h5_prefix, mode, str(metadata["video_id"]), 'h5'
-                    ])),
+                    "h5_file": h5_path,
                 })
 
-        self.h5_file_name = os.path.join(h5_fpath, '.'.join([
-            h5_prefix, mode, str(self.shard_id), 'h5'
-        ]))
+        # Sort the annotations by the shard id
+        self.annotations = sorted(self.annotations, key=lambda x: x["h5_file"])
+        print(f"Found {len(self.annotations)} annotations for {mode} set")
+
+        self.shard_id = self.annotations[0]["h5_file"].split('.')[-2]
+        self.h5_file_name = self.annotations[0]["h5_file"]
 
         self.input_type = input_type
 
@@ -194,13 +219,13 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
             # Reinitialize the dataset if the h5 file is different
             if self.h5_file_name != h5_file:
                 YoutubeASLForPose.__init__(self, h5_file, self.transform, self.max_instances)
-            keypoints = YoutubeASLForPose.__getitem__(self, file_idx)
+            keypoints = self.get_item_by_clip_id(file_idx)
 
         elif self.input_type == "sign2vec":
             # Reinitialize the dataset if the h5 file is different
             if self.h5_file_name != h5_file:
                 YoutubeASLForSign2Vec.__init__(self, h5_file, self.max_instances)
-            keypoints = YoutubeASLForSign2Vec.__getitem__(self, file_idx)
+            keypoints = YoutubeASLForSign2Vec.get_item_by_clip_id(file_idx)
 
         self.h5_file_name = h5_file
 
@@ -223,7 +248,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         attention_mask = torch.ones(len(keypoints))
 
         return {
-            "inputs": keypoints,
+            "sign_inputs": keypoints,
             "sentence": sentence,
             "labels": decoder_input_ids,
             "attention_mask": attention_mask,

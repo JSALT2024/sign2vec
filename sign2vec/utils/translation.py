@@ -13,8 +13,8 @@ def collate_fn(batch):
     # "attention_mask" must be 250 frames long
     # "labels" must be 128 tokens long
     return {
-        "inputs": torch.stack([
-            torch.cat((sample["inputs"], torch.zeros(250 - sample["inputs"].shape[0], 255)), dim=0)
+        "sign_inputs": torch.stack([
+            torch.cat((sample["sign_inputs"], torch.zeros(250 - sample["sign_inputs"].shape[0], 255)), dim=0)
             for sample in batch
         ]),
         "attention_mask": torch.stack([

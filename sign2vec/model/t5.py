@@ -14,8 +14,7 @@ class T5ModelForSLT(T5ForConditionalGeneration):
     # Override the forward method to modify input embeddings
     def forward(
         self,
-        inputs=None,
-        input_ids=None,
+        sign_inputs=None,
         attention_mask=None,
         decoder_input_ids=None,
         decoder_attention_mask=None,
@@ -31,13 +30,12 @@ class T5ModelForSLT(T5ForConditionalGeneration):
         output_attentions=None,
         output_hidden_states=None,
         return_dict=None,
+        cache_position=None,
     ):
-        # Get embeddings (input_ids -> embeddings)
-        if input_ids is not None:
-            inputs_embeds = self.shared(input_ids)  # shared is the embedding layer of T5
         
         # Apply custom linear layer to the input embeddings
-        inputs_embeds = self.custom_linear(inputs)
+        if inputs_embeds is None:
+            inputs_embeds = self.custom_linear(sign_inputs)
 
         # Pass modified embeddings to the original T5 forward method
         return super().forward(
@@ -57,6 +55,7 @@ class T5ModelForSLT(T5ForConditionalGeneration):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            cache_position=cache_position,
         )
 
 if __name__ == "__main__":

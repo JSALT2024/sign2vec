@@ -275,6 +275,19 @@ def parse_args():
         action='store_true',
         help='Debug mode'
     )
+    parser.add_argument(
+        '--annotation_file',
+        type=str,
+        default=None,
+        help='Path to the annotation file'
+    )
+    parser.add_argument(
+        '--metadata_file',
+        type=str,
+        default=None,
+        help='Path to the metadata file'
+    )
+    
     args = parser.parse_args()
 
     if args.push_to_hub:
@@ -479,12 +492,6 @@ def main():
     # initialize random model
     model = Sign2VecForPreTraining(config)
 
-    print('Model config:', config)
-
-    print('Model:', model)
-
-    print('Model initialized....')
-
     # Activate gradient checkpointing if needed
     # if args.gradient_checkpointing:
     #     model.gradient_checkpointing_enable()
@@ -521,16 +528,20 @@ def main():
         )
     elif args.dataset_name == 'YoutubeASL':
         from sign2vec.dataset.yasl import YoutubeASLForSign2VecPretraining
+        print('Loading datasets', args.datasets)
         train_dataset = YoutubeASLForSign2VecPretraining(
+            annotation_fpath=args.annotation_file,
+            metadata_fpath=args.metadata_file,
             h5_fpath=args.dataset_path,
             max_sequence_length=max_length,
             transform='yasl',
             mode=args.datasets[0],
             add_factor=args.add_factor
-
         )
 
         eval_dataset = YoutubeASLForSign2VecPretraining(
+            annotation_fpath=args.annotation_file,
+            metadata_fpath=args.metadata_file,
             h5_fpath=args.dataset_path,
             max_sequence_length=max_length,
             transform='yasl',

@@ -280,16 +280,33 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
             os.path.join(metadata_fpath, f'YT.keypoints.{mode}.json')
         ))
 
-        self.csv_file = pd.DataFrame()
+        self.annotations = []
         for video_id in tqdm(annotations.keys()):
             clip_ids = annotations[video_id]['clip_order']
             for clip_id in clip_ids:
-                self.csv_file = self.csv_file.append({
+
+                if clip_id not in metadata:
+                    continue
+
+                h5_path = os.path.join(metadata_fpath, '.'.join([
+                    'YouTubeASL', 'keypoints', mode, str(metadata[clip_id]), 'h5'
+                ]))
+
+                if not os.path.exists(h5_path):
+                    continue
+
+                self.annotations.append({
                     "clip_id": clip_id,
-                    "h5_file": os.path.join(h5_fpath, '.'.join([
-                        "YouTubeASL", mode, str(metadata["video_id"]), 'h5'
-                    ])),
-                }, ignore_index=True)
+                    "h5_file": h5_path,
+                })
+    
+        print(f"Found {len(self.annotations)} annotations for {mode} set")
+        print(f"Using {self.annotations[0]['h5_file']} as the h5 file")
+
+        self.h5_file_name = self.annotations[0]["h5_file"]
+
+        self.transform = transform
+        self.zero_mean = zero_mean
 
         self.max_sequence_length = max_sequence_length
         self.skip_frames = skip_frames
@@ -298,19 +315,18 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
         YoutubeASLForPose.__init__(self, self.h5_file_name, transform, zero_mean)
 
     def __len__(self):
-        return len(self.csv_file)
+        return len(self.annotations)
 
     def __getitem__(self, idx):
 
-        h5_file, file_idx = self.csv_file.iloc[idx].h5_file, self.csv_file.iloc[idx].file_idx
+        h5_file = self.annotations[idx]["h5_file"]
+        file_idx = self.annotations[idx]["clip_id"]
 
-        # Reinitialize the dataset if the h5 file is different
         if self.h5_file_name != h5_file:
-            YoutubeASLForPose.__init__(self, h5_file, self.transform)
+            self.h5_file_name = h5_file
+            YoutubeASLForPose.__init__(self, h5_file, self.transform, self.zero_mean)
         
-        self.h5_file_name = h5_file
-
-        keypoints = YoutubeASLForPose.__getitem__(self, file_idx)
+        keypoints = self.get_item_by_clip_id(file_idx)
 
         if self.skip_frames: keypoints = keypoints[::2]
         if self.max_sequence_length: keypoints = keypoints[: self.max_sequence_length]

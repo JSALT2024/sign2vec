@@ -3,6 +3,7 @@ run_name=$1
 cuda_device=$2
 export CUDA_VISIBLE_DEVICES=$cuda_device
 
+
 TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.py \
                     --dataset_name="YoutubeASL" \
                     --run_name="sign2vec-base-mixed-zero-mean-div-1.0" \
@@ -11,6 +12,8 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
                     --model_config_file="experimental/configs/s2v_multi_code_mixed.yaml" \
+                    --metadata_file='/ssd2/karahan/YASL/pose' \
+                    --annotation_file='/ssd2/karahan/YASL/' \
                     --output_dir="/ssd2/karahan/YASL/sign2vec-base-mixed-zero-mean-div-1.0" \
                     --max_train_steps="10000" \
                     --num_warmup_steps="1000" \
@@ -40,6 +43,8 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
                     --model_config_file="experimental/configs/s2v_multi_code_linear.yaml" \
+                    --metadata_file='/ssd2/karahan/YASL/pose' \
+                    --annotation_file='/ssd2/karahan/YASL/' \
                     --output_dir="/ssd2/karahan/YASL/sign2vec-base-linear-zero-mean-div-1.0" \
                     --max_train_steps="10000" \
                     --num_warmup_steps="1000" \
@@ -69,6 +74,8 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
                     --model_config_file="experimental/configs/s2v_multi_code_conv.yaml" \
+                    --metadata_file='/ssd2/karahan/YASL/pose' \
+                    --annotation_file='/ssd2/karahan/YASL/' \
                     --output_dir="/ssd2/karahan/YASL/sign2vec-base-conv-zero-mean-div-1.0" \
                     --max_train_steps="10000" \
                     --num_warmup_steps="1000" \
@@ -99,6 +106,8 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
                     --model_config_file="experimental/configs/s2v_multi_code_mixed_n.yaml" \
+                    --metadata_file='/ssd2/karahan/YASL/pose' \
+                    --annotation_file='/ssd2/karahan/YASL/' \
                     --output_dir="/ssd2/karahan/YASL/sign2vec-base-mixed-zero-mean-div-1.0-c128" \
                     --max_train_steps="10000" \
                     --num_warmup_steps="1000" \
@@ -128,6 +137,8 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
                     --model_config_file="experimental/configs/s2v_multi_code_linear_n.yaml" \
+                    --metadata_file='/ssd2/karahan/YASL/pose' \
+                    --annotation_file='/ssd2/karahan/YASL/' \
                     --output_dir="/ssd2/karahan/YASL/sign2vec-base-linear-zero-mean-div-1.0-c128" \
                     --max_train_steps="10000" \
                     --num_warmup_steps="1000" \
@@ -157,6 +168,8 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
                     --datasets "train" "test" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
                     --model_config_file="experimental/configs/s2v_multi_code_conv_n.yaml" \
+                    --metadata_file='/ssd2/karahan/YASL/pose' \
+                    --annotation_file='/ssd2/karahan/YASL/' \
                     --output_dir="/ssd2/karahan/YASL/sign2vec-base-conv-zero-mean-div-1.0-c128" \
                     --max_train_steps="10000" \
                     --num_warmup_steps="1000" \

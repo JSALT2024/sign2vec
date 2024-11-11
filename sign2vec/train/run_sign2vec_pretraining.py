@@ -315,7 +315,7 @@ class DataCollatorForSign2VecPretraining:
             among:
             * :obj:`True` or :obj:`'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
               sequence if provided).
-            * :obj:`'max_length'`: Pad to a maximum length specified with the argument :obj:`max_length` or to the
+            * :obj:`'256'`: Pad to a maximum length specified with the argument :obj:`max_length` or to the
               maximum acceptable input length for the model if that argument is not provided.
             * :obj:`False` or :obj:`'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of
               different lengths).
@@ -513,7 +513,7 @@ def main():
         from sign2vec.dataset.how2sign import How2SignForSign2VecPretraining
         train_dataset = How2SignForSign2VecPretraining(
             h5_fpath=args.dataset_path,
-            max_sequence_length=max_length,
+            max_sequence_length=256,
             transform=None,
             mode=args.datasets[0],
             max_instances=100 if args.debug else None
@@ -521,19 +521,19 @@ def main():
 
         eval_dataset = How2SignForSign2VecPretraining(
             h5_fpath=args.dataset_path,
-            max_sequence_length=max_length,
+            max_sequence_length=256,
             transform=None,
             mode=args.datasets[1],
             max_instances=100 if args.debug else None
         )
+
     elif args.dataset_name == 'YoutubeASL':
         from sign2vec.dataset.yasl import YoutubeASLForSign2VecPretraining
-        print('Loading datasets', args.datasets)
         train_dataset = YoutubeASLForSign2VecPretraining(
             annotation_fpath=args.annotation_file,
             metadata_fpath=args.metadata_file,
             h5_fpath=args.dataset_path,
-            max_sequence_length=max_length,
+            max_sequence_length=256,
             transform='yasl',
             mode=args.datasets[0],
             add_factor=args.add_factor
@@ -543,11 +543,12 @@ def main():
             annotation_fpath=args.annotation_file,
             metadata_fpath=args.metadata_file,
             h5_fpath=args.dataset_path,
-            max_sequence_length=max_length,
+            max_sequence_length=256,
             transform='yasl',
             mode=args.datasets[1],
             add_factor=args.add_factor
         )
+        
     else:
         raise ValueError(f"Invalid dataset name: {args.dataset_name}")
 

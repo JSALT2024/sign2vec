@@ -377,6 +377,12 @@ class DataCollatorForSign2VecPretraining:
 
         features_shape = (batch_size, mask_indices_seq_length)
 
+        print(
+            f"Batch size: {batch_size}, Mask indices seq length: {mask_indices_seq_length}, Features shape: {features_shape}"
+            'mask_time_prob:', self.mask_time_prob,
+            'mask_time_length:', self.mask_time_length
+        )
+
         # sample randomly masked indices
         mask_time_indices = _compute_mask_indices(
             features_shape,

@@ -351,14 +351,15 @@ class DataCollatorForSign2VecPretraining:
             return_tensors="pt",
         )
 
-        # If input_values dim 1 is less than min_length, pad to min_length
-        if batch["input_values"].shape[1] < 45:
-            batch["input_values"] = torch.nn.functional.pad(
-                batch["input_values"], (0, 45 - batch["input_values"].shape[1])
-            )
 
         # NOTE: transpose input_values to have <POSE> dimension first
         batch["input_values"] = batch["input_values"].transpose(1, 2)
+
+        # If input_values dim 1 is less than min_length, pad to min_length
+        if batch["input_values"].shape[-1] < 45:
+            batch["input_values"] = torch.nn.functional.pad(
+                batch["input_values"], (0, 45 - batch["input_values"].shape[-1])
+            )
 
         device = batch["input_values"].device
         batch_size = batch["input_values"].shape[0]

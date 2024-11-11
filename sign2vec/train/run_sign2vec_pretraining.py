@@ -315,7 +315,7 @@ class DataCollatorForSign2VecPretraining:
             among:
             * :obj:`True` or :obj:`'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
               sequence if provided).
-            * :obj:`'256'`: Pad to a maximum length specified with the argument :obj:`max_length` or to the
+            * :obj:`'max_length'`: Pad to a maximum length specified with the argument :obj:`max_length` or to the
               maximum acceptable input length for the model if that argument is not provided.
             * :obj:`False` or :obj:`'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of
               different lengths).
@@ -351,11 +351,19 @@ class DataCollatorForSign2VecPretraining:
             return_tensors="pt",
         )
 
+        # If input_values dim 1 is less than min_length, pad to min_length
+        if batch["input_values"].shape[1] < 15:
+            batch["input_values"] = torch.nn.functional.pad(
+                batch["input_values"], (0, 15 - batch["input_values"].shape[1])
+            )
+
         # NOTE: transpose input_values to have <POSE> dimension first
         batch["input_values"] = batch["input_values"].transpose(1, 2)
 
         device = batch["input_values"].device
         batch_size = batch["input_values"].shape[0]
+
+        print('Input values:', batch['input_values'].shape)
 
         mask_indices_seq_length = self.model._get_feat_extract_output_lengths(batch["input_values"].shape[-1])
         # make sure masked sequence length is a Python scalar
@@ -378,7 +386,9 @@ class DataCollatorForSign2VecPretraining:
         features_shape = (batch_size, mask_indices_seq_length)
 
         print(
-            f"Batch size: {batch_size}, Mask indices seq length: {mask_indices_seq_length}, Features shape: {features_shape}"
+            f"Batch size: {batch_size}, 
+             Mask indices seq length: {mask_indices_seq_length}, 
+             Features shape: {features_shape}"
             'mask_time_prob:', self.mask_time_prob,
             'mask_time_length:', self.mask_time_length
         )

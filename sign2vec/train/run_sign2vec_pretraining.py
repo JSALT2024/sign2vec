@@ -367,8 +367,6 @@ class DataCollatorForSign2VecPretraining:
         device = batch["input_values"].device
         batch_size = batch["input_values"].shape[0]
 
-        print('Input values:', batch['input_values'].shape)
-
         mask_indices_seq_length = self.model._get_feat_extract_output_lengths(batch["input_values"].shape[-1])
         # make sure masked sequence length is a Python scalar
         mask_indices_seq_length = (
@@ -388,12 +386,6 @@ class DataCollatorForSign2VecPretraining:
             )
 
         features_shape = (batch_size, mask_indices_seq_length)
-
-        print(
-            f"Batch size: {batch_size}, Mask indices seq length: {mask_indices_seq_length}, Features shape: {features_shape}",
-            'mask_time_prob:', self.mask_time_prob,
-            'mask_time_length:', self.mask_time_length
-        )
 
         if mask_indices_seq_length < self.mask_time_length:
             # Assing a lower value to mask_time_length if it is larger than the sequence length
@@ -598,7 +590,6 @@ def main():
     print('Training dataset size:', len(train_dataset))
     sample = next(iter(train_dataloader))
     print('Sample:', sample.keys())
-    print('Input values:', sample['input_values'])
     print('Input values:', sample['input_values'].shape)
     print('Mask time indices:', sample['mask_time_indices'].shape)
     print('Sampled negative indices:', sample['sampled_negative_indices'].shape)

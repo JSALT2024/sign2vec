@@ -266,6 +266,7 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
         transform="yasl",
         skip_frames=False,
         max_sequence_length=None,
+        min_sequence_length=20,
         add_factor=1.0,
         zero_mean=False,
     ):
@@ -330,7 +331,16 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
 
         if self.skip_frames: keypoints = keypoints[::2]
         if self.max_sequence_length: keypoints = keypoints[: self.max_sequence_length]
+
         keypoints = keypoints * self.add_factor
+
+        # If less than min_sequence_length, pad with zeros
+
+        if len(keypoints) < self.min_sequence_length:
+            padding = torch.zeros(
+                self.min_sequence_length - len(keypoints), keypoints.size(-1)
+            )
+            keypoints = torch.cat((keypoints, padding), dim=0)
 
         return {
             "input_values": keypoints,

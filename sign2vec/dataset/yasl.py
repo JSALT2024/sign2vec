@@ -310,6 +310,7 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
         self.zero_mean = zero_mean
 
         self.max_sequence_length = max_sequence_length
+        self.min_sequence_length = min_sequence_length
         self.skip_frames = skip_frames
         self.add_factor = add_factor
 

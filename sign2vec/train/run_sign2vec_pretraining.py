@@ -355,10 +355,13 @@ class DataCollatorForSign2VecPretraining:
         # NOTE: transpose input_values to have <POSE> dimension first
         batch["input_values"] = batch["input_values"].transpose(1, 2)
 
-        # If input_values dim 1 is less than min_length, pad to min_length
+        # If input_values dim -1 is less than min_length, pad to min_length
         if batch["input_values"].shape[-1] < 45:
             batch["input_values"] = torch.nn.functional.pad(
-                batch["input_values"], (0, 45 - batch["input_values"].shape[-1])
+                batch["input_values"],
+                (0, 45 - batch["input_values"].shape[-1]),
+                mode='constant',
+                value=0
             )
 
         device = batch["input_values"].device
@@ -392,11 +395,16 @@ class DataCollatorForSign2VecPretraining:
             'mask_time_length:', self.mask_time_length
         )
 
+        if mask_indices_seq_length < self.mask_time_length:
+            # Assing a lower value to mask_time_length if it is larger than the sequence length
+            mask_time_length = mask_indices_seq_length - 2
+
+
         # sample randomly masked indices
         mask_time_indices = _compute_mask_indices(
             features_shape,
             self.mask_time_prob,
-            self.mask_time_length,
+            self.mask_time_length if mask_indices_seq_length > self.mask_time_length else mask_indices_seq_length - 2,
             attention_mask=batch.get("sub_attention_mask"),
         )
 

@@ -352,9 +352,9 @@ class DataCollatorForSign2VecPretraining:
         )
 
         # If input_values dim 1 is less than min_length, pad to min_length
-        if batch["input_values"].shape[1] < 15:
+        if batch["input_values"].shape[1] < 45:
             batch["input_values"] = torch.nn.functional.pad(
-                batch["input_values"], (0, 15 - batch["input_values"].shape[1])
+                batch["input_values"], (0, 45 - batch["input_values"].shape[1])
             )
 
         # NOTE: transpose input_values to have <POSE> dimension first

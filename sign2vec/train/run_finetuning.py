@@ -98,9 +98,8 @@ if __name__ == "__main__":
 
     # Initialize the custom model
     config = T5Config.from_pretrained(args.model_id)
-    config.pose_dim = args.pose_dim  # Dimension of the pose embeddings
+    config.pose_dim = args.pose_dim  # Dimension of the pose embeddings 
     model = T5ModelForSLT(model_name_or_path=args.model_id, config=config)
-
 
     # Add collate_fn to DataLoader
     def collate_fn(batch):
@@ -110,18 +109,18 @@ if __name__ == "__main__":
         # "labels" must be 128 tokens long
         return {
             "sign_inputs": torch.stack([
-                torch.cat((sample["sign_inputs"], torch.zeros(250 - sample["sign_inputs"].shape[0], args.pose_dim)), dim=0)
+                torch.cat((sample["sign_inputs"], torch.zeros(args.max_sequence_length - sample["sign_inputs"].shape[0], args.pose_dim)), dim=0)
                 for sample in batch
             ]),
             "attention_mask": torch.stack([
-                torch.cat((sample["attention_mask"], torch.zeros(250 - sample["attention_mask"].shape[0])), dim=0)
-                if sample["attention_mask"].shape[0] < 250
+                torch.cat((sample["attention_mask"], torch.zeros(args.max_sequence_length - sample["attention_mask"].shape[0])), dim=0)
+                if sample["attention_mask"].shape[0] < args.max_sequence_length
                 else sample["attention_mask"]
                 for sample in batch
             ]),
             "labels": torch.stack([
-                torch.cat((sample["labels"].squeeze(0), torch.zeros(128 - sample["labels"].shape[0])), dim=0)
-                if sample["labels"].shape[0] < 128
+                torch.cat((sample["labels"].squeeze(0), torch.zeros(args.max_token_length - sample["labels"].shape[0])), dim=0)
+                if sample["labels"].shape[0] < args.max_token_length
                 else sample["labels"]
                 for sample in batch
             ]).squeeze(0).to(torch.long),
@@ -180,19 +179,19 @@ if __name__ == "__main__":
         metadata_fpath=args.metadata_file,
     )
 
-    test_dataset = DatasetForSLT(
+    # test_dataset = DatasetForSLT(
 
-        h5_fpath=args.dataset_dir,
-        mode='test' if not args.dev else 'dev',
-        transform=args.transform,
-        max_token_length=args.max_token_length,
-        max_sequence_length=args.max_sequence_length,
-        skip_frames=args.skip_frames,
-        tokenizer=args.model_id,
-        input_type=args.modality,
-        annotation_fpath=args.annotation_file,
-        metadata_fpath=args.metadata_file,
-    )
+    #     h5_fpath=args.dataset_dir,
+    #     mode='test' if not args.dev else 'dev',
+    #     transform=args.transform,
+    #     max_token_length=args.max_token_length,
+    #     max_sequence_length=args.max_sequence_length,
+    #     skip_frames=args.skip_frames,
+    #     tokenizer=args.model_id,
+    #     input_type=args.modality,
+    #     annotation_fpath=args.annotation_file,
+    #     metadata_fpath=args.metadata_file,
+    # )
 
     sacrebleu = evaluate.load('sacrebleu')
 
@@ -292,12 +291,6 @@ if __name__ == "__main__":
         collate_fn=collate_fn,
     )
 
-    test_dataloader = torch.utils.data.DataLoader(
-        test_dataset,
-        batch_size=args.per_device_eval_batch_size,
-        collate_fn=collate_fn,
-    )
-
     def evaluate(model, dataloader, tokenizer):
 
         predictions, labels = [], []
@@ -321,7 +314,6 @@ if __name__ == "__main__":
         return predictions, labels
     
     val_predictions, val_labels = evaluate(model, val_dataloader, tokenizer)
-    test_predictions, test_labels = evaluate(model, test_dataloader, tokenizer)
 
     # Save predictions to file
     with open(os.path.join(args.output_dir, args.model_name, "val_predictions.txt"), "w") as f:
@@ -335,24 +327,11 @@ if __name__ == "__main__":
 
         json.dump(all_predictions, f)
 
-    with open(os.path.join(args.output_dir, args.model_name, "test_predictions.txt"), "w") as f:
-        all_predictions = [
-            {
-                "prediction": prediction,
-                "reference": label[0]
-            }
-            for prediction, label in zip(test_predictions, test_labels) 
-        ]
-
-        json.dump(all_predictions, f)
-
     val_bleu = sacrebleu.compute(predictions=val_predictions, references=val_labels)
-    test_bleu = sacrebleu.compute(predictions=test_predictions, references=test_labels)
 
     # Save scores json
     scores = {
         "val": val_bleu,
-        "test": test_bleu
     }
 
     with open(os.path.join(args.output_dir, args.model_name, "scores.json"), "w") as f:

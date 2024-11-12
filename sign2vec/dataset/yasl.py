@@ -49,11 +49,13 @@ class YoutubeASLForPose(Dataset):
         return len(list(self.h5_file.keys())) if self.max_instances is None else self.max_instances
     
     def get_item_by_clip_id(self, clip_id):
-        keypoints = self.process_keypoints(clip_id)
+        video_id = clip_id.split('.')[0]
+        keypoints = self.process_keypoints(video_id, clip_id)
         return keypoints
 
-    def process_keypoints(self, clip_id):
-        data = self.h5_file[clip_id]
+    def process_keypoints(self, video_id, clip_id):
+
+        data = self.h5_file[video_id][clip_id]
 
         pose_landmarks = data["joints"]["pose_landmarks"][()]
         face_landmarks = data["joints"]["face_landmarks"][()]
@@ -171,7 +173,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
             for clip_id in clip_ids:
 
                 if video_id not in metadata:
-                    print(f"Video id {video_id} not found in metadata")
+                    # print(f"Video id {video_id} not found in metadata")
                     continue
 
                 h5_path = os.path.join(metadata_fpath, '.'.join([
@@ -179,10 +181,11 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
                 ]))
 
                 if not os.path.exists(h5_path):
-                    print(f"File {h5_path} not found")
+                    # print(f"File {h5_path} not found")
                     continue
 
                 self.annotations.append({
+                    "video_id": video_id,
                     "clip_id": clip_id,
                     "translation": annotations[video_id][clip_id]["translation"],
                     "h5_file": h5_path,

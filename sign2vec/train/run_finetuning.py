@@ -86,6 +86,7 @@ def parse_args():
     parser.add_argument("--dev", action="store_true")
     parser.add_argument("--project_name", type=str, default="h2s-t5")
     parser.add_argument("--max_val_samples", type=int, default=None)
+    parser.add_argument("--is_normalized", action="store_true")
 
     return parser.parse_args()
 
@@ -97,7 +98,7 @@ if __name__ == "__main__":
 
     # Initialize the custom model
     config = T5Config.from_pretrained(args.model_id)
-    config.pose_dim = 255  # Dimension of the pose embeddings
+    config.pose_dim = 286  # Dimension of the pose embeddings
     model = T5ModelForSLT(model_name_or_path=args.model_id, config=config)
 
 
@@ -134,7 +135,6 @@ if __name__ == "__main__":
         skip_frames=args.skip_frames,
         tokenizer=args.model_id,
         input_type=args.modality,
-
         annotation_fpath=args.annotation_file,
         metadata_fpath=args.metadata_file,
     )
@@ -150,7 +150,6 @@ if __name__ == "__main__":
         tokenizer=args.model_id,
         max_instances=args.max_val_samples,
         input_type=args.modality,
-
         annotation_fpath=args.annotation_file,
         metadata_fpath=args.metadata_file,
     )
@@ -165,7 +164,6 @@ if __name__ == "__main__":
         skip_frames=args.skip_frames,
         tokenizer=args.model_id,
         input_type=args.modality,
-
         annotation_fpath=args.annotation_file,
         metadata_fpath=args.metadata_file,
     )

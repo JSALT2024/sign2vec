@@ -32,12 +32,15 @@ class YoutubeASLForPose(Dataset):
         h5_file,
         transform = 'yasl',
         max_instances=None,
+        is_normalized=True,
         zero_mean=False,
     ):
         self.transform = transform
         self.h5_file = h5py.File(h5_file, "r")
         self.max_instances = max_instances
         self.zero_mean = zero_mean
+
+        self.is_normalized = is_normalized
 
         self.clip_idx2id = {}
         for idx, clip_id in enumerate(list(self.h5_file.keys())):
@@ -56,6 +59,9 @@ class YoutubeASLForPose(Dataset):
     def process_keypoints(self, video_id, clip_id):
 
         data = self.h5_file[video_id][clip_id]
+
+        if self.is_normalized:
+            return data
 
         pose_landmarks = data["joints"]["pose_landmarks"][()]
         face_landmarks = data["joints"]["face_landmarks"][()]
@@ -155,6 +161,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         file_prefix="YouTubeASL",
         h5_prefix="YouTubeASL",
         max_instances=None,
+        is_normalized=True
     ):
 
         self.mode = mode
@@ -211,7 +218,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
 
         if self.input_type == "sign2vec" and skip_frames: raise ValueError("skip_frames should be False for `sign2vec` input")
 
-        YoutubeASLForPose.__init__(self, self.h5_file_name, transform, max_instances)
+        YoutubeASLForPose.__init__(self, self.h5_file_name, transform, max_instances, is_normalized)
         YoutubeASLForSign2Vec.__init__(self, self.h5_file_name, max_instances)
 
     def __len__(self):
@@ -227,7 +234,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         if self.input_type == "pose":
             # Reinitialize the dataset if the h5 file is different
             if self.h5_file_name != h5_file:
-                YoutubeASLForPose.__init__(self, h5_file, self.transform, self.max_instances)
+                YoutubeASLForPose.__init__(self, h5_file, self.transform, self.max_instances, self.is_normalized)
             keypoints = self.get_item_by_clip_id(file_idx)
 
         elif self.input_type == "sign2vec":

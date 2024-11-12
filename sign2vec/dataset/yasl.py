@@ -150,7 +150,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         max_token_length=128,
         max_sequence_length=250,
         tokenizer="google-t5/t5-small",
-        file_prefix="YT",
+        file_prefix="YouTubeASL",
         h5_prefix="YouTubeASL",
         max_instances=None,
     ):
@@ -158,11 +158,11 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         self.mode = mode
 
         annotations = json.load(open(
-            os.path.join(annotation_fpath, f'{file_prefix}.annotations.{mode}.json')
+            os.path.join(annotation_fpath, f'YT.annotations.{mode}.json')
         )) # YT.annotations.{mode}.json
 
         metadata = json.load(open(
-            os.path.join(metadata_fpath, f'{file_prefix}.keypoints.{mode}.json')
+            os.path.join(metadata_fpath, f'YouTubeASL.keypoints.{mode}.json')
         ))  # YT.keypoints.{mode}.json
 
         self.annotations = []

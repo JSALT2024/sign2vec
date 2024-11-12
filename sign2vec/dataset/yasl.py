@@ -171,6 +171,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
             for clip_id in clip_ids:
 
                 if clip_id not in metadata:
+                    print(f"Clip {clip_id} not found in metadata")
                     continue
 
                 h5_path = os.path.join(metadata_fpath, '.'.join([
@@ -178,6 +179,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
                 ]))
 
                 if not os.path.exists(h5_path):
+                    print(f"File {h5_path} not found")
                     continue
 
                 self.annotations.append({

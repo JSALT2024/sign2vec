@@ -72,20 +72,22 @@ YASL
 #### 2a. YASL T5 Pretraining
 
 ```bash
-python3 -m sign2vec.train.run_finetuning --dataset_dir=/ssd2/karahan/YASL \
-                                          --modality="pose" \
-                                          --model_id="google-t5/t5-base" \
-                                          --max_training_step="200000" \
-                                          --learning_rate="0.001" \
-                                          --max_sequence_length="256" \
-                                          --max_token_length="128" \
-                                          --per_device_train_batch_size="32" \
-                                          --gradient_accumulation_steps="4" \
-                                          --skip_frames \
-                                          --per_device_eval_batch_size="2" \
-                                          --logging_steps="10" \
-                                          --eval_steps="1000" \
-                                          --model_name=h2s-pose-no-norm
+python3 -m sign2vec.train.run_finetuning --annotation_file='/home/kara-nlp/Documents/Repositories/Thesis/SLT/Datasets/YASL' \
+                                         --metadata_file='/home/kara-nlp/Documents/Repositories/Thesis/SLT/Datasets/YASL/keypoints/' \
+                                         --dataset_type='yasl' \
+                                         --model_id="google-t5/t5-base" \
+                                         --max_training_step="20000" \
+                                         --per_device_train_batch_size="32" \
+                                         --per_device_eval_batch_size=2
+                                         --gradient_accumulation_steps=4 \
+                                         --eval_steps=2 \
+                                         --learning_rate=0.001 \
+                                         --max_sequence_length=256 \
+                                         --max_token_length=128 \
+                                         --model_name=h2s-pose-no-norm
+                                         --skip_frames \
+                                         --logging_steps=1 \
+                                         --eval_steps="1000"
 ```
 
 #### 2b. How2Sign Finetuning

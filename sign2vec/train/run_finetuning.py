@@ -13,11 +13,10 @@ from transformers import (
     GenerationConfig,
 )
 from sign2vec.model.t5 import T5ModelForSLT
-from sign2vec.utils.translation import collate_fn, postprocess_text
+from sign2vec.utils.translation import postprocess_text
 
 from dotenv import load_dotenv
 load_dotenv()
-
 
 def init_wandb(args):
 
@@ -75,6 +74,7 @@ def parse_args():
     parser.add_argument("--push_to_hub", action="store_true")
     parser.add_argument("--report_to", type=str, default=None)
     parser.add_argument("--logging_steps", type=int, default=1)
+    parser.add_argument("--pose_dim", type=int, default=208)
 
     # Evaluation arguments
     parser.add_argument("--num_beams", type=int, default=5)
@@ -98,8 +98,34 @@ if __name__ == "__main__":
 
     # Initialize the custom model
     config = T5Config.from_pretrained(args.model_id)
-    config.pose_dim = 286  # Dimension of the pose embeddings
+    config.pose_dim = args.pose_dim  # Dimension of the pose embeddings
     model = T5ModelForSLT(model_name_or_path=args.model_id, config=config)
+
+
+    # Add collate_fn to DataLoader
+    def collate_fn(batch):
+        # Add padding to the inputs 
+        # "inputs" must be 250 frames long
+        # "attention_mask" must be 250 frames long
+        # "labels" must be 128 tokens long
+        return {
+            "sign_inputs": torch.stack([
+                torch.cat((sample["sign_inputs"], torch.zeros(250 - sample["sign_inputs"].shape[0], args.pose_dim)), dim=0)
+                for sample in batch
+            ]),
+            "attention_mask": torch.stack([
+                torch.cat((sample["attention_mask"], torch.zeros(250 - sample["attention_mask"].shape[0])), dim=0)
+                if sample["attention_mask"].shape[0] < 250
+                else sample["attention_mask"]
+                for sample in batch
+            ]),
+            "labels": torch.stack([
+                torch.cat((sample["labels"].squeeze(0), torch.zeros(128 - sample["labels"].shape[0])), dim=0)
+                if sample["labels"].shape[0] < 128
+                else sample["labels"]
+                for sample in batch
+            ]).squeeze(0).to(torch.long),
+        }
 
 
     # Initialize tokenizer and config

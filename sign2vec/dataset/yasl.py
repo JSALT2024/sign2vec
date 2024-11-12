@@ -61,7 +61,10 @@ class YoutubeASLForPose(Dataset):
         data = self.h5_file[video_id][clip_id]
 
         if self.is_normalized:
-            return data
+            keypoints = torch.tensor(data)
+            # Replace NaN, Inf values with 0
+            torch.nan_to_num_(keypoints, nan=0.0, posinf=0.0, neginf=0.0)
+            return keypoints
 
         pose_landmarks = data["joints"]["pose_landmarks"][()]
         face_landmarks = data["joints"]["face_landmarks"][()]

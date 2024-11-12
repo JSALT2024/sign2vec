@@ -170,12 +170,12 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
             clip_ids = annotations[video_id]['clip_order']
             for clip_id in clip_ids:
 
-                if clip_id not in metadata:
-                    print(f"Clip {clip_id} not found in metadata")
+                if video_id not in metadata:
+                    print(f"Video id {video_id} not found in metadata")
                     continue
 
                 h5_path = os.path.join(metadata_fpath, '.'.join([
-                    h5_prefix, 'keypoints', mode, str(metadata[clip_id]), 'h5'
+                    h5_prefix, 'keypoints', mode, str(metadata[video_id]), 'h5'
                 ]))
 
                 if not os.path.exists(h5_path):

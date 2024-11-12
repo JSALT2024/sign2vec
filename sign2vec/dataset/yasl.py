@@ -146,7 +146,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         mode="train",
         input_type="pose",
         skip_frames=True,
-        transform=[("pose_landmarks", "local"), ("face_landmarks", "local")],
+        transform="yasl",
         max_token_length=128,
         max_sequence_length=250,
         tokenizer="google-t5/t5-small",
@@ -188,6 +188,10 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
 
         # Sort the annotations by the shard id
         self.annotations = sorted(self.annotations, key=lambda x: x["h5_file"])
+
+        if max_instances is not None:
+            self.annotations = self.annotations[:max_instances]
+        
         print(f"Found {len(self.annotations)} annotations for {mode} set")
 
         self.shard_id = self.annotations[0]["h5_file"].split('.')[-2]

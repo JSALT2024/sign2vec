@@ -4,12 +4,24 @@ from sign2vec.utils.translation import collate_fn
 from transformers import T5ForConditionalGeneration, T5Tokenizer, T5Config
 
 # Subclassing the T5 model
-class T5ModelForSLT(T5ForConditionalGeneration):
-    def __init__(self, config):
-        super().__init__(config)
-        
+class T5ModelForSLT(nn.Module):
+    def __init__(self, model_name_or_path, config):
+        super(T5ModelForSLT, self).__init__()
+
         # Define a custom linear layer to apply to the input embeddings
         self.custom_linear = nn.Linear(config.pose_dim, config.d_model)
+        self.base_model = T5ForConditionalGeneration.from_pretrained(model_name_or_path)
+        
+        self.device = self.base_model.device
+
+    def generate(self, **kwargs):
+
+        kwargs["inputs_embeds"] = self.custom_linear(kwargs["sign_inputs"])
+        kwargs.pop("sign_inputs")
+
+        kwargs["input_ids"] = None
+
+        return self.base_model.generate(**kwargs)
     
     # Override the forward method to modify input embeddings
     def forward(
@@ -38,7 +50,7 @@ class T5ModelForSLT(T5ForConditionalGeneration):
             inputs_embeds = self.custom_linear(sign_inputs)
 
         # Pass modified embeddings to the original T5 forward method
-        return super().forward(
+        return self.base_model.forward(
             input_ids=None,  # We use inputs_embeds instead of input_ids
             attention_mask=attention_mask,
             decoder_input_ids=decoder_input_ids,

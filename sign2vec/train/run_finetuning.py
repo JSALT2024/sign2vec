@@ -74,7 +74,7 @@ def parse_args():
     parser.add_argument("--fp16", action="store_true")
     parser.add_argument("--push_to_hub", action="store_true")
     parser.add_argument("--report_to", type=str, default=None)
-    parser.add_argument("--logging_steps", type=int, default=10)
+    parser.add_argument("--logging_steps", type=int, default=1)
 
     # Evaluation arguments
     parser.add_argument("--num_beams", type=int, default=5)
@@ -98,10 +98,24 @@ if __name__ == "__main__":
     # Initialize the custom model
     config = T5Config.from_pretrained(args.model_id)
     config.pose_dim = 255  # Dimension of the pose embeddings
-    model = T5ModelForSLT.from_pretrained(args.model_id, config=config)
+    model = T5ModelForSLT(model_name_or_path=args.model_id, config=config)
+
 
     # Initialize tokenizer and config
     tokenizer = T5Tokenizer.from_pretrained(args.model_id)
+    model.base_model.generation_config = GenerationConfig(
+        max_length=128,
+        length_penalty=1.0,
+        top_k=10,
+        top_p=0.95,
+        temperature=1,
+        no_repeat_ngram_size=1,
+        repetition_penalty=3.1,
+        num_beams=3,
+        bos_token_id=tokenizer.bos_token_id,
+        decoder_start_token_id=tokenizer.pad_token_id,
+        do_sample=True,
+    )
 
     if args.dataset_type == 'how2sign':
         from sign2vec.dataset.how2sign import How2SignForSLT as DatasetForSLT
@@ -172,7 +186,7 @@ if __name__ == "__main__":
 
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
     
-        for i in range(50):
+        for i in range(len(decoded_preds)):
             print(f"Prediction: {decoded_preds[i]}")
             print(f"Reference: {decoded_labels[i]}")
             print('*'*50)
@@ -224,6 +238,7 @@ if __name__ == "__main__":
         hub_model_id=f"{args.model_name}",
         metric_for_best_model="bleu",
         optim="adafactor",
+        save_strategy="no",
         save_total_limit=3,
         predict_with_generate=True,
         generation_config=GenerationConfig.from_dict({
@@ -263,7 +278,7 @@ if __name__ == "__main__":
 
         predictions, labels = [], []
         for step, batch in enumerate(dataloader):
-            batch = {k: v.to(model.device) for k, v in batch.items()}
+            batch = {k: v.to(model.base_model.device) for k, v in batch.items()}
             outputs = model.generate(
                 **batch,
                 early_stopping=args.early_stopping,

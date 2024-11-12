@@ -42,7 +42,7 @@ class T5ModelForSLT(nn.Module):
         output_attentions=None,
         output_hidden_states=None,
         return_dict=None,
-        cache_position=None,
+        # cache_position=None,
     ):
         
         # Apply custom linear layer to the input embeddings
@@ -67,7 +67,7 @@ class T5ModelForSLT(nn.Module):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
-            cache_position=cache_position,
+            # cache_position=cache_position,
         )
 
 if __name__ == "__main__":

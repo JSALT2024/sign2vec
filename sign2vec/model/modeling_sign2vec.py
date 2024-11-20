@@ -51,7 +51,7 @@ from transformers.utils import (
     logging,
     replace_return_docstrings,
 )
-from sign2vec.utils.config import Sign2VecConfig
+from sign2vec.model.configuration_sign2vec import Sign2VecConfig
 
 SIGN2VEC_ADAPTER_PT_FILE = "adapter.{}.bin"
 SIGN2VEC_ADAPTER_SAFE_FILE = "adapter.{}.safetensors"

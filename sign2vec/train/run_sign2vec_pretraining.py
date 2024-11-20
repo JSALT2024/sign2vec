@@ -45,7 +45,7 @@ from transformers.utils import send_example_telemetry
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from sign2vec.utils.config import Sign2VecConfig
+from sign2vec.model.configuration_sign2vec import Sign2VecConfig
 from sign2vec.model.modeling_sign2vec import Sign2VecForPreTraining
 from sign2vec.utils.feature_extractor import Sign2VecFeatureExtractor
 
@@ -436,6 +436,11 @@ def main():
     # We now keep distinct sets of args, for a cleaner separation of concerns.
     args = parse_args()
 
+    if args.debug:
+        # Init wandb offline mode
+        wandb.init(mode='offline')
+        os.environ["WANDB_MODE"] = "dryrun"
+
     # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_sign2vec_pretraining", args)
@@ -492,11 +497,11 @@ def main():
         accelerator.wait_for_everyone()
 
         return accelerator, repo_id, api
-
+    
     # 3. Load model
     config = Sign2VecConfig().load_from_yaml(args.model_config_file)
     
-    accelerator, repo_id, api = _accelerate(args.output_dir, )
+    accelerator, repo_id, api = _accelerate(args.output_dir)
 
     feature_extractor = Sign2VecFeatureExtractor(config=config)
 
@@ -720,11 +725,20 @@ def main():
                     "loss": (loss * args.gradient_accumulation_steps) / num_losses,
                     "contrast_loss": outputs.contrastive_loss / num_losses,
                     "div_loss": outputs.diversity_loss / num_losses,
-                    "%_mask_idx": percent_masked / accelerator.num_processes,
                     "ppl": outputs.codevector_perplexity,
                     "lr": torch.tensor(optimizer.param_groups[0]["lr"]),
                     "temp": torch.tensor(gumbel_temperature),
                     "grad_norm": torch.tensor(grad_norm),
+
+                    "face_div_loss": outputs.face_diversity_loss / num_losses,
+                    "pose_div_loss": outputs.pose_diversity_loss / num_losses,
+                    "left_hand_div_loss": outputs.left_hand_diversity_loss / num_losses,
+                    "right_hand_div_loss": outputs.right_hand_diversity_loss / num_losses,
+
+                    "pose_codevector_perplexity": outputs.pose_codevector_perplexity,
+                    "left_hand_codevector_perplexity": outputs.left_hand_codevector_perplexity,
+                    "right_hand_codevector_perplexity": outputs.right_hand_codevector_perplexity,
+                    "face_codevector_perplexity": outputs.face_codevector_perplexity,
                 }
                 log_str = ""
                 for k, v in train_logs.items():
@@ -766,6 +780,10 @@ def main():
             "val_contrastive_loss": 0,
             "val_diversity_loss": 0,
             "val_num_losses": 0,
+            "val_pose_diversity_loss": 0,
+            "val_left_hand_diversity_loss": 0,
+            "val_right_hand_diversity_loss": 0,
+            "val_face_diversity_loss": 0,            
         }
         for step, batch in enumerate(eval_dataloader):
             with torch.no_grad():
@@ -776,6 +794,12 @@ def main():
             val_logs["val_contrastive_loss"] += outputs.contrastive_loss
             val_logs["val_diversity_loss"] += outputs.diversity_loss
             val_logs["val_num_losses"] += batch["mask_time_indices"].sum()
+
+            if model.config.enable_multicue:
+                val_logs["val_pose_diversity_loss"] += outputs.pose_diversity_loss
+                val_logs["val_left_hand_diversity_loss"] += outputs.left_hand_diversity_loss
+                val_logs["val_right_hand_diversity_loss"] += outputs.right_hand_diversity_loss
+                val_logs["val_face_diversity_loss"] += outputs.face_diversity_loss
 
         # sum over devices in multi-processing
         if accelerator.num_processes > 1:

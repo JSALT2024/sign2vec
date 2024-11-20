@@ -14,7 +14,7 @@ def collate_fn(batch):
     # "labels" must be 128 tokens long
     return {
         "sign_inputs": torch.stack([
-            torch.cat((sample["sign_inputs"], torch.zeros(250 - sample["sign_inputs"].shape[0], 286)), dim=0)
+            torch.cat((sample["sign_inputs"], torch.zeros(250 - sample["sign_inputs"].shape[0], 208)), dim=0)
             for sample in batch
         ]),
         "attention_mask": torch.stack([

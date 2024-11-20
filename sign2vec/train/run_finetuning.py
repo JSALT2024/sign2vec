@@ -9,10 +9,9 @@ from transformers import (
     Seq2SeqTrainingArguments,
     Seq2SeqTrainer,
     T5Tokenizer, 
-    T5Config,
-    GenerationConfig,
 )
-from sign2vec.model.t5 import T5ModelForSLT
+from sign2vec.model.configuration_t5 import SignT5Config
+from sign2vec.model.modeling_t5 import T5ModelForSLT
 from sign2vec.utils.translation import postprocess_text
 
 from dotenv import load_dotenv
@@ -42,6 +41,9 @@ def parse_args():
 
     parser = argparse.ArgumentParser()
 
+    # Configuration
+    parser.add_argument("--config_file", type=str, default=None)
+
     # Required parameters
     parser.add_argument("--model_name", type=str, default="h2s-test")
     parser.add_argument("--dataset_type", type=str, default="how2sign", choices=["how2sign", "yasl"])
@@ -50,8 +52,8 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=42)
     
     # New data scheme
-    parser.add_argument('--annotation_file', type=str, required=True)
-    parser.add_argument('--metadata_file', type=str, required=True)
+    parser.add_argument('--annotation_file', type=str)
+    parser.add_argument('--metadata_file', type=str)
 
     # Data processing
     parser.add_argument("--skip_frames", action="store_true")
@@ -69,7 +71,7 @@ def parse_args():
     parser.add_argument("--per_device_eval_batch_size", type=int, default=1)
     parser.add_argument("--gradient_accumulation_steps", type=float, default=4)
     parser.add_argument("--learning_rate", type=float, default=0.001)
-    parser.add_argument("--weight_decay", type=float, default=0.01)
+    parser.add_argument("--weight_decay", type=float, default=0.0)
     parser.add_argument("--fp16", action="store_true")
     parser.add_argument("--push_to_hub", action="store_true")
     parser.add_argument("--report_to", type=str, default=None)
@@ -90,16 +92,38 @@ def parse_args():
 
     return parser.parse_args()
 
+
+def read_from_config(args):
+
+    import yaml
+
+    if args.config_file is None and args.annotation_file is None and args.metadata_file is None:
+        raise ValueError("Please provide a config file or annotation and metadata file")
+
+    if args.config_file is not None:
+        with open(args.config_file, "r") as f:
+            config = yaml.safe_load(f)
+
+        # Update the default arguments with the config file
+        for key, value in config.items():
+            setattr(args, key, value)
+    return args
+
+
 if __name__ == "__main__":
 
     args = parse_args()
+    args = read_from_config(args)
 
     init_wandb(args)
-
+    
     # Initialize the custom model
-    config = T5Config.from_pretrained(args.model_id)
-    config.pose_dim = args.pose_dim  # Dimension of the pose embeddings 
-    model = T5ModelForSLT(model_name_or_path=args.model_id, config=config)
+    config = SignT5Config(
+        base_model_name=args.model_id,
+        sign_input_dim=args.pose_dim,
+    )
+    model = T5ModelForSLT(config=config)
+    tokenizer = T5Tokenizer.from_pretrained(args.model_id)
 
     # Add collate_fn to DataLoader
     def collate_fn(batch):
@@ -126,23 +150,6 @@ if __name__ == "__main__":
             ]).squeeze(0).to(torch.long),
         }
 
-
-    # Initialize tokenizer and config
-    tokenizer = T5Tokenizer.from_pretrained(args.model_id)
-    model.base_model.generation_config = GenerationConfig(
-        max_length=128,
-        length_penalty=1.0,
-        top_k=10,
-        top_p=0.95,
-        temperature=1,
-        no_repeat_ngram_size=1,
-        repetition_penalty=3.1,
-        num_beams=3,
-        bos_token_id=tokenizer.bos_token_id,
-        decoder_start_token_id=tokenizer.pad_token_id,
-        do_sample=True,
-    )
-
     if args.dataset_type == 'how2sign':
         from sign2vec.dataset.how2sign import How2SignForSLT as DatasetForSLT
     elif args.dataset_type == 'yasl':
@@ -151,7 +158,6 @@ if __name__ == "__main__":
         raise ValueError(f"Dataset type {args.dataset_type} not supported")
 
     train_dataset = DatasetForSLT(
-
         h5_fpath=args.dataset_dir,
         mode='train' if not args.dev else 'dev',
         transform=args.transform,
@@ -162,10 +168,10 @@ if __name__ == "__main__":
         input_type=args.modality,
         annotation_fpath=args.annotation_file,
         metadata_fpath=args.metadata_file,
+        is_normalized=args.is_normalized,
     )
 
     val_dataset = DatasetForSLT(
-
         h5_fpath=args.dataset_dir,
         mode='dev' if not args.dev else 'dev',
         transform=args.transform,
@@ -177,21 +183,23 @@ if __name__ == "__main__":
         input_type=args.modality,
         annotation_fpath=args.annotation_file,
         metadata_fpath=args.metadata_file,
+        is_normalized=args.is_normalized,
     )
 
-    # test_dataset = DatasetForSLT(
-
-    #     h5_fpath=args.dataset_dir,
-    #     mode='test' if not args.dev else 'dev',
-    #     transform=args.transform,
-    #     max_token_length=args.max_token_length,
-    #     max_sequence_length=args.max_sequence_length,
-    #     skip_frames=args.skip_frames,
-    #     tokenizer=args.model_id,
-    #     input_type=args.modality,
-    #     annotation_fpath=args.annotation_file,
-    #     metadata_fpath=args.metadata_file,
-    # )
+    if args.dataset_type == 'how2sign':
+        test_dataset = DatasetForSLT(
+            h5_fpath=args.dataset_dir,
+            mode='test' if not args.dev else 'dev',
+            transform=args.transform,
+            max_token_length=args.max_token_length,
+            max_sequence_length=args.max_sequence_length,
+            skip_frames=args.skip_frames,
+            tokenizer=args.model_id,
+            input_type=args.modality,
+            annotation_fpath=args.annotation_file,
+            metadata_fpath=args.metadata_file,
+            is_normalized=args.is_normalized,
+        )
 
     sacrebleu = evaluate.load('sacrebleu')
 
@@ -245,32 +253,26 @@ if __name__ == "__main__":
 
     training_args = Seq2SeqTrainingArguments(
         output_dir=os.path.join(args.output_dir, args.model_name),
-        evaluation_strategy="steps",
-        eval_steps=args.eval_steps,
         logging_steps=args.logging_steps,
         num_train_epochs=num_train_epochs,
-        auto_find_batch_size=True,
-        eval_accumulation_steps=1,
-        per_device_eval_batch_size=args.per_device_eval_batch_size,
-        gradient_accumulation_steps=args.gradient_accumulation_steps,
+        optim="adafactor",
         learning_rate=args.learning_rate,
         weight_decay=args.weight_decay,
+        per_device_train_batch_size=args.per_device_train_batch_size,
+        per_device_eval_batch_size=args.per_device_eval_batch_size,
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
+        eval_accumulation_steps=1,
         fp16=args.fp16,
         push_to_hub=args.push_to_hub,
-        report_to=args.report_to,
-        hub_model_id=f"{args.model_name}",
+        hub_model_id=args.model_name,
         metric_for_best_model="bleu",
-        optim="adafactor",
-        save_strategy="no",
         save_total_limit=3,
         predict_with_generate=True,
-        generation_config=GenerationConfig.from_dict({
-            "max_length": args.max_sequence_length,
-            "num_beams": args.num_beams,
-            "length_penalty": args.length_penalty,
-            "early_stopping": args.early_stopping,
-            "bos_token_id": tokenizer.pad_token_id,
-        })
+        evaluation_strategy="steps",
+        eval_steps=args.eval_steps,
+        save_strategy="steps",
+        save_steps=args.save_steps,
+        generation_config=model.base_model.generation_config,
     )
 
     trainer = Seq2SeqTrainer(
@@ -278,7 +280,7 @@ if __name__ == "__main__":
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         data_collator=collate_fn,
         compute_metrics=compute_metrics,
     )

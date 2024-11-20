@@ -32,7 +32,7 @@ class YoutubeASLForPose(Dataset):
         h5_file,
         transform = 'yasl',
         max_instances=None,
-        is_normalized=True,
+        is_normalized=False,
         zero_mean=False,
     ):
         self.transform = transform
@@ -57,8 +57,12 @@ class YoutubeASLForPose(Dataset):
         return keypoints
 
     def process_keypoints(self, video_id, clip_id):
-
-        data = self.h5_file[video_id][clip_id]
+        
+        # Data difference between LUMI and Royal
+        if video_id not in self.h5_file.keys():
+            data = self.h5_file[clip_id]
+        else:
+            data = self.h5_file[video_id][clip_id]
 
         if self.is_normalized:
             keypoints = torch.tensor(data)
@@ -95,6 +99,14 @@ class YoutubeASLForPose(Dataset):
         face_landmarks = torch.tensor(face_landmarks, dtype=torch.float)
         left_hand_landmarks = torch.tensor(left_hand_landmarks, dtype=torch.float)
         right_hand_landmarks = torch.tensor(right_hand_landmarks, dtype=torch.float)
+
+        # print(
+        #     f"Pose: {pose_landmarks.shape}",
+        #     f"Left Hand: {left_hand_landmarks.shape}",
+        #     f"Right Hand: {right_hand_landmarks.shape}",
+        #     f"Face: {face_landmarks.shape}",
+        #     sep="\n"
+        # )
 
         # Concatenate all keypoints
         keypoints = torch.cat(
@@ -164,7 +176,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         file_prefix="YouTubeASL",
         h5_prefix="YouTubeASL",
         max_instances=None,
-        is_normalized=True
+        is_normalized=False,
     ):
 
         self.mode = mode
@@ -176,6 +188,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         metadata = json.load(open(
             os.path.join(metadata_fpath, f'YouTubeASL.keypoints.{mode}.json')
         ))  # YT.keypoints.{mode}.json
+
 
         self.annotations = []
         for video_id in tqdm(annotations.keys()):
@@ -192,6 +205,12 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
 
                 if not os.path.exists(h5_path):
                     # print(f"File {h5_path} not found")
+                    continue
+
+                # Check clip_id in the h5 files
+                h5_file = h5py.File(h5_path, "r")
+                if clip_id not in h5_file.keys():
+                    # print(f"Clip id {clip_id} not found in {h5_path}")
                     continue
 
                 self.annotations.append({
@@ -288,38 +307,61 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
         min_sequence_length=20,
         add_factor=1.0,
         zero_mean=False,
+        max_instances=None,
+        h5_prefix="YouTubeASL",
+        input_type="pose",
+        is_normalized=False,
     ):
         
+        self.input_type = input_type
+
         self.mode = mode
 
         annotations = json.load(open(
             os.path.join(annotation_fpath, f'YT.annotations.{mode}.json')
-        ))
+        )) # YT.annotations.{mode}.json
 
         metadata = json.load(open(
-            os.path.join(metadata_fpath, f'YT.keypoints.{mode}.json')
-        ))
+            os.path.join(metadata_fpath, f'YouTubeASL.keypoints.{mode}.json')
+        ))  # YT.keypoints.{mode}.json
+
 
         self.annotations = []
         for video_id in tqdm(annotations.keys()):
             clip_ids = annotations[video_id]['clip_order']
             for clip_id in clip_ids:
 
-                if clip_id not in metadata:
+                if video_id not in metadata:
+                    # print(f"Video id {video_id} not found in metadata")
                     continue
 
                 h5_path = os.path.join(metadata_fpath, '.'.join([
-                    'YouTubeASL', 'keypoints', mode, str(metadata[clip_id]), 'h5'
+                    h5_prefix, 'keypoints', mode, str(metadata[video_id]), 'h5'
                 ]))
 
                 if not os.path.exists(h5_path):
+                    # print(f"File {h5_path} not found")
+                    continue
+
+                # Check clip_id in the h5 files
+                h5_file = h5py.File(h5_path, "r")
+                if clip_id not in h5_file.keys():
+                    # print(f"Clip id {clip_id} not found in {h5_path}")
                     continue
 
                 self.annotations.append({
+                    "video_id": video_id,
                     "clip_id": clip_id,
+                    "translation": annotations[video_id][clip_id]["translation"],
                     "h5_file": h5_path,
                 })
-    
+
+        # Sort the annotations by the shard id
+        self.annotations = sorted(self.annotations, key=lambda x: x["h5_file"])
+
+        if max_instances is not None:
+            self.annotations = self.annotations[:max_instances]
+        
         print(f"Found {len(self.annotations)} annotations for {mode} set")
         print(f"Using {self.annotations[0]['h5_file']} as the h5 file")
 
@@ -332,22 +374,29 @@ class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
         self.min_sequence_length = min_sequence_length
         self.skip_frames = skip_frames
         self.add_factor = add_factor
+        self.is_normalized = is_normalized
 
-        YoutubeASLForPose.__init__(self, self.h5_file_name, transform, zero_mean)
+        YoutubeASLForPose.__init__(self, self.h5_file_name, transform, zero_mean, is_normalized)
 
     def __len__(self):
         return len(self.annotations)
 
     def __getitem__(self, idx):
+        # Get the keypoints and the sentence
 
         h5_file = self.annotations[idx]["h5_file"]
         file_idx = self.annotations[idx]["clip_id"]
-
-        if self.h5_file_name != h5_file:
-            self.h5_file_name = h5_file
-            YoutubeASLForPose.__init__(self, h5_file, self.transform, self.zero_mean)
+        sentence = self.annotations[idx]["translation"]
         
-        keypoints = self.get_item_by_clip_id(file_idx)
+        if self.input_type == "pose":
+            # Reinitialize the dataset if the h5 file is different
+            if self.h5_file_name != h5_file:
+                YoutubeASLForPose.__init__(self, h5_file, self.transform, self.max_instances, self.is_normalized)
+            keypoints = self.get_item_by_clip_id(file_idx)
+        else:
+            raise ValueError("Only pose input is supported for pretraining")
+            
+        self.h5_file_name = h5_file
 
         if self.skip_frames: keypoints = keypoints[::2]
         if self.max_sequence_length: keypoints = keypoints[: self.max_sequence_length]

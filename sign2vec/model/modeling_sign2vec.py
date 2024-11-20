@@ -134,6 +134,16 @@ class Sign2VecForPreTrainingOutput(ModelOutput):
     contrastive_loss: Optional[torch.FloatTensor] = None
     diversity_loss: Optional[torch.FloatTensor] = None
 
+    face_codevector_perplexity: torch.FloatTensor = None
+    right_hand_codevector_perplexity: torch.FloatTensor = None
+    left_hand_codevector_perplexity: torch.FloatTensor = None
+    pose_codevector_perplexity: torch.FloatTensor = None
+
+    face_diversity_loss: Optional[torch.FloatTensor] = None
+    right_hand_diversity_loss: Optional[torch.FloatTensor] = None
+    left_hand_diversity_loss: Optional[torch.FloatTensor] = None
+    pose_diversity_loss: Optional[torch.FloatTensor] = None
+
 
 def _compute_mask_indices(
     shape: Tuple[int, int],
@@ -312,58 +322,6 @@ class Sign2VecNoLayerNormConvLayer(nn.Module):
         return hidden_states
 
 
-class Sign2VecLayerNormConvLayer(nn.Module):
-    def __init__(self, config, layer_id=0):
-        super().__init__()
-        self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else  config.input_dim
-        self.out_conv_dim = config.conv_dim[layer_id]
-
-        self.conv = nn.Conv1d(
-            self.in_conv_dim,
-            self.out_conv_dim,
-            kernel_size=config.conv_kernel[layer_id],
-            stride=config.conv_stride[layer_id],
-            bias=config.conv_bias,
-        )
-        self.layer_norm = nn.LayerNorm(self.out_conv_dim, elementwise_affine=True)
-        self.activation = ACT2FN[config.feat_extract_activation]
-
-    def forward(self, hidden_states):
-        hidden_states = self.conv(hidden_states)
-
-        hidden_states = hidden_states.transpose(-2, -1)
-        hidden_states = self.layer_norm(hidden_states)
-        hidden_states = hidden_states.transpose(-2, -1)
-
-        hidden_states = self.activation(hidden_states)
-        return hidden_states
-
-
-class Sign2VecGroupNormConvLayer(nn.Module):
-    def __init__(self, config, layer_id=0):
-        super().__init__()
-        self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.input_dim
-        self.in_conv_dim = self.in_conv_dim if config.encoder_type == "conv_layers" else config.conv_dim[0]
-        self.out_conv_dim = config.conv_dim[layer_id]
-
-        self.conv = nn.Conv1d(
-            self.in_conv_dim,
-            self.out_conv_dim,
-            kernel_size=config.conv_kernel[layer_id],
-            stride=config.conv_stride[layer_id],
-            bias=config.conv_bias,
-        )
-        self.activation = ACT2FN[config.feat_extract_activation]
-
-        self.layer_norm = nn.GroupNorm(num_groups=self.out_conv_dim, num_channels=self.out_conv_dim, affine=True)
-
-    def forward(self, hidden_states):
-        hidden_states = self.conv(hidden_states)
-        hidden_states = self.layer_norm(hidden_states)
-        hidden_states = self.activation(hidden_states)
-        return hidden_states
-
-
 class Sign2VecPositionalConvEmbedding(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -420,13 +378,102 @@ class Sign2VecSamePadLayer(nn.Module):
         return hidden_states
 
 
-class Sign2VecMLP(nn.Module):
-    def __init__(self, config, layer_id=0):
+class Sign2VecLayerNormConvLayer(nn.Module):
+    def __init__(self, config, layer_id=0, cue_type=None):
         super().__init__()
 
-        self.input_dim = config.conv_dim[layer_id-1] if layer_id > 0 else config.input_dim
+        match cue_type:
+            case "right_hand":
+                self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.right_hand_range[1] - config.right_hand_range[0]
+            case "left_hand":
+                self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.left_hand_range[1] - config.left_hand_range[0]
+            case "face":
+                self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.face_range[1] - config.face_range[0]
+            case "pose":
+                self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.pose_range[1] - config.pose_range[0]
+            case None:
+                self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.input_dim
+
+        self.out_conv_dim = config.conv_dim[layer_id]
+
+        self.conv = nn.Conv1d(
+            self.in_conv_dim,
+            self.out_conv_dim,
+            kernel_size=config.conv_kernel[layer_id],
+            stride=config.conv_stride[layer_id],
+            bias=config.conv_bias,
+        )
+        self.layer_norm = nn.LayerNorm(self.out_conv_dim, elementwise_affine=True)
+        self.activation = ACT2FN[config.feat_extract_activation]
+
+    def forward(self, hidden_states):
+        hidden_states = self.conv(hidden_states)
+
+        hidden_states = hidden_states.transpose(-2, -1)
+        hidden_states = self.layer_norm(hidden_states)
+        hidden_states = hidden_states.transpose(-2, -1)
+
+        hidden_states = self.activation(hidden_states)
+        return hidden_states
+
+
+class Sign2VecGroupNormConvLayer(nn.Module):
+    def __init__(self, config, layer_id=0, cue_type=None):
+        super().__init__()
+
+        match cue_type:
+            case "right_hand":
+                self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.right_hand_range[1] - config.right_hand_range[0]
+            case "left_hand":
+                self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.left_hand_range[1] - config.left_hand_range[0]
+            case "face":
+                self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.face_range[1] - config.face_range[0]
+            case "pose":
+                self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.pose_range[1] - config.pose_range[0]
+            case None:
+                self.in_conv_dim = config.conv_dim[layer_id - 1] if layer_id > 0 else config.input_dim
+     
         self.in_conv_dim = self.in_conv_dim if config.encoder_type == "conv_layers" else config.conv_dim[0]
+        self.out_conv_dim = config.conv_dim[layer_id]
+
+        self.conv = nn.Conv1d(
+            self.in_conv_dim,
+            self.out_conv_dim,
+            kernel_size=config.conv_kernel[layer_id],
+            stride=config.conv_stride[layer_id],
+            bias=config.conv_bias,
+        )
+        self.activation = ACT2FN[config.feat_extract_activation]
+
+        self.layer_norm = nn.GroupNorm(num_groups=self.out_conv_dim, num_channels=self.out_conv_dim, affine=True)
+
+        print(f"GroupNormConvLayer-{cue_type} {layer_id}: ", self.in_conv_dim, self.out_conv_dim)
+
+    def forward(self, hidden_states):
+        hidden_states = self.conv(hidden_states)
+        hidden_states = self.layer_norm(hidden_states)
+        hidden_states = self.activation(hidden_states)
+        return hidden_states
+
+
+class Sign2VecMLP(nn.Module):
+    def __init__(self, config, layer_id=0, cue_type=None):
+        super().__init__()
+
+        match cue_type:
+            case "right_hand":
+                self.input_dim = config.conv_dim[layer_id-1] if layer_id > 0 else config.right_hand_range[1] - config.right_hand_range[0]
+            case "left_hand":
+                self.input_dim = config.conv_dim[layer_id-1] if layer_id > 0 else config.left_hand_range[1] - config.left_hand_range[0]
+            case "face":
+                self.input_dim = config.conv_dim[layer_id-1] if layer_id > 0 else config.face_range[1] - config.face_range[0]
+            case "pose":
+                self.input_dim = config.conv_dim[layer_id-1] if layer_id > 0 else config.pose_range[1] - config.pose_range[0]
+
+        self.input_dim = config.conv_dim[layer_id-1] if layer_id > 0 else self.input_dim
         self.hidden_dim = config.conv_dim[layer_id]
+
+        print(f"MLP-{cue_type} {layer_id}: ", self.input_dim, self.hidden_dim)
 
         self.mlp = nn.Sequential(
             nn.Linear(self.input_dim, self.hidden_dim),
@@ -436,16 +483,16 @@ class Sign2VecMLP(nn.Module):
     def forward(self, hidden_states):
         return self.mlp(hidden_states)
 
-
 class Sign2VecFeatureEncoder(nn.Module):
     """Construct the features from raw audio waveform"""
 
     def __init__(self, config):
         super().__init__()
 
-        if config.encoder_type == "conv_layers":
+        if config.encoder_type == "conv_layers" and not config.enable_multicue:
+            print("Conv layers")
             if config.feat_extract_norm == "group":
-                conv_layers = [Sign2VecGroupNormConvLayer(config, layer_id=0)] + [
+                conv_layers = [ Sign2VecGroupNormConvLayer(config, layer_id=0) ] + [
                     Sign2VecGroupNormConvLayer(config, layer_id=i + 1) for i in range(config.num_conv_feat_extract_layers - 1)
                 ]
             elif config.feat_extract_norm == "layer":
@@ -458,19 +505,96 @@ class Sign2VecFeatureEncoder(nn.Module):
                 )
             self.conv_layers = nn.ModuleList(conv_layers)
 
-        elif config.encoder_type == "linear":
+        elif config.encoder_type == "linear" and not config.enable_multicue:
             print("Linear encoder using MLP")
             self.conv_layers = nn.ModuleList([
                 Sign2VecMLP(config, layer_id=i) for i in range(config.num_linear_feat_extract_layers)
             ])
 
-        elif config.encoder_type == 'mixed':
+        elif config.encoder_type == 'mixed' and not config.enable_multicue:
+            print("Mixed encoder using MLP and Conv layers")
             # First linear then conv layers
             self.conv_layers = nn.ModuleList(
                 [
                     Sign2VecMLP(config, layer_id=i) for i in range(config.num_linear_feat_extract_layers)
                 ] + [
                     Sign2VecGroupNormConvLayer(config, layer_id=i) for i in range(config.num_conv_feat_extract_layers)
+                ]
+            )
+
+        if config.enable_multicue and config.encoder_type == "conv_layers":
+            print("Using multicue with conv encoder")
+            # Define multiple parallel conv layers
+            self.right_hand_conv_layers = nn.ModuleList(
+                [ Sign2VecGroupNormConvLayer(config, layer_id=0, cue_type="right_hand") ] +
+                [
+                    Sign2VecGroupNormConvLayer(config, layer_id=i + 1, cue_type="right_hand") for i in range(config.num_conv_feat_extract_layers-1)
+                ]
+            )
+            self.left_hand_conv_layers = nn.ModuleList(
+                [ Sign2VecGroupNormConvLayer(config, layer_id=0, cue_type='left_hand') ] +
+                [
+                    Sign2VecGroupNormConvLayer(config, layer_id=i + 1, cue_type='left_hand') for i in range(config.num_conv_feat_extract_layers-1)
+                ]
+            )
+            self.face_conv_layers = nn.ModuleList(
+                [ Sign2VecGroupNormConvLayer(config, layer_id=0, cue_type='face') ] +
+                [
+                    Sign2VecGroupNormConvLayer(config, layer_id=i + 1, cue_type='face') for i in range(config.num_conv_feat_extract_layers-1)
+                ]
+            )
+            self.pose_conv_layers = nn.ModuleList(
+                [ Sign2VecGroupNormConvLayer(config, layer_id=0, cue_type='pose') ] +
+                [
+                    Sign2VecGroupNormConvLayer(config, layer_id=i + 1, cue_type='pose') for i in range(config.num_conv_feat_extract_layers-1)
+                ]
+            )
+
+        if config.enable_multicue and config.encoder_type == "linear":
+            print("Using multicue with linear encoder")
+            # Define multiple parallel conv layers
+            self.right_hand_conv_layers = nn.ModuleList([ 
+                Sign2VecMLP(config, layer_id=i, cue_type="right_hand")
+                for i in range(config.num_linear_feat_extract_layers) 
+            ])
+            self.left_hand_conv_layers = nn.ModuleList([ 
+                Sign2VecMLP(config, layer_id=i, cue_type='left_hand')
+                for i in range(config.num_linear_feat_extract_layers) 
+            ])
+            self.face_conv_layers = nn.ModuleList([ 
+                Sign2VecMLP(config, layer_id=i, cue_type='face')
+                for i in range(config.num_linear_feat_extract_layers) 
+            ])
+            self.pose_conv_layers = nn.ModuleList([ 
+                Sign2VecMLP(config, layer_id=i, cue_type='pose')
+                for i in range(config.num_linear_feat_extract_layers) 
+            ])
+
+        if config.enable_multicue and config.encoder_type == "mixed":
+            print("Using multicue with mixed encoder")
+            # Define multiple parallel conv layers
+            self.right_hand_conv_layers = nn.ModuleList(
+                [ Sign2VecMLP(config, layer_id=i, cue_type='right_hand') for i in range(config.num_linear_feat_extract_layers) ] +
+                [
+                    Sign2VecGroupNormConvLayer(config, layer_id=i, cue_type='right_hand') for i in range(config.num_conv_feat_extract_layers)
+                ]
+            )
+            self.left_hand_conv_layers = nn.ModuleList(
+                [ Sign2VecMLP(config, layer_id=i, cue_type='left_hand') for i in range(config.num_linear_feat_extract_layers) ] +
+                [
+                    Sign2VecGroupNormConvLayer(config, layer_id=i, cue_type='left_hand') for i in range(config.num_conv_feat_extract_layers)
+                ]
+            )
+            self.face_conv_layers = nn.ModuleList(
+                [ Sign2VecMLP(config, layer_id=i, cue_type='face') for i in range(config.num_linear_feat_extract_layers) ] +
+                [
+                    Sign2VecGroupNormConvLayer(config, layer_id=i, cue_type='face') for i in range(config.num_conv_feat_extract_layers)
+                ]
+            )
+            self.pose_conv_layers = nn.ModuleList(
+                [ Sign2VecMLP(config, layer_id=i, cue_type='pose') for i in range(config.num_linear_feat_extract_layers) ] +
+                [
+                    Sign2VecGroupNormConvLayer(config, layer_id=i, cue_type='pose') for i in range(config.num_conv_feat_extract_layers)
                 ]
             )
 
@@ -483,8 +607,59 @@ class Sign2VecFeatureEncoder(nn.Module):
             param.requires_grad = False
         self._requires_grad = False
 
-    def forward(self, input_values):
-        
+    def _forward_multicue(self, input_values):
+
+        hidden_states = input_values
+        if self.config.encoder_type == "linear" or self.config.encoder_type == "mixed":
+            hidden_states = hidden_states.transpose(1, 2)
+
+        cue_hidden_states = []
+        for cue_type, conv_layers in zip(
+            ["pose", "left_hand", "right_hand", "face"], 
+            [ self.pose_conv_layers, self.left_hand_conv_layers, self.right_hand_conv_layers, self.face_conv_layers]
+        ):
+            cue_range = getattr(self.config, f"{cue_type}_range")
+            cue_hidden_states.append(
+                hidden_states[:, cue_range[0]:cue_range[1], :]
+                if self.config.encoder_type == "conv_layers"
+                else hidden_states[:, :, cue_range[0]:cue_range[1]]
+            )
+            cue_hidden_state = cue_hidden_states[-1]
+            for layer_id, conv_layer in enumerate(conv_layers):
+                if self._requires_grad and self.gradient_checkpointing and self.training:
+                    if self.config.encoder_type == "linear" or self.config.encoder_type == "conv_layers":
+                        cue_hidden_state = self._gradient_checkpointing_func(
+                            conv_layer.__call__,
+                            cue_hidden_state,
+                        )
+                    else:
+                        cue_hidden_state = self._gradient_checkpointing_func(
+                            conv_layer.__call__,
+                            cue_hidden_state,
+                        )
+                        # If mixed, we need to transpose the hidden states for the linear layers
+                        if layer_id + 1 == self.config.num_linear_feat_extract_layers:
+                            cue_hidden_state = cue_hidden_state.transpose(1, 2)
+                else:
+                    if self.config.encoder_type == "linear" or self.config.encoder_type == "conv_layers":
+                        cue_hidden_state = conv_layer(cue_hidden_state)
+                    
+                    else:
+                        cue_hidden_state = conv_layer(cue_hidden_state)
+                        # If mixed, we need to transpose the hidden states for the linear layers
+                        if layer_id + 1 == self.config.num_linear_feat_extract_layers:
+                            cue_hidden_state = cue_hidden_state.transpose(1, 2)
+
+            cue_hidden_states[-1] = cue_hidden_state
+
+        hidden_states = torch.cat(cue_hidden_states, dim=1) if self.config.encoder_type == "conv_layers" or self.config.encoder_type == "mixed"  else torch.cat(cue_hidden_states, dim=2)
+
+        if self.config.encoder_type == "linear":
+            hidden_states = hidden_states.transpose(1, 2)
+
+        return hidden_states
+
+    def _forward_singlecue(self, input_values):
         # Copy input_values to hidden_states to keep the same variable name 
         # hidden_states = input_values[:,None]
         hidden_states = input_values
@@ -503,9 +678,6 @@ class Sign2VecFeatureEncoder(nn.Module):
                         hidden_states,
                     )
                 else:
-                    # print(f"Mixed conv layer: {layer_id}")
-                    # print(f"Layer: {conv_layer}")
-                    # print(f"Hidden states shape: {hidden_states.shape}")
                     hidden_states = self._gradient_checkpointing_func(
                         conv_layer.__call__,
                         hidden_states,
@@ -518,9 +690,6 @@ class Sign2VecFeatureEncoder(nn.Module):
                     hidden_states = conv_layer(hidden_states)
                 
                 else:
-                    # print(f"Mixed conv layer: {layer_id}")
-                    # print(f"Layer: {conv_layer}")
-                    # print(f"Hidden states shape: {hidden_states.shape}")
                     hidden_states = conv_layer(hidden_states)
                     # If mixed, we need to transpose the hidden states for the linear layers
                     if layer_id + 1 == self.config.num_linear_feat_extract_layers:
@@ -530,6 +699,11 @@ class Sign2VecFeatureEncoder(nn.Module):
             hidden_states = hidden_states.transpose(1, 2)
 
         return hidden_states
+
+    def forward(self, input_values):
+        if self.config.enable_multicue:
+            return self._forward_multicue(input_values)
+        return self._forward_singlecue(input_values)
 
 
 class Sign2VecFeatureExtractor(Sign2VecFeatureEncoder):
@@ -546,8 +720,12 @@ class Sign2VecFeatureExtractor(Sign2VecFeatureEncoder):
 class Sign2VecFeatureProjection(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.layer_norm = nn.LayerNorm(config.conv_dim[-1], eps=config.layer_norm_eps)
-        self.projection = nn.Linear(config.conv_dim[-1], config.hidden_size)
+
+        if config.enable_multicue: input_dim = config.conv_dim[-1] * 4
+        else: input_dim = config.conv_dim[-1]
+
+        self.layer_norm = nn.LayerNorm(input_dim, eps=config.layer_norm_eps)
+        self.projection = nn.Linear(input_dim, config.hidden_size)
         self.dropout = nn.Dropout(config.feat_proj_dropout)
 
     def forward(self, hidden_states):
@@ -1920,8 +2098,14 @@ class Sign2VecForPreTraining(Sign2VecPreTrainedModel):
 
         self.quantizer = Sign2VecGumbelVectorQuantizer(config)
 
+        if config.enable_multicue:
+            self.pose_quantizer = Sign2VecGumbelVectorQuantizer(config)
+            self.left_hand_quantizer = Sign2VecGumbelVectorQuantizer(config)
+            self.right_hand_quantizer = Sign2VecGumbelVectorQuantizer(config)
+            self.face_quantizer = Sign2VecGumbelVectorQuantizer(config)
+
         self.project_hid = nn.Linear(config.hidden_size, config.proj_codevector_dim)
-        self.project_q = nn.Linear(config.codevector_dim, config.proj_codevector_dim)
+        self.project_q = nn.Linear(config.codevector_dim, config.proj_codevector_dim if not config.enable_multicue else config.proj_codevector_dim // 4)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1931,6 +2115,11 @@ class Sign2VecForPreTraining(Sign2VecPreTrainedModel):
         Set the Gumbel softmax temperature to a given value. Only necessary for training
         """
         self.quantizer.temperature = temperature
+        if self.config.enable_multicue:
+            self.pose_quantizer.temperature = temperature
+            self.left_hand_quantizer.temperature = temperature
+            self.right_hand_quantizer.temperature = temperature
+            self.face_quantizer.temperature = temperature
 
     def freeze_feature_extractor(self):
         """
@@ -2067,12 +2256,36 @@ class Sign2VecForPreTraining(Sign2VecPreTrainedModel):
                 extract_features.shape[1], attention_mask, add_adapter=False
             )
 
-        quantized_features, codevector_perplexity = self.quantizer(
-            extract_features, mask_time_indices=mask_time_indices
-        )
+        codevector_perplexities = None
+        if self.config.enable_multicue:
+            extract_cues = extract_features.chunk(4, dim=2)
+            quantized_cues, codevector_perplexities = [], []
+            for cue_name, cue, quantizer in zip(
+                ['pose', 'left_hand', 'right_hand', 'face'],
+                extract_cues, 
+                [self.pose_quantizer, self.left_hand_quantizer, self.right_hand_quantizer, self.face_quantizer]):
 
-        quantized_features = quantized_features.to(self.project_q.weight.dtype)
-        quantized_features = self.project_q(quantized_features)
+                quantized_cue, cue_codevector_perplexity = quantizer(cue, mask_time_indices=mask_time_indices)
+                
+                quantized_cue = quantized_cue.to(self.project_q.weight.dtype)
+                quantized_cue = self.project_q(quantized_cue)
+
+                quantized_cues.append(quantized_cue)
+                codevector_perplexities.append(cue_codevector_perplexity)
+                
+            quantized_features = torch.cat(quantized_cues, dim=2)
+            if self.config.perplexity_reduction == "mean":
+                codevector_perplexity = torch.stack(codevector_perplexities).mean()
+            elif self.config.perplexity_reduction == "sum":
+                codevector_perplexity = torch.stack(codevector_perplexities).sum()
+
+        else:
+            quantized_features, codevector_perplexity = self.quantizer(
+                extract_features, mask_time_indices=mask_time_indices
+            )
+
+            quantized_features = quantized_features.to(self.project_q.weight.dtype)
+            quantized_features = self.project_q(quantized_features)
 
         loss = contrastive_loss = diversity_loss = None
         if sampled_negative_indices is not None:
@@ -2132,6 +2345,16 @@ class Sign2VecForPreTraining(Sign2VecPreTrainedModel):
             attentions=outputs.attentions,
             contrastive_loss=contrastive_loss,
             diversity_loss=diversity_loss,
+
+            pose_codevector_perplexity=None if not self.config.enable_multicue else codevector_perplexities[0],
+            left_hand_codevector_perplexity=None if not self.config.enable_multicue else codevector_perplexities[1],
+            right_hand_codevector_perplexity=None if not self.config.enable_multicue else codevector_perplexities[2],
+            face_codevector_perplexity=None if not self.config.enable_multicue else codevector_perplexities[3],
+
+            pose_diversity_loss=None if not self.config.enable_multicue else ((num_codevectors - codevector_perplexities[0]) / num_codevectors) * mask_time_indices.sum(),
+            left_hand_diversity_loss=None if not self.config.enable_multicue else ((num_codevectors - codevector_perplexities[1]) / num_codevectors) * mask_time_indices.sum(),
+            right_hand_diversity_loss=None if not self.config.enable_multicue else ((num_codevectors - codevector_perplexities[2]) / num_codevectors) * mask_time_indices.sum(),
+            face_diversity_loss=None if not self.config.enable_multicue else ((num_codevectors - codevector_perplexities[3]) / num_codevectors) * mask_time_indices.sum(),
         )
 
 

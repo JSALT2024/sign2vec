@@ -11,7 +11,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
                     --tags sign2vec base yasl-norm single_cue \
                     --datasets "train" "dev" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
-                    --model_config_file="experimental/configs/s2v_multi_code_mixed_mcue.yaml" \
+                    --model_config_file="experimental/configs/s2v-pretraining/s2v_multi_code_mixed_mcue.yaml" \
                     --metadata_file='/ssd2/karahan/YASL/pose' \
                     --annotation_file='/ssd2/karahan/YASL/' \
                     --output_dir="/ssd2/karahan/YASL/sign2vec-base-mixed-mcue-zero-mean-div-1.0" \
@@ -42,7 +42,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
                     --tags sign2vec base yasl-norm single_cue \
                     --datasets "train" "dev" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
-                    --model_config_file="experimental/configs/s2v_multi_code_linear_mcue.yaml" \
+                    --model_config_file="experimental/configs/s2v-pretraining/s2v_multi_code_linear_mcue.yaml" \
                     --metadata_file='/ssd2/karahan/YASL/pose' \
                     --annotation_file='/ssd2/karahan/YASL/' \
                     --output_dir="/ssd2/karahan/YASL/sign2vec-base-linear-mcue-zero-mean-div-1.0" \
@@ -73,7 +73,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
                     --tags sign2vec base yasl-norm single_cue \
                     --datasets "train" "dev" \
                     --dataset_path="/ssd2/karahan/YASL/pose"  \
-                    --model_config_file="experimental/configs/s2v_multi_code_conv_mcue.yaml" \
+                    --model_config_file="experimental/configs/s2v-pretraining/s2v_multi_code_conv_mcue.yaml" \
                     --metadata_file='/ssd2/karahan/YASL/pose' \
                     --annotation_file='/ssd2/karahan/YASL/' \
                     --output_dir="/ssd2/karahan/YASL/sign2vec-base-conv-mcue-zero-mean-div-1.0" \
@@ -105,7 +105,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
 #                     --tags sign2vec base yasl-norm single_cue \
 #                     --datasets "train" "dev" \
 #                     --dataset_path="/ssd2/karahan/YASL/pose"  \
-#                     --model_config_file="experimental/configs/s2v_multi_code_mixed_n_mcue.yaml" \
+#                     --model_config_file="experimental/configs/s2v-pretraining/s2v_multi_code_mixed_n_mcue.yaml" \
 #                     --metadata_file='/ssd2/karahan/YASL/pose' \
 #                     --annotation_file='/ssd2/karahan/YASL/' \
 #                     --output_dir="/ssd2/karahan/YASL/sign2vec-base-mixed-mcue-zero-mean-div-1.0-c128" \
@@ -136,7 +136,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
 #                     --tags sign2vec base yasl-norm single_cue \
 #                     --datasets "train" "dev" \
 #                     --dataset_path="/ssd2/karahan/YASL/pose"  \
-#                     --model_config_file="experimental/configs/s2v_multi_code_linear_n_mcue.yaml" \
+#                     --model_config_file="experimental/configs/s2v-pretraining/s2v_multi_code_linear_n_mcue.yaml" \
 #                     --metadata_file='/ssd2/karahan/YASL/pose' \
 #                     --annotation_file='/ssd2/karahan/YASL/' \
 #                     --output_dir="/ssd2/karahan/YASL/sign2vec-base-linear-mcue-zero-mean-div-1.0-c128" \
@@ -167,7 +167,7 @@ TORCHDYNAMO_VERBOSE=1 accelerate launch sign2vec/train/run_sign2vec_pretraining.
 #                     --tags sign2vec base yasl-norm single_cue \
 #                     --datasets "train" "dev" \
 #                     --dataset_path="/ssd2/karahan/YASL/pose"  \
-#                     --model_config_file="experimental/configs/s2v_multi_code_conv_n_mcue.yaml" \
+#                     --model_config_file="experimental/configs/s2v-pretraining/s2v_multi_code_conv_n_mcue.yaml" \
 #                     --metadata_file='/ssd2/karahan/YASL/pose' \
 #                     --annotation_file='/ssd2/karahan/YASL/' \
 #                     --output_dir="/ssd2/karahan/YASL/sign2vec-base-conv-mcue-zero-mean-div-1.0-c128" \

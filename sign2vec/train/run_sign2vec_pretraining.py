@@ -178,6 +178,9 @@ def parse_args():
         choices=["linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"],
     )
     parser.add_argument(
+        "--enable_multicue", action="store_true", help="Whether to enable multi-cue training."
+    )
+    parser.add_argument(
         "--num_warmup_steps", type=int, default=0, help="Number of steps for the warmup in the lr scheduler."
     )
     parser.add_argument("--output_dir", type=str, default=None, help="Where to store the final model.")
@@ -795,7 +798,7 @@ def main():
             val_logs["val_diversity_loss"] += outputs.diversity_loss
             val_logs["val_num_losses"] += batch["mask_time_indices"].sum()
 
-            if args.enable_multicue:
+            if config.enable_multicue:
                 val_logs["val_pose_diversity_loss"] += outputs.pose_diversity_loss
                 val_logs["val_left_hand_diversity_loss"] += outputs.left_hand_diversity_loss
                 val_logs["val_right_hand_diversity_loss"] += outputs.right_hand_diversity_loss

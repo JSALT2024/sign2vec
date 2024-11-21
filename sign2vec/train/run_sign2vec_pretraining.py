@@ -795,7 +795,7 @@ def main():
             val_logs["val_diversity_loss"] += outputs.diversity_loss
             val_logs["val_num_losses"] += batch["mask_time_indices"].sum()
 
-            if model.config.enable_multicue:
+            if args.enable_multicue:
                 val_logs["val_pose_diversity_loss"] += outputs.pose_diversity_loss
                 val_logs["val_left_hand_diversity_loss"] += outputs.left_hand_diversity_loss
                 val_logs["val_right_hand_diversity_loss"] += outputs.right_hand_diversity_loss

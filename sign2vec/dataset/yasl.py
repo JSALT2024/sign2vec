@@ -255,6 +255,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         if self.input_type == "pose":
             # Reinitialize the dataset if the h5 file is different
             if self.h5_file_name != h5_file:
+                print(f"Reinitializing the dataset with {h5_file}")
                 YoutubeASLForPose.__init__(self, h5_file, self.transform, self.max_instances, self.is_normalized)
             keypoints = self.get_item_by_clip_id(file_idx)
 

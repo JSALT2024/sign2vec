@@ -285,7 +285,7 @@ if __name__ == "__main__":
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
-        processing_class=tokenizer,
+        tokenizer=tokenizer,
         data_collator=collate_fn,
         compute_metrics=compute_metrics,
     )

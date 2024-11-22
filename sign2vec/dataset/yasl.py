@@ -181,6 +181,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
 
         self.mode = mode
         self.verbose = verbose
+        self.is_normalized = is_normalized
 
         annotations = json.load(open(
             os.path.join(annotation_fpath, f'YT.annotations.{mode}.json')
@@ -210,9 +211,15 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
 
                 # Check clip_id in the h5 files
                 h5_file = h5py.File(h5_path, "r")
-                if clip_id not in h5_file.keys():
-                    if verbose: print(f"Clip id {clip_id} not found in {h5_path}")
-                    continue
+                if not self.is_normalized:
+                    if clip_id not in h5_file.keys():
+                        if verbose: print(f"Clip id {clip_id} not found in {h5_path}")
+                        continue
+        
+                if self.is_normalized:
+                    if video_id not in h5_file.keys() and clip_id not in h5_file[video_id].keys():
+                        if verbose: print(f"Clip id {clip_id} not found in {h5_path}")
+                        continue
 
                 self.annotations.append({
                     "video_id": video_id,

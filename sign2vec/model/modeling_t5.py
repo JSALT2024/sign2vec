@@ -34,6 +34,7 @@ class T5ModelForSLT(PreTrainedModel):
             length_penalty=config.length_penalty,
             no_repeat_ngram_size=config.no_repeat_ngram_size,
             do_sample=config.do_sample,
+            early_stopping=config.early_stopping,
             pad_token_id=self.model.config.pad_token_id,
             bos_token_id=self.model.config.bos_token_id,
             eos_token_id=self.model.config.eos_token_id,

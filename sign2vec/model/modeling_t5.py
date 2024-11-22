@@ -13,8 +13,8 @@ class T5ModelForSLT(PreTrainedModel):
 
     config_class = SignT5Config
 
-    def __init__(self, config):
-        super(T5ModelForSLT, self).__init__(config)
+    def __init__(self, config: SignT5Config):
+        super().__init__(config)
 
         # Define a custom linear layer to apply to the input embeddings
         self.model = AutoModelForSeq2SeqLM.from_pretrained(config.base_model_name)

@@ -18,7 +18,11 @@ class T5ModelForSLT(PreTrainedModel):
 
         # Define a custom linear layer to apply to the input embeddings
         self.model = AutoModelForSeq2SeqLM.from_pretrained(config.base_model_name)
-        self.custom_linear = nn.Linear(config.sign_input_dim, self.model.config.d_model)
+        self.custom_linear =  nn.Sequential(
+            nn.Linear(config.sign_input_dim, self.model.config.d_model),
+            nn.Dropout(config.hidden_dropout_prob),
+            nn.GELU(),
+        )
 
         self.model.generation_config = GenerationConfig(
             max_length=config.max_length,

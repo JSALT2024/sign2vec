@@ -67,6 +67,7 @@ def parse_args():
     parser.add_argument("--model_id", type=str, default="t5-small")
     parser.add_argument("--max_training_steps", type=int, default=20_000)
     parser.add_argument("--eval_steps", type=int, default=100)
+    parser.add_argument("--save_steps", type=int, default=100)
     parser.add_argument("--per_device_train_batch_size", type=int, default=16)
     parser.add_argument("--per_device_eval_batch_size", type=int, default=1)
     parser.add_argument("--gradient_accumulation_steps", type=float, default=4)

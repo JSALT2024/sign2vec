@@ -206,6 +206,22 @@ if __name__ == "__main__":
             is_normalized=args.is_normalized,
         )
 
+    
+    if args.verbose:
+        print(f"Training dataset: {len(train_dataset)}")
+        print(f"Validation dataset: {len(val_dataset)}")
+
+        # Print the first sample
+        sample = train_dataset[0]
+
+        print(f"Sign inputs:")
+        print(sample["sign_inputs"])
+        print(f"Attention mask:")
+        print(sample["attention_mask"])
+        print(f"Labels:")
+        print(sample["labels"])
+
+
     sacrebleu = evaluate.load('sacrebleu')
 
     def compute_metrics(eval_preds):

@@ -183,6 +183,8 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         self.verbose = verbose
         self.is_normalized = is_normalized
 
+        self.max_instances = max_instances
+
         annotations = json.load(open(
             os.path.join(annotation_fpath, f'YT.annotations.{mode}.json')
         )) # YT.annotations.{mode}.json
@@ -252,7 +254,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         YoutubeASLForSign2Vec.__init__(self, self.h5_file_name, max_instances)
 
     def __len__(self):
-        return len(self.annotations)
+        return len(self.annotations) if self.max_instances is None else self.max_instances
 
     def __getitem__(self, idx):
         # Get the keypoints and the sentence

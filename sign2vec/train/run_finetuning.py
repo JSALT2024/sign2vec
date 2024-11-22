@@ -90,6 +90,8 @@ def parse_args():
     parser.add_argument("--max_val_samples", type=int, default=None)
     parser.add_argument("--is_normalized", action="store_true")
 
+    parser.add_argument("--verbose", action="store_true")
+
     return parser.parse_args()
 
 
@@ -107,8 +109,8 @@ def read_from_config(args):
         # Update the default arguments with the config file
         for key, value in config.items():
             setattr(args, key, value)
-    return args
 
+    return args
 
 if __name__ == "__main__":
 
@@ -169,6 +171,7 @@ if __name__ == "__main__":
         annotation_fpath=args.annotation_file,
         metadata_fpath=args.metadata_file,
         is_normalized=args.is_normalized,
+        verbose=args.verbose,
     )
 
     val_dataset = DatasetForSLT(
@@ -184,6 +187,7 @@ if __name__ == "__main__":
         annotation_fpath=args.annotation_file,
         metadata_fpath=args.metadata_file,
         is_normalized=args.is_normalized,
+        verbose=args.verbose,
     )
 
     if args.dataset_type == 'how2sign':

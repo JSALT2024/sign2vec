@@ -176,9 +176,11 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         h5_prefix="YouTubeASL",
         max_instances=None,
         is_normalized=False,
+        verbose=False,
     ):
 
         self.mode = mode
+        self.verbose = verbose
 
         annotations = json.load(open(
             os.path.join(annotation_fpath, f'YT.annotations.{mode}.json')
@@ -195,7 +197,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
             for clip_id in clip_ids:
 
                 if video_id not in metadata:
-                    # print(f"Video id {video_id} not found in metadata")
+                    if verbose: print(f"Video id {video_id} not found in metadata")
                     continue
 
                 h5_path = os.path.join(metadata_fpath, '.'.join([
@@ -203,13 +205,13 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
                 ]))
 
                 if not os.path.exists(h5_path):
-                    # print(f"File {h5_path} not found")
+                    if verbose: print(f"File {h5_path} not found")
                     continue
 
                 # Check clip_id in the h5 files
                 h5_file = h5py.File(h5_path, "r")
                 if clip_id not in h5_file.keys():
-                    # print(f"Clip id {clip_id} not found in {h5_path}")
+                    if verbose: print(f"Clip id {clip_id} not found in {h5_path}")
                     continue
 
                 self.annotations.append({
@@ -255,7 +257,7 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
         if self.input_type == "pose":
             # Reinitialize the dataset if the h5 file is different
             if self.h5_file_name != h5_file:
-                print(f"Reinitializing the dataset with {h5_file}")
+                if self.verbose: print(f"Reinitializing the dataset with {h5_file}")
                 YoutubeASLForPose.__init__(self, h5_file, self.transform, self.max_instances, self.is_normalized)
             keypoints = self.get_item_by_clip_id(file_idx)
 

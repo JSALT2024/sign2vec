@@ -36,6 +36,7 @@ class T5ModelForSLT(PreTrainedModel):
             decoder_start_token_id=self.model.config.pad_token_id,
         )
 
+    @torch.no_grad()
     def generate(
         self,
         sign_inputs: torch.FloatTensor = None,

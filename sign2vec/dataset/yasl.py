@@ -11,7 +11,7 @@ from torch.utils.data import Dataset
 
 from transformers import AutoTokenizer
 
-from sign2vec.utils.normalization import normalize_local, normalize_global, normalize_yasl
+from sign2vec.utils.normalization import normalize_yasl
 
 POSE_LANDMARKS = [11, 12, 13, 14, 23, 24]
 
@@ -23,7 +23,6 @@ FACE_LANDMARKS = [
     311, 323, 362, 386, 397,
     468, 473 
 ]
-
 
 class YoutubeASLForPose(Dataset):
 
@@ -291,7 +290,6 @@ class YoutubeASLForSLT(YoutubeASLForPose, YoutubeASLForSign2Vec):
             "labels": decoder_input_ids,
             "attention_mask": attention_mask,
         }
-
 
 class YoutubeASLForSign2VecPretraining(YoutubeASLForPose):
 

@@ -219,9 +219,7 @@ if __name__ == "__main__":
         print(f"Attention mask:")
         print(sample["attention_mask"])
         print(f"Labels:")
-        print(sample["labels"])
-
-
+        
     sacrebleu = evaluate.load('sacrebleu')
 
     def compute_metrics(eval_preds):
@@ -231,8 +229,8 @@ if __name__ == "__main__":
             preds = preds[0]
             preds = np.argmax(preds, axis=2)
 
+        preds = np.where(preds != -100, preds, tokenizer.pad_token_id)
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
-
         labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 

@@ -5,6 +5,7 @@ import wandb
 import torch
 import evaluate
 import numpy as np
+from torch.backends.mkl import verbose
 from transformers import (
     Seq2SeqTrainingArguments,
     Seq2SeqTrainer,
@@ -238,8 +239,8 @@ if __name__ == "__main__":
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
-    
-        for i in range(len(decoded_preds)):
+
+        for i in range(10):
             print(f"Prediction: {decoded_preds[i]}")
             print(f"Reference: {decoded_labels[i]}")
             print('*'*50)

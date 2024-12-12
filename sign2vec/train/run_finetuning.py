@@ -230,6 +230,9 @@ if __name__ == "__main__":
             preds = np.argmax(preds, axis=2)
 
         preds = np.where(preds != -100, preds, tokenizer.pad_token_id)
+        if len(np.where(preds > len(tokenizer) - 1)[1]) > 0:
+            print(f'Replacing <unk> for illegal tokens found on indexes {np.where(preds > len(tokenizer) - 1)[1]}')
+        preds[preds > len(tokenizer) - 1] = tokenizer.unk_token_id
         decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
         labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
@@ -325,6 +328,10 @@ if __name__ == "__main__":
                 num_beams=args.num_beams,
                 bos_token_id=tokenizer.pad_token_id,
             )
+
+            if len(np.where(outputs > len(tokenizer) - 1)[1]) > 0:
+                print(f'Replacing <unk> for illegal tokens found on indexes {np.where(outputs > len(tokenizer) - 1)[1]}')
+            outputs[outputs > len(tokenizer) - 1] = tokenizer.unk_token_id
 
             decoded_preds = tokenizer.batch_decode(outputs, skip_special_tokens=True)
             decoded_labels = tokenizer.batch_decode(batch["labels"], skip_special_tokens=True)

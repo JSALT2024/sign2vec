@@ -11,3 +11,6 @@ wandb
 accelerate
 opencv-python
 h5py
+evaluate
+sentencepiece
+sacrebleu

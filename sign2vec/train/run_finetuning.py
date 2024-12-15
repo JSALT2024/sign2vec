@@ -171,6 +171,7 @@ if __name__ == "__main__":
         max_sequence_length=args.max_sequence_length,
         skip_frames=args.skip_frames,
         tokenizer=args.model_id,
+        max_instances=args.max_train_samples,
         input_type=args.modality,
         annotation_fpath=args.annotation_file,
         metadata_fpath=args.metadata_file,

@@ -73,6 +73,7 @@ def parse_args():
     parser.add_argument("--per_device_eval_batch_size", type=int, default=1)
     parser.add_argument("--gradient_accumulation_steps", type=float, default=4)
     parser.add_argument("--learning_rate", type=float, default=0.001)
+    parser.add_argument("--lr_scheduler_type", type=str, default='linear')
     parser.add_argument("--weight_decay", type=float, default=0.0)
     parser.add_argument("--fp16", action="store_true")
     parser.add_argument("--push_to_hub", action="store_true")
@@ -283,6 +284,7 @@ if __name__ == "__main__":
         num_train_epochs=num_train_epochs,
         optim="adafactor",
         learning_rate=args.learning_rate,
+        lr_scheduler_type=args.lr_scheduler_type,
         weight_decay=args.weight_decay,
         per_device_train_batch_size=args.per_device_train_batch_size,
         per_device_eval_batch_size=args.per_device_eval_batch_size,

@@ -89,6 +89,7 @@ def parse_args():
     # Running arguments
     parser.add_argument("--dev", action="store_true")
     parser.add_argument("--project_name", type=str, default="h2s-t5")
+    parser.add_argument("--max_train_samples", type=int, default=None)
     parser.add_argument("--max_val_samples", type=int, default=None)
     parser.add_argument("--is_normalized", action="store_true")
 
@@ -127,6 +128,7 @@ if __name__ == "__main__":
         sign_input_dim=args.pose_dim,
     )
     model = T5ModelForSLT(config=config)
+    for param in model.parameters(): param.data = param.data.contiguous()
     tokenizer = T5Tokenizer.from_pretrained(args.model_id)
 
     # Add collate_fn to DataLoader

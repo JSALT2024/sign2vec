@@ -463,6 +463,7 @@ def main():
             if is_wandb_available() and not args.debug:
                 wandb.init(
                     project='sign2vec-v1',
+                    # name=args.run_name,
                     entity="boun-pilab",
                     tags=args.tags,
                     config={**vars(args), **kwargs},

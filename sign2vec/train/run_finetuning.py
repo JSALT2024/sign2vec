@@ -30,6 +30,7 @@ def init_wandb(args):
     )
     wandb.init(
         project=args.project_name,
+        # name=args.run_name,
         tags=[args.dataset_type, args.transform, args.modality] + (["dev"] if args.dev else []),
     )
 
@@ -334,7 +335,8 @@ if __name__ == "__main__":
                 bos_token_id=tokenizer.pad_token_id,
             )
 
-            if len(np.where(outputs > len(tokenizer) - 1)[1]) > 0:
+            # if len(np.where(outputs > len(tokenizer) - 1)[1]) > 0:
+            if len(np.where(outputs.cpu().numpy() > len(tokenizer) - 1)[1]) > 0:
                 print(f'Replacing <unk> for illegal tokens found on indexes {np.where(outputs > len(tokenizer) - 1)[1]}')
             outputs[outputs > len(tokenizer) - 1] = tokenizer.unk_token_id
 

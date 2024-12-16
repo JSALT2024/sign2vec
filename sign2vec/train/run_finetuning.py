@@ -341,7 +341,7 @@ if __name__ == "__main__":
 
             # if len(np.where(outputs > len(tokenizer) - 1)[1]) > 0:
             if len(np.where(outputs.cpu().numpy() > len(tokenizer) - 1)[1]) > 0:
-                print(f'Replacing <unk> for illegal tokens found on indexes {np.where(outputs > len(tokenizer) - 1)[1]}')
+                print(f'Replacing <unk> for illegal tokens found on indexes {np.where(outputs.cpu().numpy() > len(tokenizer) - 1)[1]}')
             outputs[outputs > len(tokenizer) - 1] = tokenizer.unk_token_id
 
             decoded_preds = tokenizer.batch_decode(outputs, skip_special_tokens=True)

@@ -115,6 +115,9 @@ def read_from_config(args):
         for key, value in config.items():
             setattr(args, key, value)
 
+    if args.run_name and 'PBS_JOBID' in os.environ.keys():
+        args.run_name = args.run_name + '_' + os.environ['PBS_JOBID']
+
     return args
 
 if __name__ == "__main__":

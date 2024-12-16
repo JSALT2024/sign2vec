@@ -464,7 +464,6 @@ def main():
                 wandb.init(
                     project='sign2vec-v1',
                     entity="boun-pilab",
-                    name=args.run_name,
                     tags=args.tags,
                     config={**vars(args), **kwargs},
                 )

@@ -305,6 +305,7 @@ if __name__ == "__main__":
         save_strategy="steps",
         save_steps=args.save_steps,
         generation_config=model.base_model.generation_config,
+        ddp_find_unused_parameters=False,
     )
 
     trainer = Seq2SeqTrainer(

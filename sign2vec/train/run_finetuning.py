@@ -15,6 +15,8 @@ from sign2vec.model.configuration_t5 import SignT5Config
 from sign2vec.model.modeling_t5 import T5ModelForSLT
 from sign2vec.utils.translation import postprocess_text
 
+import torch.distributed as dist
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -125,7 +127,8 @@ if __name__ == "__main__":
     args = parse_args()
     args = read_from_config(args)
 
-    init_wandb(args)
+    if os.environ.get("LOCAL_RANK", "0") == "0":
+        init_wandb(args)
     
     # Initialize the custom model
     config = SignT5Config(

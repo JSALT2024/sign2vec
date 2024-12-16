@@ -31,7 +31,7 @@ def init_wandb(args):
     wandb.init(
         project=args.project_name,
         # name=args.run_name,
-        tags=[args.dataset_type, args.transform, args.modality] + (["dev"] if args.dev else []),
+        tags=[args.dataset_type, args.transform, args.modality] + (["dev"] if args.dev else []) + (["sweep"] if args.sweep else []),
     )
 
     return wandb
@@ -89,6 +89,7 @@ def parse_args():
 
     # Running arguments
     parser.add_argument("--dev", action="store_true")
+    parser.add_argument("--sweep", action="store_true")
     parser.add_argument("--project_name", type=str, default="h2s-t5")
     parser.add_argument("--max_train_samples", type=int, default=None)
     parser.add_argument("--max_val_samples", type=int, default=None)

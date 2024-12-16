@@ -29,8 +29,7 @@ def init_wandb(args):
         key=os.getenv("WANDB_API_KEY")
     )
     wandb.init(
-        project=args.project_name, 
-        name=args.model_name,
+        project=args.project_name,
         tags=[args.dataset_type, args.transform, args.modality] + (["dev"] if args.dev else []),
     )
 

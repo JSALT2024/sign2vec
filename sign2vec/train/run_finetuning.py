@@ -30,7 +30,7 @@ def init_wandb(args):
     )
     wandb.init(
         project=args.project_name,
-        # name=args.run_name,
+        # name=args.model_name,
         tags=[args.dataset_type, args.transform, args.modality] + (["dev"] if args.dev else []) + (["sweep"] if args.sweep else []),
     )
 
@@ -115,8 +115,8 @@ def read_from_config(args):
         for key, value in config.items():
             setattr(args, key, value)
 
-    if args.run_name and 'PBS_JOBID' in os.environ.keys():
-        args.run_name = args.run_name + '_' + os.environ['PBS_JOBID']
+    if args.model_name and 'PBS_JOBID' in os.environ.keys():
+        args.model_name = args.model_name + '_' + os.environ['PBS_JOBID']
 
     return args
 

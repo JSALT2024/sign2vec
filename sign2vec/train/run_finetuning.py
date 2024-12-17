@@ -96,6 +96,7 @@ def parse_args():
     parser.add_argument("--max_train_samples", type=int, default=None)
     parser.add_argument("--max_val_samples", type=int, default=None)
     parser.add_argument("--is_normalized", action="store_true")
+    parser.add_argument("--resume_from_checkpoint", type=str, default=None)
 
     parser.add_argument("--verbose", action="store_true")
 
@@ -321,7 +322,7 @@ if __name__ == "__main__":
         compute_metrics=compute_metrics,
     )
 
-    trainer.train()
+    trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
 
     val_dataloader = torch.utils.data.DataLoader(
         val_dataset,

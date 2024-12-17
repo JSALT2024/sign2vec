@@ -17,7 +17,7 @@ def parse_args():
 
     # Model and data paths
     parser.add_argument("--model_name", type=str, default="h2s-test", help="Model name or folder inside model_dir.")
-    parser.add_argument("--dataset_type", type=str, default="how2sign", choices=["how2sign", "yasl"], help="Type of the dataset.")
+    parser.add_argument("--dataset_type", type=str, default="yasl", choices=["how2sign", "yasl"], help="Type of the dataset.")
     parser.add_argument("--dataset_dir", type=str, default="/path/to/data", help="Path to the dataset directory.")
     parser.add_argument("--output_dir", default='./results',type=str)
 

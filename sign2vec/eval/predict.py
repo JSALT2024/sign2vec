@@ -6,6 +6,7 @@ import numpy as np
 from dotenv import load_dotenv
 from transformers import T5Tokenizer
 from sign2vec.model.configuration_t5 import SignT5Config
+from transformers import T5Config
 from sign2vec.model.modeling_t5 import T5ModelForSLT
 from sign2vec.utils.translation import postprocess_text
 
@@ -15,30 +16,39 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run inference with a fine-tuned T5 model for SLT")
 
     # Model and data paths
-    parser.add_argument("--model_dir", type=str, required=True, help="Path to the directory containing the fine-tuned model and config.")
     parser.add_argument("--model_name", type=str, default="h2s-test", help="Model name or folder inside model_dir.")
     parser.add_argument("--dataset_type", type=str, default="how2sign", choices=["how2sign", "yasl"], help="Type of the dataset.")
     parser.add_argument("--dataset_dir", type=str, default="/path/to/data", help="Path to the dataset directory.")
+    parser.add_argument("--output_dir", default='./results',type=str)
+
+    # New data scheme
     parser.add_argument("--annotation_file", type=str, required=True, help="Path to the annotations file.")
     parser.add_argument("--metadata_file", type=str, required=True, help="Path to the metadata file.")
 
-    # Generation parameters
+    # Data processing
+    parser.add_argument("--skip_frames", action="store_true")
     parser.add_argument("--max_sequence_length", type=int, default=250, help="Max number of frames for sign inputs.")
     parser.add_argument("--max_token_length", type=int, default=128, help="Max token length for labels.")
+    parser.add_argument("--transform", type=str, default="yasl", choices=["yasl", "custom"], help="Data transform type.")
+    parser.add_argument("--modality", type=str, default="pose", choices=["pose", "sign2vec", "mae"], help="Input modality.")
+
+    # Generation parameters
+    parser.add_argument("--model_dir", type=str, required=True, help="Path to the directory containing the fine-tuned model and config.")
+    parser.add_argument("--batch_size", type=int, default=1, help="Batch size for inference.")
     parser.add_argument("--pose_dim", type=int, default=208, help="Dimension of the pose embeddings.")
+
+    # Evaluation arguments
     parser.add_argument("--num_beams", type=int, default=5, help="Number of beams for beam search.")
     parser.add_argument("--length_penalty", type=float, default=0.6, help="Length penalty for generation.")
     parser.add_argument("--early_stopping", action="store_true", help="Use early stopping in generation.")
     parser.add_argument("--no_repeat_ngram_size", type=int, default=0, help="No repeat ngram size.")
-    parser.add_argument("--batch_size", type=int, default=1, help="Batch size for inference.")
-    parser.add_argument("--input_type", type=str, default="pose", choices=["pose", "sign2vec", "mae"], help="Input modality.")
 
-    # Custom arguments
-    parser.add_argument("--is_normalized", action="store_true", help="If the data is normalized.")
-    parser.add_argument("--transform", type=str, default="yasl", choices=["yasl", "custom"], help="Data transform type.")
-    parser.add_argument("--output_file", type=str, default="predictions.json", help="File to store predictions.")
-    parser.add_argument("--verbose", action="store_true", help="Verbose mode.")
+    # Running arguments
     parser.add_argument("--dev", action="store_true", help="Use dev mode.")
+    parser.add_argument("--max_val_samples", type=int, default=None)
+    parser.add_argument("--is_normalized", action="store_true", help="If the data is normalized.")
+
+    parser.add_argument("--verbose", action="store_true", help="Verbose mode.")
     
     return parser.parse_args()
 
@@ -80,7 +90,8 @@ def load_dataset(args):
         max_sequence_length=args.max_sequence_length,
         skip_frames=False,
         tokenizer=args.model_dir,
-        input_type=args.input_type,
+        max_instances=args.max_val_samples,
+        input_type=args.modality,
         annotation_fpath=args.annotation_file,
         metadata_fpath=args.metadata_file,
         is_normalized=args.is_normalized,
@@ -119,12 +130,9 @@ def main():
     args = parse_args()
 
     # Load model and tokenizer
-    config = SignT5Config(
-        base_model_name=os.path.join(args.model_dir, args.model_name),
-        sign_input_dim=args.pose_dim,
-    )
-    model = T5ModelForSLT.from_pretrained(os.path.join(args.model_dir, args.model_name), config=config)
-    tokenizer = T5Tokenizer.from_pretrained(os.path.join(args.model_dir, args.model_name))
+    model = T5ModelForSLT.from_pretrained(args.model_dir)
+    for param in model.parameters(): param.data = param.data.contiguous()
+    tokenizer = T5Tokenizer.from_pretrained(args.model_dir)
 
     # Prepare dataset
     dataset = load_dataset(args)
@@ -163,11 +171,12 @@ def main():
         for pred, ref in zip(decoded_preds, decoded_labels)
     ]
 
-    os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
-    with open(args.output_file, "w") as f:
+    os.makedirs(args.output_dir, exist_ok=True)
+    prediction_file = os.path.join(args.output_dir, "predictions.json")
+    with open(prediction_file, "w") as f:
         json.dump(all_predictions, f, ensure_ascii=False, indent=4)
 
-    print(f"Predictions saved to {args.output_file}")
+    print(f"Predictions saved to {prediction_file}")
 
 if __name__ == "__main__":
     main()

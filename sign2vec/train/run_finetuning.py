@@ -330,7 +330,7 @@ if __name__ == "__main__":
         collate_fn=collate_fn,
     )
 
-    def evaluate(model, dataloader, tokenizer):
+    def evaluate_model(model, dataloader, tokenizer):
 
         predictions, labels = [], []
         for step, batch in enumerate(dataloader):
@@ -357,7 +357,7 @@ if __name__ == "__main__":
 
         return predictions, labels
     
-    val_predictions, val_labels = evaluate(model, val_dataloader, tokenizer)
+    val_predictions, val_labels = evaluate_model(model, val_dataloader, tokenizer)
 
     # Save predictions to file
     with open(os.path.join(args.output_dir, args.model_name, "val_predictions.txt"), "w") as f:

@@ -9,6 +9,7 @@ from sign2vec.model.configuration_t5 import SignT5Config
 from transformers import T5Config
 from sign2vec.model.modeling_t5 import T5ModelForSLT
 from sign2vec.utils.translation import postprocess_text
+import evaluate
 
 load_dotenv()
 
@@ -99,7 +100,7 @@ def load_dataset(args):
     )
     return dataset
 
-def evaluate(model, dataloader, tokenizer, args):
+def evaluate_model(model, dataloader, tokenizer, args):
     model.eval()
     predictions, labels = [], []
     with torch.no_grad():
@@ -151,7 +152,7 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)
 
-    predictions, labels = evaluate(model, dataloader, tokenizer, args)
+    predictions, labels = evaluate_model(model, dataloader, tokenizer, args)
 
     # Postprocess predictions and references
     decoded_preds, decoded_labels = postprocess_text(predictions, [ref[0] for ref in labels])
@@ -162,6 +163,23 @@ def main():
             print("Reference:", decoded_labels[i])
             print("-" * 50)
 
+    # Compute metrics
+    sacrebleu = evaluate.load('sacrebleu')
+    result = sacrebleu.compute(predictions=decoded_preds, references=decoded_labels)
+    result = {
+        "bleu": result["score"],
+        'bleu-1': result['precisions'][0],
+        'bleu-2': result['precisions'][1],
+        'bleu-3': result['precisions'][2],
+        'bleu-4': result['precisions'][3],
+    }
+
+    result = {k: round(v, 4) for k, v in result.items()}
+
+    if args.verbose:
+        for key, value in result.items():
+            print(f"{key}: {value:.4f}")
+
     # Save predictions
     all_predictions = [
         {
@@ -170,6 +188,7 @@ def main():
         }
         for pred, ref in zip(decoded_preds, decoded_labels)
     ]
+    all_predictions = {'metrics': result, 'predictions': all_predictions[:100]}
 
     os.makedirs(args.output_dir, exist_ok=True)
     prediction_file = os.path.join(args.output_dir, "predictions.json")

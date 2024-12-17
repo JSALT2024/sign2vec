@@ -18,7 +18,7 @@ def parse_args():
 
     # Model and data paths
     parser.add_argument("--model_name", type=str, default="h2s-test", help="Model name or folder inside model_dir.")
-    parser.add_argument("--dataset_type", type=str, default="yasl", choices=["how2sign", "yasl"], help="Type of the dataset.")
+    parser.add_argument("--dataset_type", type=str, default="yasl", choices=["how2sign", "yasl", "yasl_copy"], help="Type of the dataset.")
     parser.add_argument("--dataset_dir", type=str, default="/path/to/data", help="Path to the dataset directory.")
     parser.add_argument("--output_dir", default='./results',type=str)
 
@@ -79,6 +79,9 @@ def load_dataset(args):
         mode = 'test' if not args.dev else 'dev'
     elif args.dataset_type == 'yasl':
         from sign2vec.dataset.yasl import YoutubeASLForSLT as DatasetForSLT
+        mode = 'dev' if args.dev else 'test'
+    elif args.dataset_type == 'yasl_copy':
+        from sign2vec.dataset.yasl_version_of_h2s import YoutubeASLForSLT as DatasetForSLT
         mode = 'dev' if args.dev else 'test'
     else:
         raise ValueError(f"Dataset type {args.dataset_type} not supported")

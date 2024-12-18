@@ -2,6 +2,7 @@ import os
 import h5py
 import json
 import pandas as pd
+import numpy as np
 from tqdm.auto import tqdm
 
 import torch
@@ -64,6 +65,7 @@ class YoutubeASLForPose(Dataset):
             data = self.h5_file[video_id][clip_id]
 
         if self.is_normalized:
+            data = np.array(data)
             keypoints = torch.tensor(data)
             # Replace NaN, Inf values with 0
             torch.nan_to_num_(keypoints, nan=0.0, posinf=0.0, neginf=0.0)

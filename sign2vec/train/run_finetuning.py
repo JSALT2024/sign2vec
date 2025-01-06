@@ -254,7 +254,8 @@ if __name__ == "__main__":
 
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
 
-        for i in range(10):
+        len_samples = 10 if len(decoded_preds) > 10 else len(decoded_preds)
+        for i in range(len_samples):
             print(f"Prediction: {decoded_preds[i]}")
             print(f"Reference: {decoded_labels[i]}")
             print('*'*50)

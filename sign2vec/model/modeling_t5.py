@@ -18,9 +18,9 @@ class T5ModelForSLT(PreTrainedModel):
 
         # Define a custom linear layer to apply to the input embeddings
         self.model = AutoModelForSeq2SeqLM.from_pretrained(config.base_model_name)
-        self.custom_linear =  nn.Sequential(
+        self.custom_linear = nn.Sequential(
             nn.Linear(config.sign_input_dim, self.model.config.d_model),
-            nn.Dropout(config.hidden_dropout_prob),
+            *(nn.Dropout(config.hidden_dropout_prob),) if not config.dont_use_dropout else (), # Use dropout only without flag dont_use_dropout
             nn.GELU(),
         )
 

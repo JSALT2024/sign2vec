@@ -82,6 +82,7 @@ def parse_args():
     parser.add_argument("--report_to", type=str, default=None)
     parser.add_argument("--logging_steps", type=int, default=1)
     parser.add_argument("--pose_dim", type=int, default=208)
+    parser.add_argument("--dont_use_dropout", action="store_true")
 
     # Evaluation arguments
     parser.add_argument("--num_beams", type=int, default=5)
@@ -135,6 +136,7 @@ if __name__ == "__main__":
     config = SignT5Config(
         base_model_name=args.model_id,
         sign_input_dim=args.pose_dim,
+        dont_use_dropout=args.dont_use_dropout,
     )
     model = T5ModelForSLT(config=config)
     for param in model.parameters(): param.data = param.data.contiguous()

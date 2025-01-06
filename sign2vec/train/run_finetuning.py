@@ -98,6 +98,7 @@ def parse_args():
     parser.add_argument("--max_val_samples", type=int, default=None)
     parser.add_argument("--is_normalized", action="store_true")
     parser.add_argument("--resume_from_checkpoint", type=str, default=None)
+    parser.add_argument("--load_only_weights", action="store_true")
 
     parser.add_argument("--verbose", action="store_true")
 
@@ -138,7 +139,12 @@ if __name__ == "__main__":
         sign_input_dim=args.pose_dim,
         dont_use_dropout=args.dont_use_dropout,
     )
-    model = T5ModelForSLT(config=config)
+
+    if args.load_only_weights:
+        model = T5ModelForSLT.from_pretrained(args.resume_from_checkpoint)
+        args.resume_from_checkpoint = None
+    else:
+        model = T5ModelForSLT(config=config)
     for param in model.parameters(): param.data = param.data.contiguous()
     tokenizer = T5Tokenizer.from_pretrained(args.model_id)
 

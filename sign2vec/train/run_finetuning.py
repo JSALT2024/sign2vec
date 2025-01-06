@@ -141,7 +141,7 @@ if __name__ == "__main__":
     )
 
     if args.load_only_weights:
-        model = T5ModelForSLT.from_pretrained(args.resume_from_checkpoint)
+        model = T5ModelForSLT.from_pretrained(args.resume_from_checkpoint, config=config)
         args.resume_from_checkpoint = None
     else:
         model = T5ModelForSLT(config=config)

@@ -82,7 +82,7 @@ def parse_args():
     parser.add_argument("--report_to", type=str, default=None)
     parser.add_argument("--logging_steps", type=int, default=1)
     parser.add_argument("--pose_dim", type=int, default=208)
-    parser.add_argument("--dont_use_dropout", action="store_true")
+    parser.add_argument("--hidden_dropout_prob", type=float, default=0.1)
 
     # Evaluation arguments
     parser.add_argument("--num_beams", type=int, default=5)
@@ -137,10 +137,10 @@ if __name__ == "__main__":
     config = SignT5Config(
         base_model_name=args.model_id,
         sign_input_dim=args.pose_dim,
-        dont_use_dropout=args.dont_use_dropout,
     )
 
     if args.load_only_weights:
+        assert args.resume_from_checkpoint, "resume_from_checkpoint must be provided when running with load_only_weights"
         model = T5ModelForSLT.from_pretrained(args.resume_from_checkpoint, config=config)
         args.resume_from_checkpoint = None
     else:

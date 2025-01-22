@@ -32,10 +32,10 @@ def init_wandb(args):
     )
 
     system_config = ['PBS_JOBID', 'SLURM_JOB_ID']
-    config= {}
+    config= {'args': vars(args), 'system': {}}
     for variable in system_config:
         if variable in os.environ.keys():
-            config[variable] = os.environ[variable]
+            config['system'][variable] = os.environ[variable]
 
     wandb.init(
         project=args.project_name,

@@ -30,10 +30,18 @@ def init_wandb(args):
     wandb.login(
         key=os.getenv("WANDB_API_KEY")
     )
+
+    system_config = ['PBS_JOBID', 'SLURM_JOB_ID']
+    config= {}
+    for variable in system_config:
+        if variable in os.environ.keys():
+            config[variable] = os.environ[variable]
+
     wandb.init(
         project=args.project_name,
         # name=args.model_name,
         tags=[args.dataset_type, args.transform, args.modality] + (["dev"] if args.dev else []) + (["sweep"] if args.sweep else []),
+        config=config,
     )
 
     return wandb
@@ -147,6 +155,8 @@ if __name__ == "__main__":
         model = T5ModelForSLT(config=config)
     for param in model.parameters(): param.data = param.data.contiguous()
     tokenizer = T5Tokenizer.from_pretrained(args.model_id)
+
+    wandb.config.update(vars(model.config))
 
     # Add collate_fn to DataLoader
     def collate_fn(batch):
@@ -320,6 +330,7 @@ if __name__ == "__main__":
         generation_config=model.base_model.generation_config,
         ddp_find_unused_parameters=False,
     )
+    wandb.config.update(vars(training_args))
 
     trainer = Seq2SeqTrainer(
         model=model,

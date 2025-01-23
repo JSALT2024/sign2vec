@@ -355,6 +355,8 @@ if __name__ == "__main__":
         predictions, labels = [], []
         for step, batch in enumerate(dataloader):
             batch = {k: v.to(model.base_model.device) for k, v in batch.items()}
+            if len(batch['labels'].shape) < 2:
+                batch['labels'] = batch['labels'].unsqueeze(0)
             outputs = model.generate(
                 **batch,
                 early_stopping=args.early_stopping,
@@ -390,6 +392,7 @@ if __name__ == "__main__":
         ]
 
         json.dump(all_predictions, f)
+        print(f'Predictions saved to {os.path.join(args.output_dir, args.model_name, "val_predictions.txt")}')
 
     val_bleu = sacrebleu.compute(predictions=val_predictions, references=val_labels)
 
@@ -400,6 +403,7 @@ if __name__ == "__main__":
 
     with open(os.path.join(args.output_dir, args.model_name, "scores.json"), "w") as f:
         json.dump(scores, f)
+        print(f'Scores saved to {os.path.join(args.output_dir, args.model_name, "scores.json")}')
 
 
 
